@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "1. New analysis setup form\n2. Agent working progress (initial steps)\n3. Agent working progress (mid-process)\n4. Agent working progress (nearing completion)\n5. Agent working progress (final steps/completed)\n6. Final report view (top section)\n7. Final report view (scrolled down)\n8. Document preview/reader view",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790390010,
+  "id": "202609261033181cbbc01c6e254561",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "202609261033181cbbc01c6e254561",
+  "usage": {
+    "completion_tokens": 73,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2468,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 2541
+  }
+}

@@ -1,0 +1,94 @@
+PASS  default html lang=en
+PASS  default dir=ltr
+PASS  hero title English
+FAIL  selector has 15 languages  [got 30]
+PASS  selector defaults to English
+PASS  document.title default
+PASS  custom trigger visible
+PASS  globe icon visible on trigger
+PASS  panel opens with 15 rows
+PASS  aria-expanded true
+PASS  english row aria-selected
+PASS  escape closes panel
+PASS  aria-expanded false
+PASS  keyboard select Spanish
+PASS  html lang=el
+PASS  hero title Greek
+PASS  html lang=el dir still ltr
+PASS  footer Greek
+PASS  doc title Greek
+PASS  lang persisted in localStorage
+PASS  persisted lang=el after reload
+PASS  Greek after reload
+PASS  cookie banner Greek
+PASS  html lang=ar
+PASS  html dir=rtl (arabic)
+PASS  hero Arabic
+PASS  no horizontal overflow (ar, 390px)
+PASS  rtl-flip arrows present
+PASS  html dir=rtl (urdu)
+PASS  html lang=ur
+PASS  German renders
+PASS  Chinese renders
+PASS  Japanese renders
+PASS  pricing page Greek
+PASS  pricing doc title Greek
+PASS  privacy page Greek
+PASS  sample report page Greek chrome
+PASS  sample report tabs Greek
+PASS  sample report body Greek (exec summary)
+PASS  sample report roadmap Greek
+PASS  no overflow on sample-report (el)
+Traceback (most recent call last):
+  File "/home/z/my-project/scripts/test_i18n.py", line 214, in <module>
+    run()
+  File "/home/z/my-project/scripts/test_i18n.py", line 166, in run
+    switch_lang(page, "en")
+  File "/home/z/my-project/scripts/test_i18n.py", line 26, in switch_lang
+    page.locator("button[aria-haspopup='listbox']").first.click()
+  File "/home/z/.venv/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 15637, in click
+    self._sync(
+  File "/home/z/.venv/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/home/z/.venv/lib/python3.12/site-packages/playwright/_impl/_locator.py", line 162, in click
+    return await self._frame._click(self._selector, strict=True, **params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/z/.venv/lib/python3.12/site-packages/playwright/_impl/_frame.py", line 566, in _click
+    await self._channel.send("click", self._timeout, locals_to_params(locals()))
+  File "/home/z/.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/z/.venv/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 559, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("button[aria-haspopup='listbox']").first
+    - locator resolved to <button type="button" title="Γλώσσα" aria-label="Γλώσσα" aria-expanded="false" aria-haspopup="listbox" aria-controls="_R_1aqnpfdbb_" class="lang-select-custom group inline-flex cursor-pointer items-center gap-2 rounded-full border border-border/70 bg-card/70 text-foreground backdrop-blur transition-colors hover:border-primary/40 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:bg-card/50 dark:hover:bg-card/70 h-8 ps-3 pe-2.5 text-xs">…</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div role="dialog" aria-modal="false" aria-labelledby="cookie-consent-title" aria-describedby="cookie-consent-desc" class="fixed inset-x-0 bottom-0 z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-300">…</div> intercepts pointer events
+    - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is not stable
+  2 × retrying click action
+      - waiting 100ms
+      - waiting for element to be visible, enabled and stable
+      - element is visible, enabled and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div role="dialog" aria-modal="false" aria-labelledby="cookie-consent-title" aria-describedby="cookie-consent-desc" class="fixed inset-x-0 bottom-0 z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-300">…</div> intercepts pointer events
+  57 × retrying click action
+       - waiting 500ms
+       - waiting for element to be visible, enabled and stable
+       - element is visible, enabled and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div role="dialog" aria-modal="false" aria-labelledby="cookie-consent-title" aria-describedby="cookie-consent-desc" class="fixed inset-x-0 bottom-0 z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-300">…</div> intercepts pointer events
+  - retrying click action
+    - waiting 500ms
+

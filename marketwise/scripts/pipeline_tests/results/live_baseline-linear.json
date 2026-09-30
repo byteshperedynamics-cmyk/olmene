@@ -1,0 +1,53 @@
+{
+  "summary": {
+    "variant": "baseline-linear",
+    "runs_total": 1,
+    "runs_completed": 0,
+    "mean_wall_s": null,
+    "mean_step_work_s": null,
+    "mean_gap_s": null,
+    "mean_sources": null,
+    "min_competitors": null,
+    "mean_competitors": null,
+    "pricing_found_pct": null,
+    "mean_findings": null,
+    "seo_checklist_entries": [],
+    "citations_valid_pct": null,
+    "tavily_credits": 0,
+    "llm_calls": 0
+  },
+  "runs": [
+    {
+      "site": "https://linear.app",
+      "jobId": "b7c288ac-8b0b-4a70-93c0-62ef7c144713",
+      "status": "failed",
+      "error": "We could not complete the crawl step of your analysis after several attempts. This is usually temporary (an upstream provider hiccup). Failed jobs do not count against your quota \u2014 please try again.",
+      "wall_client_s": 72.3,
+      "wall_server_s": null,
+      "step_work_s": 0.6,
+      "gap_s": 0,
+      "steps": [
+        {
+          "step": "crawl",
+          "dur": 0.6,
+          "model": ""
+        }
+      ],
+      "attempts": 2,
+      "pages_crawled": 0,
+      "sources": 0,
+      "competitor_picks": 0,
+      "competitors_analyzed": 0,
+      "competitors_with_pricing": 0,
+      "findings": 0,
+      "seo_checklist_entries": null,
+      "citations_valid_pct": null,
+      "scores": null,
+      "llm_models_used": [],
+      "budget": {
+        "tavily": 0,
+        "llm": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://academy.talki-app.fr",
+    "name": "LLM Cost Benchmark 2026: Claude vs GPT-4o vs Mistral vs",
+    "snippet": "May 9, 2026 — On raw token cost , yes — Groq's Llama 3.3 70B at $0.59 input / $0.79 output per 1M tokens is 4–5× cheaper than Claude Sonnet 4.6 or GPT-4o. But ... Read more",
+    "host_name": "academy.talki-app.fr",
+    "rank": 0,
+    "date": "May 9, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://chatboq.com",
+    "name": "Free AI Chatbot APIs 2026 | LLM APIs & Integration Guide",
+    "snippet": "Rate Limits and Token Limits: Free tiers control how often you can call the API (requests per minute / RPM, requests per day / RPD) and how much text you can ... Read more",
+    "host_name": "chatboq.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://omidsaffari.com",
+    "name": "Cheapest AI API",
+    "snippet": "Aug 30, 2026 — Eight low- cost AI APIs compared with live August 2026 prices, free tiers , production limits , and the monthly cost that changes the decision.",
+    "host_name": "omidsaffari.com",
+    "rank": 2,
+    "date": "Aug 30, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://o-mega.ai",
+    "name": "Cheapest LLM APIs for AI Agents: 2026 Price Table - O-mega.ai",
+    "snippet": "Aug 26, 2026 — Save 90% on AI agent costs. Compare the cheapest 2026 LLM API prices, prompt caching, and routing strategies in our latest guide.",
+    "host_name": "o-mega.ai",
+    "rank": 3,
+    "date": "Aug 26, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://localaimaster.com",
+    "name": "Llama 3 Groq 8B Tool Use: Function Calling AI | Run Locally 2026",
+    "snippet": "Get a free API key at console.groq.com. Free tier includes generous rate limits for development . Local vs Cloud: When to Use Each. Use Local (Ollama). - Data ...",
+    "host_name": "localaimaster.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://neuraplus-ai.github.io",
+    "name": "Groq Inference Engine Explained: Streaming API & Integration",
+    "snippet": "This guide covers the streaming API design, KV cache management strategies, error handling patterns, and integration examples for Python and Node.js ...",
+    "host_name": "neuraplus-ai.github.io",
+    "rank": 5,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://aizolo.com",
+    "name": "AI Playgrounds Multi-Model Comparison 2026: Best Guide",
+    "snippet": "Its playground is free to try, with 25+ open models available at no cost under rate limits . Paid models are billed per token, close to the provider's own rate, ... Read more",
+    "host_name": "aizolo.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://dev.to",
+    "name": "The Budget Guide to Prompt Engineering: Save Money",
+    "snippet": "Jun 15, 2026 — Free/Budget Tier API Providers (2026 ) Provider Free Tier Models Rate Limits Best For Google AI Studio 1,500 req/day, Groq 300 tok/sec free",
+    "host_name": "dev.to",
+    "rank": 7,
+    "date": "Jun 15, 2026",
+    "favicon": ""
+  }
+]

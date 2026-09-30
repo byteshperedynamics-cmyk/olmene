@@ -1,18 +1,12 @@
 # olmene
 
-Worker serving **olmene.com** + **www.olmene.com**.
+This repository serves two purposes:
 
-## How this works
+1. **olmene.com Worker** (repo root) — deployed automatically by Cloudflare
+   Workers Builds on every push to `main`. Serves olmene.com + www.olmene.com.
+   Code: `src/index.js`, config: `wrangler.jsonc`.
 
-- This repository is connected to Cloudflare Workers Builds.
-- Every push to `main` automatically builds and deploys the Worker.
-- `wrangler.jsonc` at the repo root is the deploy configuration.
-
-## Develop
-
-```bash
-npm install        # installs wrangler
-npx wrangler dev   # local dev at http://localhost:8787
-```
-
-Push to `main` to deploy. The worker code lives in `src/index.js`.
+2. **`marketwise/`** — the complete MarketWise source code snapshot
+   (Next.js 16 app, agent system, Supabase migrations, edge function sources,
+   docs, reports, research, QA artifacts). Not deployed; reference copy.
+   See `marketwise/README.md` for details.

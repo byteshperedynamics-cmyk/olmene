@@ -1,0 +1,74 @@
+[
+  {
+    "url": "https://llmgateway.io",
+    "name": "Groq API — Models & Pricing",
+    "snippet": "Access 2 Groq models through LLM Gateway's OpenAI-compatible API with per -token pricing, automatic fallback, caching, and cost analytics.",
+    "host_name": "llmgateway.io",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://ai-api-hub.com",
+    "name": "Groq API pricing: every Groq model, per 1M tokens - AI API Hub",
+    "snippet": "Sep 13, 2026 — free tier , rate limits. OSS 120B · 4,000 input tokens and 1,200 output tokens per request , 30 requests per day , with no cached input or batch ...",
+    "host_name": "ai-api-hub.com",
+    "rank": 1,
+    "date": "Sep 13, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://computeprices.com",
+    "name": "GPT-OSS-120B API Pricing from $0.04/1M input tokens",
+    "snippet": "Sep 13, 2026 — GPT - OSS - 120B is OpenAI's open-source lightweight model with 120 billion parameters, offering fast inference and a 128K token context window for ... Read more",
+    "host_name": "computeprices.com",
+    "rank": 2,
+    "date": "Sep 13, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://llmcostcalc.com",
+    "name": "Groq API Pricing 2026 - LLM Cost Calculator",
+    "snippet": "PT- OSS 120B ( Groq ) OpenAI open-source model. The monthly table assumes 70% input tokens and 30 % output tokens. GPT - OSS 120B ( Groq ) $0.285. Groq offers 5 models ...",
+    "host_name": "llmcostcalc.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://standardthinking.ai",
+    "name": "GPT-OSS 120B API cost calculator - Standard Thinking",
+    "snippet": "Sep 12, 2026 — Compare GPT - OSS 120B API token costs on Groq , Groq : $0.15 input, $0.60 output , $0.075 cached input. Output $9.00 Total$18.00 Total for 30 days. ...",
+    "host_name": "standardthinking.ai",
+    "rank": 4,
+    "date": "Sep 12, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://modelmarkets.ai",
+    "name": "Groq Models, Pricing & API - Model Markets",
+    "snippet": "Aug 28, 2026 — Get Free API KeyAPI. Input from $0.075 Output from $0.30 … service tier , retention policy, - oss - 120b . $0.075 input and $0.30 output per million ...",
+    "host_name": "modelmarkets.ai",
+    "rank": 5,
+    "date": "Aug 28, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://factquire.com",
+    "name": "GPT OSS 120B on Groq - FactQuire",
+    "snippet": "GPT OSS 120B on Groq … $0.15 input$0.60 output . Want per -model alerts within a day ? Create a free watchlist",
+    "host_name": "factquire.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://apipriceindex.com",
+    "name": "GPT-OSS 120B (Groq) API — price, latency & code",
+    "snippet": "GPT - OSS 120B ( Groq ): $0.15 input / $0.60 output per 1M tokens, 1 of 18 providers serving gpt - oss - 120b .",
+    "host_name": "apipriceindex.com",
+    "rank": 7,
+    "date": "",
+    "favicon": ""
+  }
+]

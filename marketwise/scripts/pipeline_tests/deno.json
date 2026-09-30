@@ -1,0 +1,8 @@
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "npm:cheerio@1.2.0": "npm:cheerio@1.2.0",
+    "npm:zod@4.6.5": "npm:zod@4.6.5",
+    "npm:@supabase/supabase-js@2.117.1": "npm:@supabase/supabase-js@2.117.1"
+  }
+}

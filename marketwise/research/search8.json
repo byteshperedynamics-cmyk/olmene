@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://baeseokjae.github.io",
+    "name": "Z.ai API Developer Guide 2026: GLM Models, Pricing, and Setup",
+    "snippet": "... api.z.ai /api/anthropic — making Z.ai the only ... GLM-4.7 targets balanced cost -performance ... The recommended starting model is glm - 4.7 - flash for free ...",
+    "host_name": "baeseokjae.github.io",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://classic.yarnpkg.com",
+    "name": "ai-sdk-zhipu",
+    "snippet": "... open.bigmodel.cn /api/paas/v4', apiKey: process ... 16K. glm -4.5- flash , Free model , 128K, 96K. Vision ... modelId (string) - Model ID (e.g., ' glm - 4.7 ' ) ...",
+    "host_name": "classic.yarnpkg.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com",
+    "name": "awesome-free-llm-apis/data.json at main",
+    "snippet": "... open.bigmodel.cn /usercenter/apikeys\", \"baseUrl\": \"https:// open.bigmodel.cn ... api.z.ai /api/paas/v4` ([endpoint](https:// docs .z.ai/guides/develop/http ... Read more",
+    "host_name": "github.com",
+    "rank": 2,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.layer3labs.io",
+    "name": "There Is No Official Z.AI App for iOS, Android or PC",
+    "snippet": "Sep 2, 2026 — The full rate table sits on our Z.AI pricing page. Base URL https:// api.z.ai /api/paas/v4/ with an Authorization: Bearer header, so a standard ... Read more",
+    "host_name": "www.layer3labs.io",
+    "rank": 3,
+    "date": "Sep 2, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://docs.one.fim.ai",
+    "name": "Recommended Models - FIM One - Introduction",
+    "snippet": "Base URL (Domestic): https:// open.bigmodel.cn /api/paas/v4; Base URL (Z.AI International): https:// api.z.ai /api/paas/v4 ... Fast: glm - 4.7 - flash ( free tier!) or glm ... Read more",
+    "host_name": "docs.one.fim.ai",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://vanja.io",
+    "name": "DeepSeek, GLM, and OpenCode",
+    "snippet": "Sep 16, 2026 — One more split: open.bigmodel.cn is the China console, priced in RMB. ... Metered API: Z.ai pricing . Native-agent list prices cited as ... Read more",
+    "host_name": "vanja.io",
+    "rank": 5,
+    "date": "Sep 16, 2026",
+    "favicon": ""
+  }
+]

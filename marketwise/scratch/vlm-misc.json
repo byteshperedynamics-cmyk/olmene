@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "1. **Image 1 (Mobile):** Yes, a language pill with a globe icon is clearly visible above the main headline. The layout appears clean and well-structured for the 390px width, with no obvious overflow or alignment issues.\n2. **Image 2 (Desktop Dark Mode):** The dark panel is highly readable with excellent contrast. The rows are distinct, and a clear checkmark is visible on the selected \"English\" row.",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790426836,
+  "id": "2026092620471343a37b6ef4144f24",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "2026092620471343a37b6ef4144f24",
+  "usage": {
+    "completion_tokens": 94,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 2138,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 2232
+  }
+}

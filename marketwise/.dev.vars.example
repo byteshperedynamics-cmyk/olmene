@@ -1,0 +1,27 @@
+# MarketWise Agent — Worker secrets template
+# Copy to `.dev.vars` for local wrangler preview (gitignored) — production
+# values are set with: npx wrangler secret put <NAME>
+# See docs/integrations.md §1.3 for the full setup walkthrough.
+
+# Master feature flag — the agent stays OFF until everything below is set.
+AGENT_FEATURE_ENABLED=false
+
+# Supabase (service role = the ONLY writer to agent tables; same trust domain
+# as the edge functions). Retrieve: Management API /api-keys or dashboard.
+SUPABASE_URL=https://ffoevhldpppyfsfgufmx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Envelope-encryption master key (32 bytes, base64url). Generate:
+#   bun run scripts/agent-setup.ts genkey
+# NEVER store this in the database or the repo.
+MW_KMS_MASTER_KEY=
+
+# LLM keys for agent copy drafting (mirror of the edge-function secrets).
+GLM_API_KEY=
+GEMINI_API_KEY=
+AGENT_LLM_DAILY_CAP=300
+
+# Optional overrides for tests/mocks
+# GITHUB_API_BASE=http://127.0.0.1:9999
+# GITHUB_WEB_BASE=https://github.com
+# APP_URL=https://get.marketwiselabs.workers.dev

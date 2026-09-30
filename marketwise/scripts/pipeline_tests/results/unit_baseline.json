@@ -1,0 +1,67 @@
+{
+  "variant": "baseline",
+  "t1_json_repair": {
+    "recoverable_samples": 18,
+    "recovered": 11,
+    "repair_success_pct": 61.1,
+    "unexpected": [
+      "09:unescaped tab in string",
+      "10:smart quotes around values",
+      "11:single-quoted keys and values",
+      "12:Python literals True/None",
+      "14:NaN value",
+      "18:unquoted keys",
+      "19:two JSON objects (take first)"
+    ],
+    "false_positives": 0
+  },
+  "t2_boilerplate": {
+    "boilerplate_marker_hits": 7,
+    "boilerplate_markers": [
+      "cookie settings",
+      "all rights reserved",
+      "accept all",
+      "careers",
+      "sitemap",
+      "subscribe to our newsletter",
+      "log in"
+    ],
+    "content_coverage_pct": 100,
+    "extracted_chars": 1014
+  },
+  "t3_seo_checklist": {
+    "checks": 18,
+    "has_https_check": false,
+    "has_favicon_check": false,
+    "has_ogimage_check": false,
+    "pass_count": 16
+  },
+  "t4_score_variance": {
+    "llm_score_stddev": 6.8,
+    "final_score_stddev": 6.8,
+    "deterministic_checklist_score": null,
+    "blending": false
+  },
+  "t5_competitor_topup": {
+    "min_competitors": 1,
+    "topup_logic_valid": false
+  },
+  "t6_prompt_budgets": {
+    "profile": {
+      "chars": 17371,
+      "under_120k": true
+    },
+    "audit": {
+      "chars": 35301,
+      "under_120k": true
+    },
+    "market": {
+      "chars": 21994,
+      "under_120k": true
+    },
+    "strategy": {
+      "chars": 8192,
+      "under_120k": true
+    }
+  }
+}

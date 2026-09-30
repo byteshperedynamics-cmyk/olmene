@@ -1,0 +1,28 @@
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Based on the screenshots provided, here is the exact description of what is visible:\n\n(1) **Yes**, there is a small flower/asterisk-like logo mark visible. It appears in two places: first as a tiny icon inside the pill-shaped badge above the main headline (\"On-demand marketing director...\"), and second, more prominently, immediately to the left of the status text below the search bar.\n\n(2) **The color is a soft orange (or salmon/peach tone).** It matches the color of the \"Analyzing...\" button and the \"Get started\" button in the header.\n\n(3) **Yes**, there is a status text that reads **\"Reading your homepage — running 18 deterministic checks...\"**. While it is difficult to confirm a \"shimmer\" animation from a static image, the text is styled in a way that suggests activity (it is bolded and paired with the animated-looking flower icon).\n\n(4) **The header logo at the top left** consists of the same black, 8-petal flower/asterisk icon followed by the word **\"Marketwise\"** in a clean, black sans-serif font.\n\n(5) **Screenshot 2 shows the Results state.** The loading animation is gone, replaced by a detailed report card titled \"INSTANT DIAGNOSIS\" displaying a score of **42 Readiness / 100**, progress bars for SEO, Messaging, and Conversion signals, and a list of specific findings (e.g., \"No clear call-to-action on the homepage\").",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1790353043,
+  "id": "20260926001715e28a0016cd7b4e95",
+  "model": "glm-5v-turbo",
+  "object": "chat.completion",
+  "request_id": "20260926001715e28a0016cd7b4e95",
+  "usage": {
+    "completion_tokens": 314,
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    },
+    "prompt_tokens": 3455,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 3769
+  }
+}

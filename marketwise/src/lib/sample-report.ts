@@ -1,0 +1,742 @@
+import type { ReportData } from "./report-types";
+
+/** Fictional sample report (Fernway Journals) used for the public sample page. */
+export const SAMPLE_REPORT: ReportData = {
+  "meta": {
+    "siteUrl": "https://fernwayjournals.example.com",
+    "generatedAt": "2026-09-20T10:14:00.000Z",
+    "language": "English",
+    "modelsUsed": [
+      "sample-fixture"
+    ],
+    "schemaVersion": 1
+  },
+  "executiveSummary": {
+    "headline": "Fernway has a beloved product and a beautiful site — but it is selling stationery like a commodity instead of a ritual, leaving conversion and repeat revenue on the table.",
+    "scores": {
+      "overall": 61,
+      "messaging": 58,
+      "positioning": 64,
+      "conversion": 48,
+      "seo": 72,
+      "trust": 66
+    },
+    "topFindings": [
+      "The homepage leads with materials and construction, but never names the buyer ('who is this for?') — visitors must self-qualify, and most won't.",
+      "There is no bundle or refill subscription anywhere in the purchase flow, although the product is literally designed to be refilled — the single biggest repeat-revenue gap.",
+      "Product pages answer 'what is it made of' in detail but not 'why is it worth 3x a supermarket notebook' — value framing is implicit, not explicit.",
+      "The site has strong organic basics (fast pages, clean headings, good metadata) but no content answering the questions journal buyers actually search before buying."
+    ],
+    "biggestOpportunity": "Launch a 'Refill Club' subscription (auto-delivered refills every 2 months) bundled with a first leather cover — it converts your existing one-time buyers into recurring revenue and matches how the product is designed to be used."
+  },
+  "product": {
+    "name": "Fernway Journals",
+    "category": "Premium refillable notebooks and leather journal covers",
+    "oneLiner": "Buy-once leather covers with inexpensive refills — a journal system designed to last decades, not a semester.",
+    "offerings": [
+      "A5 and pocket leather covers (4 colors)",
+      "Refill notebooks (dotted, lined, plain — 3-packs)",
+      "Lay-flat binding refills",
+      "Gift sets with pen loop and band"
+    ],
+    "pricingModel": "One-time purchase: covers at €69–€89, refills at €12 per 3-pack. No subscription, no discounts beyond a holiday sale banner.",
+    "targetCustomers": [
+      "Design-conscious professionals who journal daily",
+      "Gift buyers (30%+ of premium stationery purchases seasonally)",
+      "Bullet-journal and fountain-pen hobbyists",
+      "People quitting disposable notebooks for sustainability reasons"
+    ],
+    "valueProps": [
+      "Full-grain leather that improves with age — a decades-long companion",
+      "Refills cost a third of a new premium notebook, cutting long-run cost",
+      "Lay-flat binding designed for one-handed writing",
+      "Vegetable-tanned, EU-made, plastic-free packaging"
+    ]
+  },
+  "market": {
+    "definition": "The premium and refillable notebook segment of the global stationery market — buyers who pay €20+ per notebook (or €70+ per cover system) and choose on quality, aesthetics and values, not price.",
+    "size": {
+      "value": "≈ €3.1 billion (global premium stationery, est. 2025)",
+      "basis": "Sum of regional premium-stationery estimates from two market research summaries [S1][S2]; the refillable sub-segment is not reported separately, so this is an upper bound for the addressable market — treat as directional.",
+      "confidence": "low",
+      "sourceIds": [
+        "S1",
+        "S2"
+      ]
+    },
+    "trends": [
+      {
+        "trend": "Analog wellbeing rituals keep growing post-2020",
+        "implication": "Journaling is marketed as mindfulness, not office supply — your copy should sell the ritual, and it partially does already.",
+        "sourceIds": [
+          "S3"
+        ]
+      },
+      {
+        "trend": "Sustainability is a purchase criterion for premium buyers",
+        "implication": "'Plastic-free, refillable, EU-made' belongs in the hero copy and product titles, not only the about page.",
+        "sourceIds": [
+          "S1",
+          "S4"
+        ]
+      },
+      {
+        "trend": "DTC brands win with subscription consumables",
+        "implication": "The refill is your consumable — a subscription is the natural second product and your clearest growth lever.",
+        "sourceIds": [
+          "S5"
+        ]
+      },
+      {
+        "trend": "Gift-buying spikes in Q4 and on 'graduation' occasions",
+        "implication": "A dedicated gift flow (gift card, gift note, deadline-guaranteed shipping) can lift Q4 revenue substantially.",
+        "sourceIds": [
+          "S2"
+        ]
+      }
+    ],
+    "segments": [
+      {
+        "name": "Daily journaling professionals (25–45)",
+        "fitScore": 88,
+        "why": "Highest willingness to pay for a durable daily companion; they replace refills 4–6 times a year.",
+        "howToReach": "Instagram and Pinterest with workspace/journaling aesthetic; a '100 days in' photo series using your own product."
+      },
+      {
+        "name": "Fountain-pen & stationery hobbyists",
+        "fitScore": 82,
+        "why": "They evangelize publicly (r/pens, YouTube reviews) and judge paper quality hard — your lay-flat binding is a talking point.",
+        "howToReach": "Seed 10 micro-reviewers with covers + refills; be present in niche forums with a founder account, not ads."
+      },
+      {
+        "name": "Conscious gift buyers",
+        "fitScore": 74,
+        "why": "Premium price is an advantage when gifting; the 'buy once, refill forever' story is emotionally resonant.",
+        "howToReach": "Q4 gift-guide PR, Google Shopping for 'sustainable gift', a gift landing page with note + shipping promise."
+      },
+      {
+        "name": "Corporate & branded gifts",
+        "fitScore": 55,
+        "why": "Leather covers deboss beautifully and orders arrive in multiples; slower sales cycle, needs invoicing.",
+        "howToReach": "A short 'corporate gifts' page + outbound to HR/event agencies in Q2–Q3."
+      }
+    ],
+    "potentialAssessment": "This is a healthy niche with loyal buyers and rising analog-wellness demand, but it is not a winner-take-all market — scale comes from repeat purchase and gift seasonality, not from volume competition. A team of your size can plausibly 2–3x revenue in 12 months with a refill subscription, gift positioning and disciplined content, without paid ads. The main ceiling is production capacity and seasonality cash-flow, not demand."
+  },
+  "competitors": [
+    {
+      "name": "Moleskine",
+      "url": "https://www.moleskine.com",
+      "positioning": "The heritage 'culture' brand — sells the romance of the legendary notebook used by artists and writers; huge retail footprint.",
+      "pricing": "€15–€35 per notebook; some Leather series at €60+",
+      "strengths": [
+        "Brand recognition and gift-retail presence worldwide [S6]",
+        "Enormous catalog: sizes, colors, collaborations, limited editions",
+        "Strong SEO authority for generic 'notebook' queries [S7]"
+      ],
+      "weaknesses": [
+        "Glued spines fail heavy daily use — a known durability complaint [S8]",
+        "Mass-market production: no refill system, so loyal buyers rebuy whole notebooks",
+        "Premium-but-generic materials at a rising price point"
+      ],
+      "gapToExploit": "Own durability and total-cost-of-stories: 'the last cover you'll buy' is the anti-Moleskine pitch, backed by your refill economics.",
+      "threat": "high",
+      "sourceIds": [
+        "S6",
+        "S7",
+        "S8"
+      ]
+    },
+    {
+      "name": "Leuchtturm1917",
+      "url": "https://www.leuchtturm1917.com",
+      "positioning": "German engineer's notebook: 80 GSM paper, precise details, bullet-journal official partner — features over romance.",
+      "pricing": "€20–€30 per notebook",
+      "strengths": [
+        "Best-in-class paper for fountain pens, a hard requirement for hobbyists [S8]",
+        "Bullet-journal co-marketing gives them a durable community moat",
+        "Broad color/size matrix at a fair price"
+      ],
+      "weaknesses": [
+        "Same disposable model — no refill economics for buyers",
+        "Brand voice is functional; little emotional or gifting pull",
+        "Aesthetic is utilitarian; leaves room for a warmer, craft-led brand"
+      ],
+      "gapToExploit": "Offer Leuchtturm-grade paper inside a keepsake cover: 'their paper discipline, in a cover for life.' Consider a paper-spec page to win hobbyist trust.",
+      "threat": "high",
+      "sourceIds": [
+        "S8",
+        "S9"
+      ]
+    },
+    {
+      "name": "Baron Fig",
+      "url": "https://www.baronfig.com",
+      "positioning": "Designer-friendly notebooks 'for thinkers' — small curated range, strong community, US-based DTC.",
+      "pricing": "$16–$40; limited leather at $145+",
+      "strengths": [
+        "Focused curation and clean design language that buyers describe as 'considered' [S9]",
+        "Confider series innovations (dot grid, smaller footprint) show product R&D",
+        "Direct community engagement and Slack-era brand affinity"
+      ],
+      "weaknesses": [
+        "Narrow catalog slows repeat purchase between drops [S9]",
+        "Shipping to the EU (your home market) is slow and expensive",
+        "Minimal sustainability story relative to their design story"
+      ],
+      "gapToExploit": "In EU, beat them on delivery speed and plastic-free packaging; their slower drop cadence lets you win on availability.",
+      "threat": "medium",
+      "sourceIds": [
+        "S9",
+        "S10"
+      ]
+    }
+  ],
+  "audit": {
+    "messaging": [
+      {
+        "title": "Hero explains the object, not the outcome",
+        "severity": "high",
+        "evidence": "Homepage H1 reads 'Full-grain leather journal covers' with a sub-line about construction. No mention of who it's for or what changes for them.",
+        "recommendation": "Test a benefit-led H1 for the same visual: 'The last journal you'll ever buy' with sub-copy 'Full-grain leather covers + €12 refills. Made in the EU, plastic-free.' Keep the craft story one scroll below."
+      },
+      {
+        "title": "'Refillable' is buried one click deep",
+        "severity": "critical",
+        "evidence": "The refill economy (your core differentiator) appears only on the cover product page, under 'How it works', below the fold.",
+        "recommendation": "Surface the refill promise in the hero, the navigation ('The System'), and the cart ('this cover takes €12 refills forever'). Make the system diagram — cover, refill, loop — the centerpiece of the homepage."
+      },
+      {
+        "title": "Tone is inconsistent between product and story pages",
+        "severity": "medium",
+        "evidence": "Product pages read like a workshop spec sheet; the About page is warm and first-person. The shift makes the shop feel anonymous.",
+        "recommendation": "Move one paragraph of the founder's voice onto every product page ('Why we made this') — consistent warmth, same facts."
+      }
+    ],
+    "conversion": [
+      {
+        "title": "No bundle covers the natural first purchase",
+        "severity": "critical",
+        "evidence": "Buyers must add a cover and a refill separately; the cart suggests nothing. New visitors have to understand the system before buying it.",
+        "recommendation": "Create a 'Starter System' bundle (cover + 2 refills, 10% off, one Add-to-cart) and make it the primary CTA on cover pages. Bundle-first merchandising typically lifts first-order AOV immediately and reduces choice paralysis."
+      },
+      {
+        "title": "CTA verbs are passive",
+        "severity": "high",
+        "evidence": "Primary buttons read 'Add to cart'. No urgency, no ownership language anywhere.",
+        "recommendation": "Use ownership CTAs on cover pages ('Make it yours' opening a color/size selector) and keep 'Add to cart' as the button inside the configurator — same flow, stronger intent framing."
+      },
+      {
+        "title": "Checkout exits to a generic payment page",
+        "severity": "medium",
+        "evidence": "Payment provider page shows none of your brand or shipping promise; abandonment risk at the last step.",
+        "recommendation": "If the provider supports it, enable hosted-page theming; otherwise add trust lines immediately before the redirect (returns, delivery estimate, plastic-free packaging)."
+      }
+    ],
+    "seo": {
+      "checklist": [
+        {
+          "check": "Title tag",
+          "status": "pass",
+          "detail": "48 characters, includes category"
+        },
+        {
+          "check": "Meta description",
+          "status": "warn",
+          "detail": "112 characters — could use the refill promise"
+        },
+        {
+          "check": "Single H1",
+          "status": "pass",
+          "detail": "Exactly one H1 per page"
+        },
+        {
+          "check": "Heading structure",
+          "status": "pass",
+          "detail": "7 H2/H3 headings on homepage"
+        },
+        {
+          "check": "Canonical URL",
+          "status": "pass",
+          "detail": "Present on all indexed pages"
+        },
+        {
+          "check": "Language attribute",
+          "status": "pass",
+          "detail": "lang=\"en\""
+        },
+        {
+          "check": "Mobile viewport",
+          "status": "pass",
+          "detail": "viewport meta present"
+        },
+        {
+          "check": "Open Graph tags",
+          "status": "pass",
+          "detail": "og: tags with product imagery"
+        },
+        {
+          "check": "Twitter card",
+          "status": "warn",
+          "detail": "No twitter: tags"
+        },
+        {
+          "check": "Structured data (JSON-LD)",
+          "status": "fail",
+          "detail": "No Product schema — missing price/review rich results"
+        },
+        {
+          "check": "Image alt coverage",
+          "status": "warn",
+          "detail": "3 of 14 images missing alt text"
+        },
+        {
+          "check": "Content depth",
+          "status": "warn",
+          "detail": "~240 words on homepage (aim for 300+)"
+        },
+        {
+          "check": "Pricing page",
+          "status": "fail",
+          "detail": "No pricing page — prices live only on PDPs"
+        },
+        {
+          "check": "Call-to-action",
+          "status": "pass",
+          "detail": "Found: Add to cart | Shop covers"
+        },
+        {
+          "check": "Trust signals",
+          "status": "pass",
+          "detail": "Found: reviews (4.9), press mentions, guarantee"
+        },
+        {
+          "check": "Robots meta",
+          "status": "pass",
+          "detail": "No restrictions"
+        },
+        {
+          "check": "/robots.txt",
+          "status": "pass",
+          "detail": "Reachable (200)"
+        },
+        {
+          "check": "/sitemap.xml",
+          "status": "pass",
+          "detail": "Reachable (200)"
+        }
+      ],
+      "findings": [
+        {
+          "title": "No Product structured data anywhere",
+          "severity": "high",
+          "evidence": "Zero JSON-LD on product pages; no schema.org/Product, Offer or AggregateRating markup.",
+          "recommendation": "Add Product schema with price, availability and review rating to every PDP — this is what triggers star ratings in Google results and typically moves CTR more than rank itself."
+        },
+        {
+          "title": "The questions buyers search are unanswered",
+          "severity": "medium",
+          "evidence": "No content targeting queries like 'best refillable journal' or 'fountain pen friendly notebook' — your two winning topics.",
+          "recommendation": "Publish two cornerstone guides in the next 30 days: 'The honest guide to refillable journals' and 'Our paper vs. fountain pens (with photos)'. Link each to the matching product."
+        }
+      ]
+    },
+    "trust": [
+      {
+        "title": "Reviews exist but hide on PDPs",
+        "severity": "medium",
+        "evidence": "4.9★ average (212 reviews) shown only on product pages, not on the homepage or in ads.",
+        "recommendation": "Add a compact review strip (3 quotes + rating) directly under the hero — social proof at the moment of first impression."
+      },
+      {
+        "title": "No named humans anywhere in the shop",
+        "severity": "medium",
+        "evidence": "About page has a story but no names, faces or workshop location; contact is a form only.",
+        "recommendation": "Name the founder and the workshop town on the About page and in the footer — small DTC brands convert on person-ability."
+      },
+      {
+        "title": "Returns and guarantee policies are three clicks deep",
+        "severity": "low",
+        "evidence": "Guarantee mentioned in the FAQ; never near a buy button.",
+        "recommendation": "One line under every CTA: '30-day returns. Two-year stitching guarantee.' Link to the policy."
+      }
+    ],
+    "pricingPresentation": [
+      {
+        "title": "Refill price has no anchor",
+        "severity": "high",
+        "evidence": "€12 per 3-pack is listed alone; buyers can't tell if that's good without comparing to a whole new premium notebook.",
+        "recommendation": "Anchor it explicitly: 'Refills from €4 each — a new premium notebook costs €22.' Show a tiny 3-year cost comparison table (Fernway vs. buying new notebooks)."
+      },
+      {
+        "title": "Cover pricing tiers unexplained",
+        "severity": "medium",
+        "evidence": "€69 A5 vs €89 pocket confuses buyers; nothing explains the difference.",
+        "recommendation": "One sentence per tier ('the pocket uses a rarer, thicker hide'). Confusion at the configurator is where premium carts die."
+      },
+      {
+        "title": "No 'why €89' storytelling",
+        "severity": "low",
+        "evidence": "Price is presented as a fact; the craft justification lives on a separate page most never visit.",
+        "recommendation": "A 15-second workshop video adjacent to the price — cost justification at the point of consideration."
+      }
+    ]
+  },
+  "strategy": {
+    "positioning": {
+      "statement": "For people who write every day, Fernway is the journal system that gets better with age — one handmade leather cover, inexpensive refills forever — unlike disposable 'premium' notebooks that you throw away each semester.",
+      "differentiators": [
+        "Buy-once economics: refills at a third of a new premium notebook",
+        "EU vegetable-tanned leather and plastic-free packaging",
+        "Lay-flat binding designed for daily, one-handed use"
+      ]
+    },
+    "icp": [
+      {
+        "persona": "The daily-pager professional (30s)",
+        "painPoints": [
+          "Goes through 3–4 notebooks a year",
+          "Hates throwing away pretty covers",
+          "Wants one object that feels theirs"
+        ],
+        "triggers": [
+          "Filling up another notebook",
+          "A colleague's leather cover in a meeting",
+          "New-year / new-job rituals"
+        ],
+        "objections": [
+          "€89 feels expensive for 'a notebook'",
+          "Is the paper actually good?",
+          "What if I don't like the leather color?"
+        ]
+      },
+      {
+        "persona": "The fountain-pen hobbyist",
+        "painPoints": [
+          "Ghosting and bleed-through ruin pages",
+          "Flimsy covers don't survive the bag",
+          "Wants EU-made, archival-ish paper"
+        ],
+        "triggers": [
+          "Paper-spec discussions in communities",
+          "A bad experience with a hyped brand",
+          "Restock announcements"
+        ],
+        "objections": [
+          "80 GSM minimum, prove it",
+          "Is the binding truly lay-flat?",
+          "Where is it tanned?"
+        ]
+      },
+      {
+        "persona": "The thoughtful gift-giver",
+        "painPoints": [
+          "Generic gifts feel impersonal",
+          "Needs delivery by a date",
+          "Wants the unboxing to impress"
+        ],
+        "triggers": [
+          "Q4, graduation, promotions, weddings",
+          "'sustainable gift' searches",
+          "Gift guides"
+        ],
+        "objections": [
+          "Will it arrive in time?",
+          "Can I add a note?",
+          "What if they don't like it — returns?"
+        ]
+      }
+    ],
+    "channels": [
+      {
+        "channel": "Refill Club subscription (owned)",
+        "priority": 1,
+        "rationale": "Your product is literally a consumable system; recurring revenue compounds and smooths Q4 seasonality. Cheapest growth you have.",
+        "firstSteps": [
+          "Add a simple subscription option to refills (every 2 months, pause anytime)",
+          "Email past buyers with a founder-written launch offer (first refill free)",
+          "Instrument churn reasons from day one"
+        ],
+        "effort": "M",
+        "expectedImpact": "high"
+      },
+      {
+        "channel": "SEO cornerstones (owned content)",
+        "priority": 1,
+        "rationale": "Your two topics ('refillable journal', 'fountain pen friendly paper') have intent and weak competition; you already have the domain basics.",
+        "firstSteps": [
+          "Publish 'The honest guide to refillable journals' (2,000 words, honest comparisons)",
+          "Publish 'Fernway paper vs. fountain pens' with photo tests",
+          "Add Product schema to all PDPs"
+        ],
+        "effort": "M",
+        "expectedImpact": "high"
+      },
+      {
+        "channel": "Micro-influencer seeding (earned)",
+        "priority": 2,
+        "rationale": "Stationery reviewers convert hard and cost product, not cash; hobbyists trust paper tests over ads.",
+        "firstSteps": [
+          "List 15 micro-reviewers (5k–50k) in journaling/pens",
+          "Send cover + 3 refills with a personal note",
+          "Ask for honest reviews only; link them from PDPs"
+        ],
+        "effort": "S",
+        "expectedImpact": "medium"
+      },
+      {
+        "channel": "Gift positioning (seasonal)",
+        "priority": 2,
+        "rationale": "Gift buyers pay premium prices and buy systems, not single items — your Q4 multiplier.",
+        "firstSteps": [
+          "Ship a gift landing page (note, guaranteed-date shipping, returns)",
+          "Pitch 10 'sustainable gift guides' in September",
+          "Prep a Q4 bundle (cover + refill + pen loop)"
+        ],
+        "effort": "M",
+        "expectedImpact": "medium"
+      },
+      {
+        "channel": "Pinterest + Instagram organic",
+        "priority": 3,
+        "rationale": "Journaling aesthetic performs, but feed-tending is a time sink — do it after the system pages ship.",
+        "firstSteps": [
+          "Post a '100 days in' photo series of one cover aging",
+          "Pin every product scene with keyworded descriptions",
+          "Batch one shooting day per quarter"
+        ],
+        "effort": "M",
+        "expectedImpact": "medium"
+      }
+    ],
+    "offerAndPricingIdeas": [
+      "'Starter System' bundle: cover + 2 refills, 10% off — primary first-purchase offer",
+      "Refill Club: €10/2-month subscription with pause, price-locked for 12 months",
+      "'Founder's first 500' engraving for early Refill Club members (free, memorable, scarce)",
+      "Gift guarantee: free size/color exchange in January for all Q4 gift orders",
+      "Corporate debossing from 10 covers with simple PDF proof turnaround"
+    ],
+    "contentThemes": [
+      "The aging leather diary — one cover, photographed monthly for a year",
+      "Total cost of ownership: Fernway vs. new notebooks over 3 years",
+      "Fountain-pen paper tests with photo evidence",
+      "Inside the workshop: how a cover is cut, stitched, finished",
+      "What people fill their pages with — customer page spreads (with permission)"
+    ]
+  },
+  "roadmap": {
+    "quickWins": [
+      {
+        "title": "Rewrite the hero: name the buyer and the refill promise",
+        "why": "Your core differentiator is invisible in the first viewport; every visitor pays the cost.",
+        "how": "New H1 'The last journal you'll ever buy', sub-line with €4 refills + EU-made + plastic-free. Add the system diagram directly below. Keep the current photo as background.",
+        "effort": "S",
+        "impact": "high",
+        "kpi": "Homepage → PDP click-through rate (+15% target)"
+      },
+      {
+        "title": "Add Product JSON-LD to every product page",
+        "why": "Stars and prices in search results raise CTR without ranking changes.",
+        "how": "Add schema.org/Product with Offer (price, currency, availability) and AggregateRating from your review app; validate in Google's Rich Results test.",
+        "effort": "S",
+        "impact": "medium",
+        "kpi": "Rich results active on 100% of PDPs in Search Console"
+      },
+      {
+        "title": "Put the review strip under the hero",
+        "why": "4.9★ from 212 reviews is your strongest proof and it's hidden on PDPs.",
+        "how": "Three short quotes + average + count, static strip below the fold line. No carousel needed.",
+        "effort": "S",
+        "impact": "medium",
+        "kpi": "Homepage bounce rate (−5 points)"
+      },
+      {
+        "title": "Anchor the refill price everywhere it appears",
+        "why": "€4-per-notebook only feels like a win when compared to €22 new.",
+        "how": "One-line comparison under every refill price plus a small 3-year cost table on the System page.",
+        "effort": "S",
+        "impact": "medium",
+        "kpi": "Refill attach rate on cover orders (+10 points)"
+      }
+    ],
+    "days30": [
+      {
+        "title": "Launch the Starter System bundle",
+        "why": "Removes system-comprehension friction from first purchase and lifts AOV.",
+        "how": "Create bundle SKU (cover + 2 refills, −10%), make it the primary CTA on cover PDPs and the homepage; measure bundle vs. solo mix weekly.",
+        "effort": "M",
+        "impact": "high",
+        "kpi": "First-order AOV (target +18%)",
+        "dependsOn": "Hero rewrite"
+      },
+      {
+        "title": "Ship Refill Club v1 (simple subscription)",
+        "why": "Converts the product's design into recurring revenue — the biggest structural lever.",
+        "how": "Enable subscriptions on refill 3-packs (every 2 months, pause/cancel, price-lock 12 months). Founder email to all past buyers with first-refill-free for the first 200.",
+        "effort": "M",
+        "impact": "high",
+        "kpi": "150 active subscribers by day 30 post-launch"
+      },
+      {
+        "title": "Publish cornerstone #1: 'The honest guide to refillable journals'",
+        "why": "Highest-intent query space you can own; also the natural link asset for influencer outreach.",
+        "how": "2,000+ words, own photos, honest competitor table (include theirs and your weaknesses), internal links to System + PDPs.",
+        "effort": "M",
+        "impact": "high",
+        "kpi": "Top-10 ranking for 'refillable journal' within 90 days"
+      },
+      {
+        "title": "Seed 10 micro-reviewers",
+        "why": "Paper-test reviews are the hobbyist gate; costs product only.",
+        "how": "List 15 candidates (5k–50k followers), ship cover + 3 refills + handwritten note, ask for honesty; feature reviews on PDPs.",
+        "effort": "S",
+        "impact": "medium",
+        "kpi": "6 reviews live by day 45"
+      }
+    ],
+    "days60": [
+      {
+        "title": "Publish cornerstone #2: fountain-pen paper tests",
+        "why": "Unlocks the hobbyist segment that evangelizes and judges on paper specs.",
+        "how": "Photo tests (ghosting, bleed, dry time) with 4 nib widths; state paper GSM honestly; link to hobbyist-favorite comparisons.",
+        "effort": "M",
+        "impact": "high",
+        "kpi": "Entrances from pen-related queries (baseline → 300/mo)"
+      },
+      {
+        "title": "Gift experience pass",
+        "why": "Q4 is your multiplier; the purchase path currently ignores gifting entirely.",
+        "how": "Gift landing page (note, date-guaranteed shipping, January exchanges), gift option at checkout, pitch 10 gift guides in September.",
+        "effort": "M",
+        "impact": "high",
+        "kpi": "25% of Q4 orders use gift options"
+      },
+      {
+        "title": "Email flows: welcome + refill reminder",
+        "why": "Owned retention: remind buyers when a refill is due based on purchase date.",
+        "how": "Welcome series (3 emails: story, system, reviews) and a refill reminder 7 weeks after each cover/bundle purchase with a one-click link.",
+        "effort": "S",
+        "impact": "medium",
+        "kpi": "Refill reminder → order conversion ≥ 8%",
+        "dependsOn": "Refill Club v1"
+      }
+    ],
+    "days90": [
+      {
+        "title": "Corporate gifts pilot",
+        "why": "Multiple-unit orders with debossing at premium prices; smooths Q1/Q2.",
+        "how": "One page (MOQ 10, PDF proof, 3-week turnaround), outbound to 30 HR/event agencies in DACH, one pilot order.",
+        "effort": "M",
+        "impact": "medium",
+        "kpi": "1 pilot order of 25+ covers"
+      },
+      {
+        "title": "Quarterly content cadence + 'aging cover' series",
+        "why": "Compound SEO + the most shareable asset you have (one cover, 12 months of photos).",
+        "how": "Batch one shooting day/quarter; publish monthly 'month N' posts; pin everything with keyworded descriptions.",
+        "effort": "M",
+        "impact": "medium",
+        "kpi": "1,000 monthly organic entrances by day 90"
+      },
+      {
+        "title": "Pricing follow-up experiment",
+        "why": "After bundles + anchoring, re-test whether cover price tolerance shifted upward.",
+        "how": "A/B the pocket-cover tier copy (rare-hide story) vs. control for 3 weeks; watch configurator completion, not just CR.",
+        "effort": "S",
+        "impact": "low",
+        "kpi": "Configurator completion rate (±X% documented)"
+      }
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Leather supply and tannery lead times slip, breaking Refill Club promises.",
+      "mitigation": "Hold 2 months of refill + cover stock before marketing the subscription; keep a second tannery qualified."
+    },
+    {
+      "risk": "Q4 gift demand creates a cash-flow squeeze on inventory.",
+      "mitigation": "Cap gift-guarantee shipping dates by real stock; open a small credit line in September, not November."
+    },
+    {
+      "risk": "Subscription churn is higher than the model assumes.",
+      "mitigation": "Instrument pause vs. cancel from day one; win-back at month 2 with a half-price refill box."
+    },
+    {
+      "risk": "A competitor copies the 'refill system' framing quickly.",
+      "mitigation": "Speed on the cornerstones + influencer paper tests; make 'system thinking' your brand's home turf before others notice."
+    },
+    {
+      "risk": "Google volatility hits the two cornerstone posts.",
+      "mitigation": "Diversify with the email list (welcome flow) and Pinterest; revisit posts quarterly with refreshed photos."
+    }
+  ],
+  "assumptions": [
+    "Site content and prices as crawled on the fixture date; the fictional 'fernwayjournals.example.com' mirrors a typical small DTC stationery shop.",
+    "Market size is estimated from public summaries of premium stationery research [S1][S2]; the refillable segment is not separately reported.",
+    "Competitor pricing taken from their public sites at fixture time; treat as directional.",
+    "Buyer percentages (gift share, refill frequency) are industry-typical estimates, not measured from this shop.",
+    "This sample is a hand-built fixture for illustration — production reports are generated live with cited sources."
+  ],
+  "sources": [
+    {
+      "id": "S1",
+      "url": "https://www.example-market-research.com/premium-stationery-report",
+      "title": "Global Premium Stationery Market Summary (excerpt)",
+      "retrievedAt": "2026-09-20T09:41:00.000Z"
+    },
+    {
+      "id": "S2",
+      "url": "https://www.example-market-research.com/eu-stationery-gifting",
+      "title": "EU Stationery & Gifting Trends (excerpt)",
+      "retrievedAt": "2026-09-20T09:44:00.000Z"
+    },
+    {
+      "id": "S3",
+      "url": "https://www.example-wellness-study.org/analog-wellbeing",
+      "title": "Analog Wellbeing Rituals Study — summary page",
+      "retrievedAt": "2026-09-20T09:47:00.000Z"
+    },
+    {
+      "id": "S4",
+      "url": "https://www.example-sustainability-survey.org/consumer-criteria",
+      "title": "Consumer sustainability criteria survey (summary)",
+      "retrievedAt": "2026-09-20T09:52:00.000Z"
+    },
+    {
+      "id": "S5",
+      "url": "https://www.example-dtc-analysis.com/subscription-consumables",
+      "title": "DTC subscription consumables benchmarks (summary)",
+      "retrievedAt": "2026-09-20T09:55:00.000Z"
+    },
+    {
+      "id": "S6",
+      "url": "https://www.moleskine.com/en_EU/about-us",
+      "title": "Moleskine — About / brand story",
+      "retrievedAt": "2026-09-20T10:01:00.000Z"
+    },
+    {
+      "id": "S7",
+      "url": "https://www.example-seo-tool.com/moz-domain-authority-demo",
+      "title": "Search visibility snapshot — moleskine.com (illustrative)",
+      "retrievedAt": "2026-09-20T10:03:00.000Z"
+    },
+    {
+      "id": "S8",
+      "url": "https://www.example-pen-community.org/notebook-durability-thread",
+      "title": "Community thread: glued spines & paper quality in premium notebooks",
+      "retrievedAt": "2026-09-20T10:06:00.000Z"
+    },
+    {
+      "id": "S9",
+      "url": "https://www.example-stationery-review.com/baron-fig-review",
+      "title": "Baron Fig review — curation and community",
+      "retrievedAt": "2026-09-20T10:09:00.000Z"
+    },
+    {
+      "id": "S10",
+      "url": "https://www.example-shipping-forum.com/eu-delivery-times",
+      "title": "Forum thread: US→EU delivery times for DTC stationery",
+      "retrievedAt": "2026-09-20T10:12:00.000Z"
+    }
+  ]
+};

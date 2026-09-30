@@ -1,0 +1,16 @@
+{
+  "email": "qa.bench.enhanced.1790472476@mailinator.com",
+  "user_id": "db083c4c-6bd1-478f-93f0-6c11eab2ff7c",
+  "sites": [
+    "https://get.marketwiselabs.workers.dev",
+    "https://trisle-app.github.io/Trisle_Website/",
+    "https://linear.app",
+    "https://get.marketwiselabs.workers.dev"
+  ],
+  "done": [
+    true,
+    true,
+    true,
+    true
+  ]
+}

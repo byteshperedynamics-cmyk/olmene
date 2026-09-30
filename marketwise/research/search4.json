@@ -1,0 +1,65 @@
+[
+  {
+    "url": "https://www.rettercorp.com",
+    "name": "NOVA_Project — Exploit/PoC",
+    "snippet": "(cloud, censored) Cloudflare Workers AI — free 10,000 Neurons /day tier . Models : @cf/qwen/qwen3.8-27b (27B, vision+reasoning), @cf/meta/ llama -3.1-8b-instruct ...",
+    "host_name": "www.rettercorp.com",
+    "rank": 0,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://github.com",
+    "name": "OmniRoute — The Free AI Gateway",
+    "snippet": "OmniRoute is an AI gateway for multi-provider LLMs: Smart routing to FREE & low-cost AI models . Cloudflare Workers AI (10K Neurons /day, 50+ models ). Free 10, ...",
+    "host_name": "github.com",
+    "rank": 1,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.flaex.ai",
+    "name": "Top 10 Free LLM API Providers for 2026",
+    "snippet": "Jun 8, 2026 — Cloudflare Workers AI Edge inference, 10,000 Neurons/day free , integrates with KV/Queues. Global edge execution + native Cloudflare ...",
+    "host_name": "www.flaex.ai",
+    "rank": 2,
+    "date": "Jun 8, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "http://www.simpleappshipper.com",
+    "name": "Workers AI: Free Inference at the Edge - Cloudflare Feature Focus",
+    "snippet": "Workers AI runs open-source models — Llama , Flux, Whisper, Stable Diffusion — directly from your Cloudflare Worker, with no external API key.",
+    "host_name": "www.simpleappshipper.com",
+    "rank": 3,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.linkedin.com",
+    "name": "LLM Routing: Prioritizing Controllability Over Capability",
+    "snippet": "The most practical shift I'm seeing in production LLM stacks right now isn't “we found the one best model .” It's: we built a routing layer.",
+    "host_name": "www.linkedin.com",
+    "rank": 4,
+    "date": "",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.instagram.com",
+    "name": "Free Ai Api Keys 2026",
+    "snippet": "Mar 5, 2026 — Cloudflare Workers AI act as gateways to multiple free models under one key, ideal for testing without billing",
+    "host_name": "www.instagram.com",
+    "rank": 5,
+    "date": "Mar 5, 2026",
+    "favicon": ""
+  },
+  {
+    "url": "https://www.facebook.com",
+    "name": "This week's tech and media news update",
+    "snippet": "The tech world is heating up this week — from new AI apps and the race for computing power, to YouTube's latest updates and Google's budget- ...",
+    "host_name": "www.facebook.com",
+    "rank": 6,
+    "date": "",
+    "favicon": ""
+  }
+]

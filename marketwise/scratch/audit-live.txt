@@ -1,0 +1,26 @@
+PASS 320x700 /
+PASS 320x700 /pricing/
+PASS 320x700 /sample-report/
+PASS 320x700 /login/
+PASS 320x700 /legal/privacy/
+PASS 320x700 /legal/terms/
+PASS 390x844 /
+PASS 390x844 /pricing/
+PASS 390x844 /sample-report/
+PASS 390x844 /login/
+PASS 390x844 /legal/privacy/
+PASS 390x844 /legal/terms/
+PASS 768x900 /
+PASS 768x900 /pricing/
+PASS 768x900 /sample-report/
+PASS 768x900 /login/
+PASS 768x900 /legal/privacy/
+PASS 768x900 /legal/terms/
+PASS 1440x900 /
+PASS 1440x900 /pricing/
+PASS 1440x900 /sample-report/
+PASS 1440x900 /login/
+PASS 1440x900 /legal/privacy/
+PASS 1440x900 /legal/terms/
+polish: {"skipLinkPresent":true,"skipVisibleOnFocus":true,"smoothScroll":"smooth","anchoredSectionsOffset":true,"mainContentId":true}
+TOTAL FAILURES: 0
