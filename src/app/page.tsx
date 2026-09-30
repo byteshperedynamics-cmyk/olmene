@@ -27,6 +27,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { BrandMark } from "@/components/brand-mark";
+import { CHECK_COUNT } from "@/lib/config";
 import { FreeAuditForm } from "@/components/free-audit-form";
 import { PricingTeaser } from "@/components/pricing-cards";
 import { DemoVideo } from "@/components/demo-video";
@@ -41,7 +42,10 @@ const TEARDOWN_BEFORE = {
   checksA: 13,
   checksB: 18,
 };
-const TEARDOWN_AFTER = { readiness: 98, checksA: 21, checksB: 21 }; // re-measured 2026-10-01 after the free audit synced to the 21-check pipeline (the teardown copy itself lifted conversion 90→94)
+const TEARDOWN_AFTER = { readiness: 98, checksA: CHECK_COUNT, checksB: CHECK_COUNT }; // re-measured 2026-10-01 after the free audit synced to the 21-check pipeline (the teardown copy itself lifted conversion 90→94)
+
+// Demo video: footage predates the Olmene rebrand — hidden until re-recorded.
+const SHOW_DEMO = false;
 
 // Proof strip — real, all-time numbers from the production database
 // (free_audits / reports row counts; 18 = the deterministic checklist the
@@ -50,7 +54,7 @@ const TEARDOWN_AFTER = { readiness: 98, checksA: 21, checksB: 21 }; // re-measur
 const STATS = [
   { value: "73", label: "stats.audits" },
   { value: "198", label: "stats.sources" },
-  { value: "21", label: "stats.checks" },
+  { value: String(CHECK_COUNT), label: "stats.checks" },
   { value: "15", label: "stats.languages" },
 ] as const;
 
@@ -145,7 +149,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Watch it work: real product demo video ── */}
+        {/* ── Watch it work: real product demo video ──
+            Hidden until re-recorded: the footage still shows the pre-rebrand
+            product. Flip SHOW_DEMO after the new capture lands. */}
+        {SHOW_DEMO && (
         <section id="demo" className="scroll-mt-20 py-16 md:py-20">
           <div className="mx-auto w-full max-w-4xl px-4 sm:px-6">
             <Reveal className="text-center">
@@ -163,6 +170,7 @@ export default function HomePage() {
             </Reveal>
           </div>
         </section>
+        )}
 
         {/* ── The fine print, up front: can / cannot ── */}
         <section id="can-cannot" className="scroll-mt-20 py-16 md:py-20">
@@ -248,7 +256,7 @@ export default function HomePage() {
                       <c.icon className="size-4.5" aria-hidden />
                     </span>
                     <h3 className="mt-3 font-semibold">{t(c.title)}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t(c.body)}</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t(c.body, { n: CHECK_COUNT })}</p>
                   </div>
                 </Reveal>
               ))}
@@ -276,7 +284,7 @@ export default function HomePage() {
                 {["firstmin.li1", "firstmin.li2", "firstmin.li3", "firstmin.li4"].map((k) => (
                   <li key={k} className="flex items-start gap-2.5">
                     <ArrowUpRight className="mt-0.5 size-4 shrink-0 text-primary rtl-flip" aria-hidden />
-                    <span>{t(k)}</span>
+                    <span>{t(k, { n: CHECK_COUNT })}</span>
                   </li>
                 ))}
               </ul>
@@ -289,7 +297,7 @@ export default function HomePage() {
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("exdiag.title")}</p>
                 <div className="flex items-center gap-2">
                   <span className="rounded-full bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
-                    {t("form.checksPassed", { a: 13, b: 18 })}
+                    {t("form.checksPassed", { a: 13, b: CHECK_COUNT })}
                   </span>
                   <span className="rounded-full bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
                     {t("form.highImpact", { n: 3 })}
@@ -353,7 +361,7 @@ export default function HomePage() {
                       <c.icon className="size-4.5" aria-hidden />
                     </span>
                     <h3 className="mt-3 font-semibold">{t(c.title)}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t(c.body)}</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t(c.body, { n: CHECK_COUNT })}</p>
                   </div>
                 </Reveal>
               ))}
@@ -438,7 +446,7 @@ export default function HomePage() {
                   src="/img/teardown-001-diagnosis-768.webp"
                   srcSet="/img/teardown-001-diagnosis-480.webp 480w, /img/teardown-001-diagnosis-768.webp 768w, /img/teardown-001-diagnosis-1064.webp 1064w"
                   sizes="(min-width: 1024px) 532px, (min-width: 640px) 768px, calc(100vw - 32px)"
-                  alt={t("teardown.screenshotAlt")}
+                  alt={t("teardown.screenshotAlt", { n: CHECK_COUNT })}
                   className="w-full"
                   width={768}
                   height={279}
@@ -447,7 +455,7 @@ export default function HomePage() {
                 />
               </div>
               <figcaption className="mt-3 text-center text-xs text-muted-foreground">
-                {t("teardown.figcaption")}
+                {t("teardown.figcaption", { n: CHECK_COUNT })}
               </figcaption>
             </figure>
             </Reveal>

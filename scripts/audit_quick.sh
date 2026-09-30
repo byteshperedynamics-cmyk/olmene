@@ -2,7 +2,7 @@
 # Quick post-deploy regression audit (reduced matrix of audit_text_live.sh):
 # 4 key routes x 2 viewports with identical checks + HTTP checks for all routes.
 set -uo pipefail
-BASE="https://get.marketwiselabs.workers.dev"
+BASE="${BASE:-https://olmene.com}"
 ROUTES=("/" "/pricing/" "/sample-report/" "/login/")
 SIZES=("390 844" "1440 900")
 

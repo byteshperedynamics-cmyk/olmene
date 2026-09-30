@@ -21,3 +21,7 @@ export const ADVANCE_MAX_BACKOFF_MS = 30_000;
 export function fnUrl(name: string, params: URLSearchParams = new URLSearchParams()): string {
   return `${SUPABASE_URL}/functions/v1/${name}${params.toString() ? `?${params}` : ""}`;
 }
+
+// Number of deterministic checks the free audit runs (must match the
+// free-audit edge function's buildChecklist — verified 21 as of 2026-10-01).
+export const CHECK_COUNT = 21;

@@ -11,6 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CHECK_COUNT } from "@/lib/config";
 import { Input } from "@/components/ui/input";
 import { LogoLoader, ShimmerText } from "@/components/logo-loader";
 import { runFreeAudit, type FreeAuditResult, type FreeAuditCheck } from "@/lib/api";
@@ -109,7 +110,7 @@ export function FreeAuditForm({ compact = false }: { compact?: boolean }) {
         {loading && (
           <div className="mt-4 flex items-center gap-3" role="status" aria-live="polite">
             <LogoLoader size={22} glow />
-            <ShimmerText className="text-sm font-medium">{t("form.reading")}</ShimmerText>
+            <ShimmerText className="text-sm font-medium">{t("form.reading", { n: CHECK_COUNT })}</ShimmerText>
           </div>
         )}
       </form>

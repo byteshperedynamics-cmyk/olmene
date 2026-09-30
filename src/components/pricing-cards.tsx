@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Check, Sparkles } from "lucide-react";
 import { getPlans } from "@/lib/data";
+import { CHECK_COUNT } from "@/lib/config";
 import { useSession } from "@/lib/session";
 import { Enter } from "@/components/motion";
 import { useI18n } from "@/i18n/provider";
@@ -62,7 +63,7 @@ export function PlanCards() {
   const starterFeatures = (reports: number) => [
     t("pc.feature.reports", { n: reports }),
     t("pc.feature.research"),
-    t("pc.feature.audit"),
+    t("pc.feature.audit", { n: CHECK_COUNT }),
     t("pc.feature.roadmap"),
     t("pc.feature.export"),
     t("pc.feature.forever"),

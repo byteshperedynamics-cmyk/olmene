@@ -16,7 +16,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const ROOT = "/home/z/my-project/src/i18n";
+const ROOT = path.join(__dirname, "../src/i18n");
 const UI = path.join(ROOT, "dictionaries");
 const SR = path.join(ROOT, "sample-report");
 const LANGS = [
