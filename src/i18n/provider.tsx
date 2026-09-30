@@ -86,7 +86,7 @@ function interpolate(template: string, vars?: Vars): string {
 }
 
 function resolveText(template: string, vars?: Vars): string {
-  return interpolate(pickPlural(template, vars?.n), vars);
+  return interpolate(pickPlural(template, typeof vars?.n === "number" ? vars.n : undefined), vars);
 }
 
 // ── Rich text: [[em]] and {{strong}} markers ─────────────────────────────
@@ -96,7 +96,7 @@ const RICH_RE = /(\[\[[^\]]*\]\]|\{\{[^}]*\}\})/g;
 type RichPart = { t: "text"; v: string } | { t: "em" | "strong"; v: string };
 
 function richParts(template: string, vars?: Vars): RichPart[] {
-  const chosen = pickPlural(template, vars?.n);
+  const chosen = pickPlural(template, typeof vars?.n === "number" ? vars.n : undefined);
   const parts: RichPart[] = [];
   let last = 0;
   RICH_RE.lastIndex = 0;

@@ -12,7 +12,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
  */
 
 const FILES: Record<string, { type: string }> = {
-  "marketwise-demo.mp4": { type: "video/mp4" },
+  "olmene-demo.mp4": { type: "video/mp4" },
 };
 
 function parseRange(header: string | null, total: number): { start: number; end: number } | null {
@@ -37,7 +37,8 @@ async function loadFile(name: string): Promise<ArrayBuffer | null> {
     try {
       const { readFile } = await import("node:fs/promises");
       const { join } = await import("node:path");
-      return await readFile(join(process.cwd(), "public", "video", name));
+      const buf = await readFile(join(process.cwd(), "public", "video", name));
+      return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
     } catch {
       return null;
     }

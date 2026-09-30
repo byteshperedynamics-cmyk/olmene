@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm, type FieldArrayPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
@@ -38,9 +38,9 @@ const formSchema = z.object({
     ),
   productName: z.string().trim().max(120).optional().or(z.literal("")),
   targetMarket: z.string().trim().max(120).optional().or(z.literal("")),
-  knownCompetitors: z.array(z.string().trim().max(2048)).max(5).default([]),
+  knownCompetitors: z.array(z.string().trim().max(2048)).max(5),
   goal: z.enum(["first_customers", "grow_revenue", "improve_conversion", "enter_new_market", "beat_competitor"]),
-  language: z.string().trim().min(2).max(40).default("English"),
+  language: z.string().trim().min(2).max(40),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -61,7 +61,13 @@ export default function NewAnalysisPage() {
       language: "English",
     },
   });
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: "knownCompetitors" });
+  // RHF's eager ArrayPath types exclude strictly-typed primitive arrays
+  // (string[] resolves to never — still true in 7.89). Runtime is unaffected;
+  // the double cast only satisfies the checker. Revisit if RHF fixes path types.
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "knownCompetitors" as unknown as FieldArrayPath<FormValues>,
+  });
   const siteUrl = form.watch("siteUrl");
 
   const onSubmit = async (values: FormValues) => {

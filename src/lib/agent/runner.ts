@@ -249,7 +249,7 @@ async function runPlanning(job: AgentJobRow, ports: RunnerPorts): Promise<void> 
     fixer_id: c.fixerId,
     finding_ref: c.findingRef,
     action_class: "reversible_write",
-    target: { owner, repo, branch: `marketwise/fix-${job.id.slice(0, 8)}-a1` },
+    target: { owner, repo, branch: `olmene/fix-${job.id.slice(0, 8)}-a1` },
     preview: null,
     status: "planned",
     skip_reason: null,
@@ -466,7 +466,7 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   const repoInfo = await client.getRepo();
   const defaultBranch = repoInfo.default_branch || "main";
   const baseBranch = await client.getBranch(defaultBranch);
-  const branchName = `marketwise/fix-${job.id.slice(0, 8)}-a1`;
+  const branchName = `olmene/fix-${job.id.slice(0, 8)}-a1`;
 
   // Final allowlist validation of every action (deterministic, code-only)
   for (const action of approved) {

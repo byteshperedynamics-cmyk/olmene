@@ -11,8 +11,9 @@ export function Logo({ className }: { className?: string }) {
     >
       {/* Brand lockup — elm flower mark + lowercase serif wordmark.
           Inline SVG + live text: crisp at any DPR, themes with the site,
-          no image request. The old 480x96 WebP (which still read
-          "Marketwise") only remains as the JSON-LD/OG asset. */}
+          no image request. The pre-rebrand wordmark raster (which read
+          "Marketwise") was regenerated; the file now carries this brand
+          and remains only as the JSON-LD/OG asset. */}
       <BrandMark size={26} className="text-primary" />
       <span className="font-display text-[1.4rem] font-semibold leading-none tracking-tight">
         olmene

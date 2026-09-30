@@ -48,6 +48,7 @@ export interface Source {
   id: string;
   title: string;
   url: string;
+  retrievedAt?: string;
 }
 
 export interface ReportData {
@@ -91,7 +92,7 @@ export interface ReportData {
   strategy: {
     positioning: { statement: string; differentiators: string[] };
     icp: { persona: string; painPoints: string[]; triggers: string[]; objections?: string[] }[];
-    channels?: { channel: string; priority: number; rationale: string; firstSteps: string[] }[];
+    channels?: { channel: string; priority: number; rationale: string; firstSteps: string[]; effort?: string; expectedImpact?: string }[];
     offerAndPricingIdeas?: string[];
     contentThemes?: string[];
     quickWins?: { title: string; why: string; effort: string; impact: string; kpi: string }[];

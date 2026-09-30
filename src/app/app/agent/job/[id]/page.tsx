@@ -253,7 +253,7 @@ export default function AgentJobPage() {
               approve
             </CardTitle>
             <CardDescription>
-              Each fix is a reversible pull request on a <code className="font-mono text-xs">marketwise/fix-…</code>{" "}
+              Each fix is a reversible pull request on a <code className="font-mono text-xs">olmene/fix-…</code>{" "}
               branch. Your default branch is never pushed.
             </CardDescription>
           </CardHeader>

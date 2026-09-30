@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupabase } from "./supabase";
+import type { ReportData } from "./report-types";
 
 // ── DB-backed data layer (production mode) ──────────────────────────────
 // Mirrors the deployed app: reads analysis_jobs / reports / subscriptions /

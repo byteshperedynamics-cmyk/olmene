@@ -1,5 +1,5 @@
 // free-audit — instant, free, deterministic marketing diagnosis.
-// Crawls the homepage (SSRF-safe), computes the same 18-point SEO checklist
+// Crawls the homepage (SSRF-safe), computes the same 21-point SEO checklist
 // used by full reports, derives a marketing score + top findings, and returns
 // them for the landing-page "free diagnosis" funnel. No LLM cost, no auth.
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
@@ -202,7 +202,8 @@ interface Signals {
   metaDescription: string | null; metaDescriptionLength: number | null;
   h1Count: number; h1Texts: string[]; headingOutline: string[];
   canonical: string | null; lang: string | null; viewport: boolean;
-  openGraph: boolean; twitterCard: boolean; jsonLdTypes: string[];
+  openGraph: boolean; ogImage: boolean; favicon: boolean; https: boolean;
+  twitterCard: boolean; jsonLdTypes: string[];
   imagesWithoutAlt: number; imagesTotal: number; internalLinks: number; externalLinks: number;
   wordCount: number; hasPricingPage: boolean; ctaButtons: string[]; trustSignals: string[];
   robotsMeta: string | null; robotsTxtOk: boolean; sitemapXmlOk: boolean; checklist: Check[];
@@ -248,6 +249,9 @@ function computeSeoSignals(html: string, pageUrl: string, extras: { robotsTxtOk:
   const lang = $("html").attr("lang")?.trim() || null;
   const viewport = !!$('meta[name="viewport"]').attr("content");
   const openGraph = $('meta[property^="og:"]').length >= 2;
+  const ogImage = !!$('meta[property="og:image"]').attr("content");
+  const favicon = !!$('link[rel~="icon"]').attr("href");
+  const https = pageUrl.startsWith("https://");
   const twitterCard = !!$('meta[name^="twitter:"]').attr("content");
   let imagesTotal = 0, imagesWithoutAlt = 0;
   $("img").each((_, el) => {
@@ -287,7 +291,7 @@ function computeSeoSignals(html: string, pageUrl: string, extras: { robotsTxtOk:
     pageUrl, titleText, titleLength, metaDescription,
     metaDescriptionLength: metaDescription ? metaDescription.length : null,
     h1Count: h1s.length, h1Texts: h1s.slice(0, 5), headingOutline,
-    canonical, lang, viewport, openGraph, twitterCard, jsonLdTypes,
+    canonical, lang, viewport, openGraph, ogImage, favicon, https, twitterCard, jsonLdTypes,
     imagesWithoutAlt, imagesTotal, internalLinks, externalLinks, wordCount,
     hasPricingPage, ctaButtons, trustSignals, robotsMeta,
     robotsTxtOk: extras.robotsTxtOk, sitemapXmlOk: extras.sitemapXmlOk,
@@ -311,6 +315,9 @@ function buildChecklist(s: Omit<Signals, "checklist">): Check[] {
   push("Language attribute", s.lang ? "pass" : "warn", s.lang ? `lang="${s.lang}"` : "No lang attribute on <html>");
   push("Mobile viewport", s.viewport ? "pass" : "fail", s.viewport ? "viewport meta present" : "No viewport meta tag");
   push("Open Graph tags", s.openGraph ? "pass" : "warn", s.openGraph ? "og: tags present" : "Few or no og: tags (worse social previews)");
+  push("Social preview image (og:image)", s.ogImage ? "pass" : "warn", s.ogImage ? "og:image present" : "No og:image — link previews render without an image");
+  push("Favicon", s.favicon ? "pass" : "warn", s.favicon ? "icon link present" : "No favicon link found (looks unfinished in browser tabs)");
+  push("HTTPS", s.https ? "pass" : "fail", s.https ? "Page served over HTTPS" : "Page served over plain http — browsers flag it as not secure");
   push("Twitter card", s.twitterCard ? "pass" : "warn", s.twitterCard ? "twitter: meta present" : "No twitter: tags");
   push("Structured data (JSON-LD)", s.jsonLdTypes.length ? "pass" : "warn", s.jsonLdTypes.length ? `@type: ${s.jsonLdTypes.join(", ")}` : "No JSON-LD found");
   push("Image alt coverage", s.imagesTotal === 0 ? "warn" : s.imagesWithoutAlt / s.imagesTotal <= 0.1 ? "pass" : s.imagesWithoutAlt / s.imagesTotal <= 0.5 ? "warn" : "fail",

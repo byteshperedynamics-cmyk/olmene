@@ -39,7 +39,7 @@ export function DemoVideo({ src, poster }: { src: string; poster: string }) {
               narrates the on-screen journey (a11y + Lighthouse). */}
           <track
             kind="captions"
-            src="/video/marketwise-demo-captions.vtt"
+            src="/video/olmene-demo-captions.vtt"
             srcLang="en"
             label="English"
           />

@@ -128,15 +128,15 @@ export function validatePlannedAction(
     return { ok: false, reason: `target repo ${owner}/${repo} outside allowlist ${allow.owner}/${allow.repo}` };
   }
   if (!path) return { ok: false, reason: "missing target path" };
-  if (!path.startsWith("marketwise/") && FORBIDDEN_PATH_PREFIXES.some((p) => path.startsWith(p))) {
+  if (!path.startsWith("olmene/") && FORBIDDEN_PATH_PREFIXES.some((p) => path.startsWith(p))) {
     return { ok: false, reason: `protected path: ${path}` };
   }
   const lower = path.toLowerCase();
   if (!ALLOWED_FILE_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
     return { ok: false, reason: `file extension not allowed for v1 fixers: ${path}` };
   }
-  if (!branch || !branch.startsWith("marketwise/fix-")) {
-    return { ok: false, reason: `branch must be a marketwise/fix- branch, got: ${branch}` };
+  if (!branch || !branch.startsWith("olmene/fix-")) {
+    return { ok: false, reason: `branch must be an olmene/fix- branch, got: ${branch}` };
   }
   if (branch === defaultBranch || branch === `refs/heads/${defaultBranch}`) {
     return { ok: false, reason: `refusing to write to default branch ${defaultBranch}` };

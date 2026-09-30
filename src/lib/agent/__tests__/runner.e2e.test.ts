@@ -261,8 +261,8 @@ describe("agent runner E2E (fake GitHub)", () => {
     expect(gh.prs.length).toBe(1);
     const pr = gh.prs[0];
     expect(pr.base.ref).toBe("main");
-    expect(pr.head.ref).toBe("marketwise/fix-job-0001-a1");
-    expect(gh.createdBranches).toEqual(["marketwise/fix-job-0001-a1"]);
+    expect(pr.head.ref).toBe("olmene/fix-job-0001-a1");
+    expect(gh.createdBranches).toEqual(["olmene/fix-job-0001-a1"]);
     expect(pr.title).toContain("report-proven");
 
     // The commit content composed ALL fixes into the files

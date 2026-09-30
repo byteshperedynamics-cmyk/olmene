@@ -75,7 +75,7 @@ describe("plan-level validation", () => {
         {
           fixer_id: "meta-description",
           action_class: "reversible_write",
-          target: { owner: "octocat", repo: "site", path: "index.html", branch: "marketwise/fix-ab12cd34-a1" },
+          target: { owner: "octocat", repo: "site", path: "index.html", branch: "olmene/fix-ab12cd34-a1" },
         },
         allow,
         fixers,
@@ -90,7 +90,7 @@ describe("plan-level validation", () => {
         {
           fixer_id: "rm-rf-everything",
           action_class: "reversible_write",
-          target: { owner: "octocat", repo: "site", path: "index.html", branch: "marketwise/fix-x-a1" },
+          target: { owner: "octocat", repo: "site", path: "index.html", branch: "olmene/fix-x-a1" },
         },
         allow,
         fixers,
@@ -105,7 +105,7 @@ describe("plan-level validation", () => {
         {
           fixer_id: "meta-description",
           action_class: "destructive",
-          target: { owner: "octocat", repo: "site", path: "index.html", branch: "marketwise/fix-x-a1" },
+          target: { owner: "octocat", repo: "site", path: "index.html", branch: "olmene/fix-x-a1" },
         },
         allow,
         fixers,
@@ -129,7 +129,7 @@ describe("plan-level validation", () => {
     ).toBe(false);
   });
 
-  test("non-marketwise branches are refused", () => {
+  test("non-olmene branches are refused", () => {
     expect(
       validatePlannedAction(
         {
@@ -150,7 +150,7 @@ describe("plan-level validation", () => {
         {
           fixer_id: "meta-description",
           action_class: "reversible_write",
-          target: { owner: "victim", repo: "repo", path: "index.html", branch: "marketwise/fix-x-a1" },
+          target: { owner: "victim", repo: "repo", path: "index.html", branch: "olmene/fix-x-a1" },
         },
         allow,
         fixers,
@@ -173,7 +173,7 @@ describe("plan-level validation", () => {
           {
             fixer_id: "sitemap-robots",
             action_class: "reversible_write",
-            target: { owner: "octocat", repo: "site", path, branch: "marketwise/fix-x-a1" },
+            target: { owner: "octocat", repo: "site", path, branch: "olmene/fix-x-a1" },
           },
           allow,
           fixers,
@@ -188,7 +188,7 @@ describe("plan-level validation", () => {
           {
             fixer_id: "sitemap-robots",
             action_class: "reversible_write",
-            target: { owner: "octocat", repo: "site", path, branch: "marketwise/fix-x-a1" },
+            target: { owner: "octocat", repo: "site", path, branch: "olmene/fix-x-a1" },
           },
           allow,
           fixers,
@@ -204,7 +204,7 @@ describe("plan-level validation", () => {
         {
           fixer_id: "meta-description",
           action_class: "reversible_write",
-          target: { owner: "octocat", repo: "site", path: "../etc/passwd", branch: "marketwise/fix-x-a1" },
+          target: { owner: "octocat", repo: "site", path: "../etc/passwd", branch: "olmene/fix-x-a1" },
         },
         allow,
         fixers,

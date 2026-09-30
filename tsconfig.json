@@ -38,16 +38,8 @@
   ],
   "exclude": [
     "node_modules",
-    "fnsrc",
-    "scratch",
-    "lighthouse",
+    "archive",
     "scripts",
-    "examples",
-    "tests",
-    "download",
-    "artifacts",
-    "shots",
-    "skills",
     "src/lib/agent/__tests__"
   ]
 }

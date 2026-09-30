@@ -41,7 +41,7 @@ const TEARDOWN_BEFORE = {
   checksA: 13,
   checksB: 18,
 };
-const TEARDOWN_AFTER = { readiness: 98, checksA: 18, checksB: 18 }; // measured 2026-09-25 after deploy (the teardown copy itself lifted conversion 90→94)
+const TEARDOWN_AFTER = { readiness: 98, checksA: 21, checksB: 21 }; // re-measured 2026-10-01 after the free audit synced to the 21-check pipeline (the teardown copy itself lifted conversion 90→94)
 
 // Proof strip — real, all-time numbers from the production database
 // (free_audits / reports row counts; 18 = the deterministic checklist the
@@ -50,7 +50,7 @@ const TEARDOWN_AFTER = { readiness: 98, checksA: 18, checksB: 18 }; // measured 
 const STATS = [
   { value: "73", label: "stats.audits" },
   { value: "198", label: "stats.sources" },
-  { value: "18", label: "stats.checks" },
+  { value: "21", label: "stats.checks" },
   { value: "15", label: "stats.languages" },
 ] as const;
 
@@ -157,8 +157,8 @@ export default function HomePage() {
             </Reveal>
             <Reveal className="mt-8" delay={0.1}>
               <DemoVideo
-                src="/video/marketwise-demo.mp4"
-                poster="/video/marketwise-demo-poster-dark-960.webp"
+                src="/video/olmene-demo.mp4"
+                poster="/video/olmene-demo-poster-dark-960.webp"
               />
             </Reveal>
           </div>
@@ -441,7 +441,7 @@ export default function HomePage() {
                   alt={t("teardown.screenshotAlt")}
                   className="w-full"
                   width={768}
-                  height={381}
+                  height={279}
                   loading="lazy"
                   decoding="async"
                 />

@@ -68,7 +68,7 @@ function LoginForm() {
       setAuthError(code);
       // Clean the URL so the message doesn't reappear on refresh.
       const clean = window.location.pathname;
-      window.history.replaceState(window.location.state, "", clean);
+      window.history.replaceState(window.history.state, "", clean);
     }
   }, [params]);
 

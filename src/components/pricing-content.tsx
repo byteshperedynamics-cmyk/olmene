@@ -28,7 +28,9 @@ export function PricingContent() {
             className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,var(--accent),transparent)]"
             aria-hidden
           />
-          <div className="mx-auto w-full max-w-5xl px-4 pb-14 pt-16 text-center sm:px-6 md:pt-20">
+          {/* Mobile-first spacing: the tall desktop paddings read as dead space
+              on a narrow viewport, so they scale up only from md. */}
+          <div className="mx-auto w-full max-w-5xl px-4 pb-8 pt-10 text-center sm:px-6 md:pb-14 md:pt-20">
             <h1 className="font-display text-4xl font-bold tracking-tight text-balance">{t("nav.pricing")}</h1>
             <p className="mx-auto mt-4 max-w-2xl leading-relaxed text-muted-foreground">{t("pricing.body")}</p>
           </div>
