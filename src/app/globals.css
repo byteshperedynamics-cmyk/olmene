@@ -181,7 +181,7 @@
 
 /* ─────────────────────────────────────────────────────────────────────────
    Olmene design system — "Warm craft" (Claude-inspired)
-   Oat surfaces, terracotta accent, soft serif display, calm hierarchy.
+   Oat surfaces, deep elm-green accent, soft serif display, calm hierarchy.
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
@@ -195,10 +195,11 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.245 0.005 90);
 
-  /* Accent — Claude terracotta, deepened for WCAG AA: as text on oat 5.3:1,
-     with white text 5.6:1 (was #D97757 — 2.7:1). Dark mode keeps the lighter
-     terracotta for text/borders; buttons switch to ink-on-terracotta. */
-  --primary: oklch(0.53 0.125 45);           /* #A55026 rust terracotta */
+  /* Accent — deep elm green (olm, the elm tree the name comes from),
+     WCAG AA with margin: as text on oat 7.1:1, white text on it 7.4:1.
+     Dark mode keeps the lighter leaf green for text/borders; buttons
+     switch to ink-on-leaf (6.9:1). */
+  --primary: oklch(0.44 0.09 152);           /* #256039 deep elm */
   --primary-foreground: oklch(0.995 0.002 106);
 
   /* Secondary surfaces — oat-200 */
@@ -207,16 +208,16 @@
   --muted: oklch(0.943 0.006 100);
   --muted-foreground: oklch(0.516 0.006 90); /* #6E6D6A warm gray */
 
-  /* Hover tint — soft clay */
-  --accent: oklch(0.938 0.014 78);
-  --accent-foreground: oklch(0.40 0.07 50);
+  /* Hover tint — soft sage wash */
+  --accent: oklch(0.93 0.025 150);           /* #DDEDDF */
+  --accent-foreground: oklch(0.40 0.07 152);
 
   --destructive: oklch(0.577 0.199 25);
   --border: oklch(0.913 0.009 95);           /* #E6E3DA */
   --input: oklch(0.913 0.009 95);
-  --ring: oklch(0.53 0.125 45);
+  --ring: oklch(0.44 0.09 152);
 
-  --chart-1: oklch(0.53 0.125 45);          /* terracotta */
+  --chart-1: oklch(0.44 0.09 152);          /* elm */
   --chart-2: oklch(0.68 0.115 75);           /* ochre */
   --chart-3: oklch(0.55 0.095 150);          /* sage */
   --chart-4: oklch(0.45 0.02 90);            /* warm charcoal */
@@ -224,19 +225,21 @@
 
   --sidebar: oklch(0.943 0.006 100);
   --sidebar-foreground: oklch(0.245 0.005 90);
-  --sidebar-primary: oklch(0.53 0.125 45);
+  --sidebar-primary: oklch(0.44 0.09 152);
   --sidebar-primary-foreground: oklch(0.995 0.002 106);
   --sidebar-accent: oklch(0.913 0.012 90);
-  --sidebar-accent-foreground: oklch(0.30 0.05 50);
+  --sidebar-accent-foreground: oklch(0.30 0.06 152);
   --sidebar-border: oklch(0.913 0.009 95);
-  --sidebar-ring: oklch(0.699 0.127 45);
+  --sidebar-ring: oklch(0.74 0.13 150);
 
   /* Score semantics — warm family: sage / ochre / terracotta-red.
      Light-mode good/mid darkened to clear WCAG AA as text (4.8-5.3:1 on oat). */
   --score-good: oklch(0.52 0.09 150);
   --score-mid: oklch(0.53 0.1 75);
   --score-bad: oklch(0.56 0.16 30);
-  --fg-clay: oklch(0.50 0.12 45);
+  /* Severity-only rust — deliberately NOT the green brand accent, so a
+     "high severity" badge never reads as "pass". */
+  --fg-rust: oklch(0.50 0.12 45);
 }
 
 .dark {
@@ -247,9 +250,9 @@
   --popover: oklch(0.335 0.004 100);
   --popover-foreground: oklch(0.972 0.004 106);
 
-  --primary: oklch(0.699 0.127 45);
-  /* Ink-on-terracotta in dark mode: white on #D97757 is 3.1:1 — fails AA.
-     Warm near-black text on the terracotta button passes at 5.2:1. */
+  --primary: oklch(0.74 0.13 150);           /* #69C27E fresh leaf */
+  /* Ink-on-leaf in dark mode: white on the leaf green is only ~2.4:1 —
+     fails AA. Warm near-black text on the leaf button passes at 6.9:1. */
   --primary-foreground: oklch(0.245 0.005 90);
 
   --secondary: oklch(0.36 0.003 100);        /* #343432 */
@@ -257,15 +260,15 @@
   --muted: oklch(0.36 0.003 100);
   --muted-foreground: oklch(0.72 0.005 95);  /* #A3A29C */
 
-  --accent: oklch(0.40 0.04 55);
-  --accent-foreground: oklch(0.90 0.06 55);
+  --accent: oklch(0.38 0.05 150);
+  --accent-foreground: oklch(0.85 0.08 150);
 
   --destructive: oklch(0.704 0.191 22);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.699 0.127 45);
+  --ring: oklch(0.74 0.13 150);
 
-  --chart-1: oklch(0.699 0.127 45);
+  --chart-1: oklch(0.74 0.13 150);
   --chart-2: oklch(0.82 0.10 80);
   --chart-3: oklch(0.76 0.10 148);
   --chart-4: oklch(0.62 0.01 90);
@@ -273,17 +276,17 @@
 
   --sidebar: oklch(0.25 0.003 95);           /* #1F1E1D */
   --sidebar-foreground: oklch(0.972 0.004 106);
-  --sidebar-primary: oklch(0.699 0.127 45);
+  --sidebar-primary: oklch(0.74 0.13 150);
   --sidebar-primary-foreground: oklch(0.245 0.005 90);
-  --sidebar-accent: oklch(0.40 0.04 55);
-  --sidebar-accent-foreground: oklch(0.90 0.06 55);
+  --sidebar-accent: oklch(0.38 0.05 150);
+  --sidebar-accent-foreground: oklch(0.85 0.08 150);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.699 0.127 45);
+  --sidebar-ring: oklch(0.74 0.13 150);
 
   --score-good: oklch(0.76 0.10 148);
   --score-mid: oklch(0.82 0.10 80);
   --score-bad: oklch(0.72 0.15 30);
-  --fg-clay: oklch(0.85 0.10 45);
+  --fg-rust: oklch(0.85 0.10 45);
 }
 
 @layer base {
@@ -481,8 +484,8 @@
     color: var(--score-bad);
   }
   .sev-high {
-    background: color-mix(in oklab, var(--primary) 13%, var(--card));
-    color: var(--fg-clay);
+    background: color-mix(in oklab, oklch(0.50 0.12 45) 13%, var(--card));
+    color: var(--fg-rust);
   }
   .sev-medium {
     background: color-mix(in oklab, var(--score-mid) 15%, var(--card));
@@ -512,7 +515,7 @@
   }
   .status-running {
     background: color-mix(in oklab, var(--primary) 13%, var(--card));
-    color: var(--fg-clay);
+    color: var(--accent-foreground);
   }
   .status-completed {
     background: var(--score-good);

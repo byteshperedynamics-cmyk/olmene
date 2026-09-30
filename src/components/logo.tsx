@@ -1,24 +1,22 @@
 import Link from "next/link";
 import { APP_NAME } from "@/lib/config";
+import { BrandMark } from "@/components/brand-mark";
 
 export function Logo({ className }: { className?: string }) {
   return (
     <Link
       href="/"
-      className={`flex items-center gap-2 ${className ?? ""}`}
+      className={`flex items-center gap-2 text-foreground ${className ?? ""}`}
       aria-label={`${APP_NAME} home`}
     >
-      {/* Full brand lockup — flower mark + Olmene wordmark.
-          Black on light; inverted to warm cream in dark mode.
-          480x96 WebP (9KB) serves the h-8 display up to 3x DPR — the old
-          1280x257 PNG was 68KB for the same 159x32 box. */}
-      <img
-        src="/img/logo-full-480.webp"
-        alt={APP_NAME}
-        width={480}
-        height={96}
-        className="h-8 w-auto dark:invert"
-      />
+      {/* Brand lockup — elm flower mark + lowercase serif wordmark.
+          Inline SVG + live text: crisp at any DPR, themes with the site,
+          no image request. The old 480x96 WebP (which still read
+          "Marketwise") only remains as the JSON-LD/OG asset. */}
+      <BrandMark size={26} className="text-primary" />
+      <span className="font-display text-[1.4rem] font-semibold leading-none tracking-tight">
+        olmene
+      </span>
     </Link>
   );
 }

@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { BrandMark } from "@/components/brand-mark";
 import { FreeAuditForm } from "@/components/free-audit-form";
 import { PricingTeaser } from "@/components/pricing-cards";
 import { DemoVideo } from "@/components/demo-video";
@@ -41,6 +42,17 @@ const TEARDOWN_BEFORE = {
   checksB: 18,
 };
 const TEARDOWN_AFTER = { readiness: 98, checksA: 18, checksB: 18 }; // measured 2026-09-25 after deploy (the teardown copy itself lifted conversion 90→94)
+
+// Proof strip — real, all-time numbers from the production database
+// (free_audits / reports row counts; 18 = the deterministic checklist the
+// free audit actually runs today, verified live 2026-10-01; 15 languages).
+// Refresh periodically (or wire to the DB) as usage grows; never inflate.
+const STATS = [
+  { value: "73", label: "stats.audits" },
+  { value: "198", label: "stats.sources" },
+  { value: "18", label: "stats.checks" },
+  { value: "15", label: "stats.languages" },
+] as const;
 
 export default function HomePage() {
   const { t } = useI18n();
@@ -118,6 +130,18 @@ export default function HomePage() {
             <div className="hero-in" style={{ animationDelay: "0.35s" }}>
               <PricingTeaser />
             </div>
+          </div>
+        </section>
+
+        {/* ── Proof strip: the instrument, in real numbers ── */}
+        <section aria-label={t("stats.label")} className="border-y border-border/60 bg-secondary/30">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-y-8 px-4 py-10 sm:px-6 md:grid-cols-4 md:py-12">
+            {STATS.map((s) => (
+              <div key={s.label} className="text-center">
+                <p className="font-display text-4xl font-bold text-primary tabular-nums md:text-5xl">{s.value}</p>
+                <p className="mx-auto mt-2 max-w-[16ch] text-sm leading-snug text-muted-foreground">{t(s.label)}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -522,7 +546,7 @@ export default function HomePage() {
             <Reveal delay={0.12}>
               <div className="overflow-hidden rounded-xl border bg-card shadow-lg">
               <div className="flex items-center gap-2 border-b bg-secondary/40 px-4 py-2.5">
-                <img src="/img/logo-mark-42.webp" alt="Olmene" width={42} height={42} className="size-3.5" aria-hidden />
+                <BrandMark size={14} className="text-primary" />
                 <span className="font-mono text-xs text-muted-foreground">{t("rt.previewLabel")}</span>
               </div>
               <div className="space-y-4 p-6">
