@@ -1,0 +1,13 @@
+{
+  "name": "olmene-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "olmene.com worker - placeholder until first repository build deploys",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
