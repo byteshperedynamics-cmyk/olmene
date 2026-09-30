@@ -1,0 +1,757 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-code), ui-monospace, monospace;
+  --font-display: var(--font-serif-display), Georgia, "Times New Roman", serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Brand motion — the flower mark breathes the way Claude's asterisk does */
+  --animate-logo-breathe: logo-breathe 1.8s ease-in-out infinite;
+  --animate-logo-glow: logo-glow 1.8s ease-in-out infinite;
+  --animate-text-shimmer: text-shimmer 2.4s linear infinite;
+  --animate-flower-drift: flower-drift 30s linear infinite;
+
+  /* Premium motion vocabulary */
+  --animate-progress-sheen: progress-sheen 1.8s ease-in-out infinite;
+  --animate-soft-pulse: soft-pulse 2.2s ease-in-out infinite;
+  --animate-hero-fade-up: hero-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Brand motion keyframes ────────────────────────────────────────────
+   Calm breathing pulse for the Olmene flower, a soft warm glow that
+   swells with it, and the gentle highlight sweep on status text —
+   the same quiet, patient feeling as Claude's thinking state.
+   ────────────────────────────────────────────────────────────────────── */
+@keyframes logo-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+@keyframes logo-glow {
+  0%, 100% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 0.95; transform: scale(1.12); }
+}
+@keyframes text-shimmer {
+  0% { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+/* The living mark: each petal fans open and eases shut, phase-staggered so
+   the flower continuously changes form — a bloom, not a spin. */
+@keyframes petal-bloom {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(12deg) scale(0.83); }
+}
+@keyframes flower-drift {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.flower-petal {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: petal-bloom 3.2s ease-in-out infinite;
+}
+
+/* Premium motion keyframes — quiet, physical, never attention-grabbing */
+@keyframes progress-sheen {
+  0% { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(320%); }
+}
+@keyframes soft-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+@keyframes hero-fade-up {
+  /* Translate-only on purpose: the hero text is the LCP element, so it must
+     paint fully opaque immediately — a fade-from-0 defers LCP by the
+     animation duration (measured +3.7s element render delay). The 14px rise
+     keeps the entrance; the stagger still reads via the inline delays. */
+  from { transform: translateY(14px); }
+  to { transform: translateY(0); }
+}
+
+/* Mount fade-up for client-rendered content (e.g. the free-diagnosis result
+   card). Not for above-the-fold SSR text — see hero-fade-up note above. */
+@keyframes fade-up-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Checkout success — one-shot celebration ──────────────────────────
+   Stroke-drawn check ring + a warm bloom behind it. The confetti itself
+   is a canvas (confetti.tsx). All one-shot: nothing loops forever.
+   ───────────────────────────────────────────────────────────────────── */
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes glow-bloom {
+  0% { opacity: 0; transform: scale(0.55); }
+  55% { opacity: 0.9; transform: scale(1.1); }
+  100% { opacity: 0.5; transform: scale(1.3); }
+}
+.check-ring {
+  stroke-dasharray: 264;
+  stroke-dashoffset: 264;
+  animation: check-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.1s forwards;
+}
+.check-mark {
+  stroke-dasharray: 64;
+  stroke-dashoffset: 64;
+  animation: check-draw 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.6s forwards;
+}
+.check-glow {
+  opacity: 0;
+  background: radial-gradient(circle, color-mix(in oklab, var(--primary) 30%, transparent), transparent 68%);
+  animation: glow-bloom 0.9s ease-out 0.15s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check-ring,
+  .check-mark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .check-glow {
+    animation: none;
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-logo-breathe,
+  .animate-logo-glow {
+    animation: none;
+  }
+  .flower-petal,
+  .animate-flower-drift {
+    animation: none;
+  }
+  .animate-text-shimmer {
+    animation: none;
+    background-image: none;
+    background-clip: initial;
+    -webkit-background-clip: initial;
+    color: inherit;
+    -webkit-text-fill-color: inherit;
+  }
+  .animate-progress-sheen,
+  .animate-soft-pulse,
+  .hero-in {
+    animation: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Olmene design system — "Warm craft" (Claude-inspired)
+   Oat surfaces, terracotta accent, soft serif display, calm hierarchy.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --radius: 0.75rem;
+
+  /* Surfaces — warm oat, never sterile white */
+  --background: oklch(0.984 0.003 106);      /* #FAF9F5 oat */
+  --foreground: oklch(0.245 0.005 90);       /* warm ink */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.245 0.005 90);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.245 0.005 90);
+
+  /* Accent — Claude terracotta, deepened for WCAG AA: as text on oat 5.3:1,
+     with white text 5.6:1 (was #D97757 — 2.7:1). Dark mode keeps the lighter
+     terracotta for text/borders; buttons switch to ink-on-terracotta. */
+  --primary: oklch(0.53 0.125 45);           /* #A55026 rust terracotta */
+  --primary-foreground: oklch(0.995 0.002 106);
+
+  /* Secondary surfaces — oat-200 */
+  --secondary: oklch(0.943 0.006 100);       /* #F0EEE6 */
+  --secondary-foreground: oklch(0.30 0.005 90);
+  --muted: oklch(0.943 0.006 100);
+  --muted-foreground: oklch(0.516 0.006 90); /* #6E6D6A warm gray */
+
+  /* Hover tint — soft clay */
+  --accent: oklch(0.938 0.014 78);
+  --accent-foreground: oklch(0.40 0.07 50);
+
+  --destructive: oklch(0.577 0.199 25);
+  --border: oklch(0.913 0.009 95);           /* #E6E3DA */
+  --input: oklch(0.913 0.009 95);
+  --ring: oklch(0.53 0.125 45);
+
+  --chart-1: oklch(0.53 0.125 45);          /* terracotta */
+  --chart-2: oklch(0.68 0.115 75);           /* ochre */
+  --chart-3: oklch(0.55 0.095 150);          /* sage */
+  --chart-4: oklch(0.45 0.02 90);            /* warm charcoal */
+  --chart-5: oklch(0.80 0.06 95);            /* straw */
+
+  --sidebar: oklch(0.943 0.006 100);
+  --sidebar-foreground: oklch(0.245 0.005 90);
+  --sidebar-primary: oklch(0.53 0.125 45);
+  --sidebar-primary-foreground: oklch(0.995 0.002 106);
+  --sidebar-accent: oklch(0.913 0.012 90);
+  --sidebar-accent-foreground: oklch(0.30 0.05 50);
+  --sidebar-border: oklch(0.913 0.009 95);
+  --sidebar-ring: oklch(0.699 0.127 45);
+
+  /* Score semantics — warm family: sage / ochre / terracotta-red.
+     Light-mode good/mid darkened to clear WCAG AA as text (4.8-5.3:1 on oat). */
+  --score-good: oklch(0.52 0.09 150);
+  --score-mid: oklch(0.53 0.1 75);
+  --score-bad: oklch(0.56 0.16 30);
+  --fg-clay: oklch(0.50 0.12 45);
+}
+
+.dark {
+  --background: oklch(0.28 0.003 106);       /* #262624 warm dark */
+  --foreground: oklch(0.972 0.004 106);      /* #F5F4EF */
+  --card: oklch(0.335 0.004 100);            /* #30302E */
+  --card-foreground: oklch(0.972 0.004 106);
+  --popover: oklch(0.335 0.004 100);
+  --popover-foreground: oklch(0.972 0.004 106);
+
+  --primary: oklch(0.699 0.127 45);
+  /* Ink-on-terracotta in dark mode: white on #D97757 is 3.1:1 — fails AA.
+     Warm near-black text on the terracotta button passes at 5.2:1. */
+  --primary-foreground: oklch(0.245 0.005 90);
+
+  --secondary: oklch(0.36 0.003 100);        /* #343432 */
+  --secondary-foreground: oklch(0.955 0.004 106);
+  --muted: oklch(0.36 0.003 100);
+  --muted-foreground: oklch(0.72 0.005 95);  /* #A3A29C */
+
+  --accent: oklch(0.40 0.04 55);
+  --accent-foreground: oklch(0.90 0.06 55);
+
+  --destructive: oklch(0.704 0.191 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.699 0.127 45);
+
+  --chart-1: oklch(0.699 0.127 45);
+  --chart-2: oklch(0.82 0.10 80);
+  --chart-3: oklch(0.76 0.10 148);
+  --chart-4: oklch(0.62 0.01 90);
+  --chart-5: oklch(0.55 0.06 95);
+
+  --sidebar: oklch(0.25 0.003 95);           /* #1F1E1D */
+  --sidebar-foreground: oklch(0.972 0.004 106);
+  --sidebar-primary: oklch(0.699 0.127 45);
+  --sidebar-primary-foreground: oklch(0.245 0.005 90);
+  --sidebar-accent: oklch(0.40 0.04 55);
+  --sidebar-accent-foreground: oklch(0.90 0.06 55);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.699 0.127 45);
+
+  --score-good: oklch(0.76 0.10 148);
+  --score-mid: oklch(0.82 0.10 80);
+  --score-bad: oklch(0.72 0.15 30);
+  --fg-clay: oklch(0.85 0.10 45);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 20%, transparent) transparent;
+    scroll-behavior: smooth;
+  }
+  /* Jump cuts, not glides, for people who are sensitive to motion */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+  #main-content {
+    scroll-margin-top: 4.5rem;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 24%, transparent);
+  }
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+  .font-display em {
+    font-family: var(--font-serif-display-italic), var(--font-display);
+    font-style: italic;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .section-label {
+    @apply text-xs font-medium uppercase tracking-[0.14em] text-primary;
+  }
+
+  /* Scroll-reveal (Reveal/Enter components) — pure CSS transition driven by
+     a data attribute flipped by IntersectionObserver. Replaces framer-motion
+     for fade-ups (~43KB off every marketing page). SSR renders "out";
+     no-JS + reduced-motion users see content immediately. */
+  [data-reveal] {
+    transition:
+      opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-reveal="out"] {
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 18px));
+  }
+  [data-reveal="in"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+      transition: none;
+    }
+    [data-reveal="out"] {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Mount entrance for client-rendered content (result cards) */
+  .fade-up-in {
+    animation: fade-up-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fade-up-in {
+      animation: none;
+    }
+  }
+
+  /* ── Language selector: custom dropdown vs native select ──
+     Desktops (hover + fine pointer) get the polished custom dropdown; touch
+     devices keep the native <select> with the OS picker (best mobile UX,
+     zero JS). display:none also removes the hidden variant from the
+     accessibility tree, so exactly one control is exposed per device. */
+  .lang-select-custom {
+    display: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .lang-select-custom {
+      display: inline-flex;
+    }
+    .lang-select-native {
+      display: none;
+    }
+  }
+
+  /* Language popover. Enter: the element mounts with data-state="open" and
+     the keyframe animates from invisible. Exit: data-state flips to
+     "closed" → the transition plays out → the component unmounts it. */
+  .lang-panel {
+    transform-origin: top center;
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .lang-panel[data-dir="up"] {
+    transform-origin: bottom center;
+  }
+  .lang-panel[data-state="open"] {
+    animation: lang-panel-in 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .lang-panel[data-dir="up"][data-state="open"] {
+    animation-name: lang-panel-in-up;
+  }
+  .lang-panel[data-state="closed"] {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+    pointer-events: none;
+  }
+  .lang-panel[data-dir="up"][data-state="closed"] {
+    transform: translateY(5px) scale(0.98);
+  }
+  @keyframes lang-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(-5px) scale(0.98);
+    }
+  }
+  @keyframes lang-panel-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(5px) scale(0.98);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lang-panel {
+      transition: none;
+    }
+    .lang-panel[data-state="open"] {
+      animation: none;
+    }
+  }
+
+  /* Landing hero intro — SSR-safe staggered entrance (pure CSS, delays inline) */
+  .hero-in {
+    animation: var(--animate-hero-fade-up);
+  }
+
+  /* Premium hover elevation for interactive cards */
+  .card-lift {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px -14px color-mix(in oklab, var(--foreground) 22%, transparent);
+  }
+
+  /* The moving highlight inside an active progress bar.
+     Place inside an overflow-hidden wrapper whose width equals the fill. */
+  .progress-sheen {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 34%;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      color-mix(in oklab, white 34%, transparent) 50%,
+      transparent 100%
+    );
+    animation: var(--animate-progress-sheen);
+    pointer-events: none;
+  }
+
+  /* Score colors — warm family (text) */
+  .score-good { color: var(--score-good); }
+  .score-mid { color: var(--score-mid); }
+  .score-bad { color: var(--score-bad); }
+
+  /* Score colors — fills (bars, rings, dots) */
+  .bg-score-good { background-color: var(--score-good); }
+  .bg-score-mid { background-color: var(--score-mid); }
+  .bg-score-bad { background-color: var(--score-bad); }
+  .stroke-score-good { stroke: var(--score-good); }
+  .stroke-score-mid { stroke: var(--score-mid); }
+  .stroke-score-bad { stroke: var(--score-bad); }
+
+  /* Severity chips — soft warm tints on card */
+  .sev-critical {
+    background: color-mix(in oklab, var(--score-bad) 15%, var(--card));
+    color: var(--score-bad);
+  }
+  .sev-high {
+    background: color-mix(in oklab, var(--primary) 13%, var(--card));
+    color: var(--fg-clay);
+  }
+  .sev-medium {
+    background: color-mix(in oklab, var(--score-mid) 15%, var(--card));
+    color: var(--score-mid);
+  }
+  .sev-low {
+    background: color-mix(in oklab, var(--foreground) 7%, var(--card));
+    color: var(--muted-foreground);
+  }
+  .sev-pass {
+    background: color-mix(in oklab, var(--score-good) 14%, var(--card));
+    color: var(--score-good);
+  }
+  .sev-warn {
+    background: color-mix(in oklab, var(--score-mid) 15%, var(--card));
+    color: var(--score-mid);
+  }
+  .sev-fail {
+    background: color-mix(in oklab, var(--score-bad) 15%, var(--card));
+    color: var(--score-bad);
+  }
+
+  /* Job status pills */
+  .status-queued {
+    background: color-mix(in oklab, var(--foreground) 7%, var(--card));
+    color: var(--muted-foreground);
+  }
+  .status-running {
+    background: color-mix(in oklab, var(--primary) 13%, var(--card));
+    color: var(--fg-clay);
+  }
+  .status-completed {
+    background: var(--score-good);
+    color: oklch(0.99 0.003 106);
+  }
+  .status-failed {
+    background: color-mix(in oklab, var(--score-bad) 15%, var(--card));
+    color: var(--score-bad);
+  }
+  .status-canceled {
+    background: color-mix(in oklab, var(--foreground) 6%, var(--card));
+    color: var(--muted-foreground);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Print / PDF — the premium paper face of a Olmene report.
+   A4 pages, branded cover, numbered sections with hairline rules, and the
+   flower mark repeated in the footer of every page.
+   ───────────────────────────────────────────────────────────────────────── */
+@page {
+  size: A4;
+  margin: 16mm 14mm 20mm;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .print-block {
+    break-inside: avoid;
+  }
+
+  /* Everything inside the print document keeps its brand color on paper */
+  .print-doc,
+  .print-doc * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .print-doc {
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1a1712;
+  }
+  .print-doc a {
+    color: #b85f3f !important;
+    text-decoration: none;
+  }
+
+  /* ── Repeating footer on every printed page ── */
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-top: 0.5pt solid #d8d2c6;
+    padding-top: 4mm;
+    font-size: 7.5pt;
+    color: #6f6a5e;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Cover page ── */
+  .print-cover {
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+    /* Fits the content box of both A4 (261mm) and US Letter (243mm) */
+    min-height: 225mm;
+    padding-top: 6mm;
+  }
+  .print-cover-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 14mm;
+  }
+  .print-cover-wordmark {
+    font-size: 17pt;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #1a1712;
+  }
+  .print-cover-body {
+    flex: 1;
+  }
+  .print-cover-kicker {
+    font-size: 9pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: #b85f3f;
+  }
+  .print-cover-title {
+    margin-top: 6mm;
+    font-size: 30pt;
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    color: #1a1712;
+  }
+  .print-cover-oneliner {
+    margin-top: 4mm;
+    max-width: 125mm;
+    font-size: 11.5pt;
+    line-height: 1.55;
+    color: #57524a;
+  }
+  .print-cover-score {
+    display: flex;
+    align-items: baseline;
+    gap: 3mm;
+    margin-top: 14mm;
+    padding: 6mm 0;
+    border-top: 0.5pt solid #d8d2c6;
+    border-bottom: 0.5pt solid #d8d2c6;
+  }
+  .print-cover-score-num {
+    font-size: 34pt;
+    font-weight: 700;
+    line-height: 1;
+    color: #b85f3f;
+  }
+  .print-cover-score-den {
+    font-size: 12pt;
+    color: #8a8578;
+  }
+  .print-cover-score-label {
+    margin-left: auto;
+    font-size: 10.5pt;
+    font-style: italic;
+    color: #57524a;
+  }
+  .print-cover-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm 10mm;
+    margin-top: 10mm;
+  }
+  .print-cover-meta dt {
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #8a8578;
+  }
+  .print-cover-meta dd {
+    margin: 1mm 0 0;
+    font-size: 10pt;
+    color: #1a1712;
+  }
+  .print-cover-foot {
+    margin-top: auto;
+    padding-top: 6mm;
+    border-top: 0.5pt solid #d8d2c6;
+    font-size: 8pt;
+    color: #8a8578;
+  }
+
+  /* ── Numbered section headings with hairline rule ── */
+  .print-section {
+    break-before: page;
+  }
+  .print-section:first-of-type {
+    break-before: auto;
+  }
+  .print-section-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    column-gap: 6mm;
+    margin-bottom: 7mm;
+  }
+  .print-section-kicker {
+    grid-column: 1 / -1;
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #b85f3f;
+    margin-bottom: 1.5mm;
+  }
+  .print-section-title {
+    font-size: 17pt;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    color: #1a1712;
+  }
+  .print-section-rule {
+    grid-column: 1 / -1;
+    display: block;
+    height: 0;
+    border-bottom: 1pt solid #1a1712;
+    margin-top: 3mm;
+  }
+  .print-section-rule::after {
+    content: "";
+    display: block;
+    border-bottom: 0.5pt solid #d8d2c6;
+    margin-top: 1.2mm;
+  }
+
+  /* Section bodies: soften screen cards into paper blocks */
+  .print-doc .rounded-xl,
+  .print-doc .rounded-lg {
+    border-radius: 2mm !important;
+    border-color: #d8d2c6 !important;
+    background: #faf8f4 !important;
+    box-shadow: none !important;
+  }
+  .print-doc .font-display {
+    letter-spacing: -0.01em;
+  }
+
+  /* Never truncate content on paper: source URLs and long strings wrap fully */
+  .print-doc .truncate {
+    overflow: visible !important;
+    text-overflow: initial !important;
+    white-space: normal !important;
+    word-break: break-all !important;
+  }
+}
+
+/* ── RTL support (Arabic / Urdu) ───────────────────────────────────────
+   Directional icons (arrows, quote marks) mirror horizontally when the
+   document direction is RTL. Layout mirroring itself comes from flex/grid
+   plus logical utilities (ms-/me-/ps-/pe-/start-/end-) used in components.
+   ────────────────────────────────────────────────────────────────────── */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}

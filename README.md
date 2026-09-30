@@ -1,12 +1,81 @@
-# olmene
+# Olmene
 
-This repository serves two purposes:
+**Marketing diagnosis you can verify, and fixes you can ship.**
 
-1. **olmene.com Worker** (repo root) — deployed automatically by Cloudflare
-   Workers Builds on every push to `main`. Serves olmene.com + www.olmene.com.
-   Code: `src/index.js`, config: `wrangler.jsonc`.
+Formerly *Marketwise* — rebranded and moved to **olmene.com**. A founder enters
+a URL and gets a free instant diagnosis (21 deterministic checks, no LLM cost),
+then can buy a full cited report: crawl, live web research, competitor
+analysis, a five-part audit and a 7/30/60/90-day plan. Every market claim
+links to a source.
 
-2. **`marketwise/`** — the complete MarketWise source code snapshot
-   (Next.js 16 app, agent system, Supabase migrations, edge function sources,
-   docs, reports, research, QA artifacts). Not deployed; reference copy.
-   See `marketwise/README.md` for details.
+## Repository map
+
+| Path | What it is |
+|---|---|
+| `src/` | Next.js 16 / React 19 app (Tailwind 4, shadcn/ui, 15-language i18n) |
+| `supabase/` | SQL migrations (schema, pg_cron sweeper, seeds) |
+| `prisma/` | Legacy Prisma schema (vestigial — the live schema is Supabase SQL) |
+| `scripts/` | Ops & dev tooling (deploys, audits, snapshots, infra setup) |
+| `public/` | Static assets (logo, robots, OG image, demo video) |
+| `tests/` | Test suites (agent unit tests, pipeline tests) |
+| `docs/` | Documentation: `worklog.md`, `architecture-audit.md`, `integrations.md`, `olmene-setup.md` |
+| `workers/` | Auxiliary Cloudflare Workers (`get-redirect/` = 301s from the old workers.dev URL) |
+| `archive/` | Historical working artifacts — see `archive/README.md` (nothing in `archive/` is needed to build or run the app) |
+
+## Architecture
+
+```
+browser ─▶ olmene.com + www.olmene.com
+              │  Cloudflare Worker "olmene" (this repo, OpenNext adapter)
+              ▼
+        Next.js 16 app (static + API routes)
+              │                          │
+              ▼                          ▼
+   Supabase Postgres (RLS)     Supabase Edge Functions (8)
+   profiles, reports, plans,   free-audit, start/advance-analysis,
+   subscriptions, agent_*      polar-webhook, sweeper, …
+              │                          │
+              ▼                          ▼
+        pg_cron sweeper          LLMs (Gemini direct + Z.ai GLM fallback),
+        (job leases, 1-min)      Tavily research, Polar billing, Brevo email
+```
+
+- **Deploys**: every push to `main` → Cloudflare Workers Builds → Worker
+  `olmene` (owns both custom domains). Build: `npx opennextjs-cloudflare
+  build`, deploy: `npx wrangler deploy` (root `wrangler.jsonc`).
+- **Secrets** (worker): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `MW_KMS_MASTER_KEY`, `AGENT_FEATURE_ENABLED` — set once via
+  `npx wrangler secret put <NAME>` or the API; they persist across deploys.
+- **Secrets** (edge functions): set via Supabase Management API
+  (`APP_URL=https://olmene.com`, `APP_NAME=Olmene`, model keys, Polar…).
+
+## Develop
+
+```bash
+bun install            # or npm install (Node ≥ 22, see package.json engines)
+cp .dev.vars.example .dev.vars   # optional: local worker secrets for preview
+npm run dev            # http://localhost:3000
+
+npm run build:cf       # production build via OpenNext (→ .open-next/)
+npx wrangler dev       # preview the actual worker locally
+```
+
+`.env.production` (committed) holds the **public** build-time values
+(Supabase URL + publishable key, app URL, GA id). Real secrets never live in
+the repo.
+
+## Test
+
+```bash
+npm run test:agent     # agent suite (bun test src/lib/agent)
+npm run lint           # eslint
+```
+
+## Deploy
+
+- **Automatic**: push to `main` (Workers Builds, ~2–4 min).
+- **Manual**: `npm run deploy:cf` (needs `CLOUDFLARE_API_TOKEN` or
+  `CLOUDFLARE_API_KEY` + `CLOUDFLARE_EMAIL` in the environment).
+
+Edge functions and database: see `docs/olmene-setup.md` and
+`docs/integrations.md` for the full operational picture.
