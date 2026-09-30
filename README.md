@@ -71,11 +71,33 @@ npm run test:agent     # agent suite (bun test src/lib/agent)
 npm run lint           # eslint
 ```
 
-## Deploy
+## Deploy — the one pipeline
 
-- **Automatic**: push to `main` (Workers Builds, ~2–4 min).
-- **Manual**: `npm run deploy:cf` (needs `CLOUDFLARE_API_TOKEN` or
-  `CLOUDFLARE_API_KEY` + `CLOUDFLARE_EMAIL` in the environment).
+Every push to `main` runs one CI pipeline (Cloudflare Workers Builds) that
+syncs everything:
 
-Edge functions and database: see `docs/olmene-setup.md` and
-`docs/integrations.md` for the full operational picture.
+```
+push to main
+  └─ build:  npm ci
+             npx opennextjs-cloudflare build     (app bundle → .open-next/)
+             npx supabase db push                (applies pending SQL migrations,
+                                                  no-ops when up to date)
+  └─ deploy: npx wrangler deploy                (Worker "olmene" → olmene.com + www)
+```
+
+~3–5 minutes end to end. The Supabase access token and project ref live as
+encrypted environment variables in the Workers Builds config (dashboard:
+Worker `olmene` → Settings → Build).
+
+What syncs automatically vs. not:
+
+| Change | Synced on push? |
+|---|---|
+| App code, pages, UI, i18n (`src/`, `public/`, configs) | ✅ deploys live |
+| Database schema (`supabase/migrations/*.sql` — add new files, never edit applied ones) | ✅ applied before deploy |
+| Edge functions (`archive/fnsrc/…`, still three drifted generations — G11) | ⚠️ manual: redeploy via `scripts/deploy_fn.py` |
+| Worker secrets (`wrangler secret` / API) and Supabase function secrets | ⚠️ manual by design — secrets never live in git |
+
+Manual deploy fallback: `npm run deploy:cf` (needs `CLOUDFLARE_API_TOKEN` or
+`CLOUDFLARE_API_KEY` + `CLOUDFLARE_EMAIL`). Operational details:
+`docs/olmene-setup.md`, `docs/integrations.md`.
