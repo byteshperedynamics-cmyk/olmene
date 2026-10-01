@@ -61,6 +61,13 @@ export interface Plan {
   sort_order: number;
   active: boolean;
   one_time: boolean;
+  /** v2 pricing dimensions (migration 20261002) — null on rows not yet backfilled. */
+  slug?: string | null;
+  billing_interval?: "month" | "year" | "once" | null;
+  monthly_equivalent_eur?: number | null;
+  sites_limit?: number | null;
+  features_key?: string | null;
+  actions_per_period?: number | null;
 }
 
 const JOB_SELECT =

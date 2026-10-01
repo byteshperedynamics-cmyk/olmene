@@ -4,7 +4,7 @@ import { PricingContent } from "@/components/pricing-content";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Olmene plans — counted in reports, not seats. Starter and Pro, cancel any time. Failed analyses never count against your quota.",
+    "Olmene plans: a free scan, then fixes shipped as pull requests and a weekly re-check of your site. Cancel any time.",
 };
 
 export default function PricingPage() {
