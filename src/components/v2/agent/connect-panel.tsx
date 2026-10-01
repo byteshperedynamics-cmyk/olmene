@@ -1,0 +1,105 @@
+"use client";
+
+import Link from "next/link";
+import { Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Eyebrow } from "../atoms";
+import { ConnectDiagram } from "../data-viz";
+import { Flower } from "../flower";
+
+/**
+ * Connect flow (brief §5D): what is connected, in a diagram, and permissions
+ * phrased as what the user will see happen, including what Olmene can never
+ * do. Search Console joins as a third source once Measure ships.
+ */
+export function ConnectPanel({
+  hasScan,
+  githubConfigured,
+  githubConnected,
+  killSwitch,
+  busy,
+  onRegister,
+  onConnect,
+}: {
+  hasScan: boolean;
+  githubConfigured: boolean;
+  githubConnected: boolean;
+  killSwitch: boolean;
+  busy: string | null;
+  onRegister: () => void;
+  onConnect: () => void;
+}) {
+  const step = !hasScan ? 1 : 2;
+  return (
+    <section className="grid items-center gap-8 overflow-hidden rounded-2xl border bg-card p-6 sm:p-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="mx-auto w-full max-w-sm">
+        <ConnectDiagram
+          ariaLabel={`Your site ${hasScan ? "scanned" : "not scanned yet"}, GitHub ${githubConnected ? "connected" : "not connected"}`}
+          nodes={[
+            { key: "site", label: "Your site", status: hasScan ? "scanned" : "scan first", state: hasScan ? "connected" : "pending" },
+            {
+              key: "gh",
+              label: "GitHub",
+              status: githubConnected ? "connected" : "pending",
+              state: githubConnected ? "connected" : "pending",
+            },
+          ]}
+          center={<Flower size={44} variant={githubConnected ? "static" : "breathe"} />}
+        />
+      </div>
+
+      <div className="grid min-w-0 gap-5">
+        <Eyebrow>Step {step} of 2</Eyebrow>
+        {step === 1 ? (
+          <>
+            <h2 className="o-display text-[28px] leading-tight">Start with a scan of your site</h2>
+            <p className="text-[15px] text-muted-foreground">
+              Olmene plans fixes from a completed analysis of your site. Run one first; it takes a few minutes.
+            </p>
+            <div>
+              <Button asChild variant="sheen" size="xl">
+                <Link href="/app/new/">Analyze my site</Link>
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="o-display text-[28px] leading-tight">Connect GitHub to ship fixes</h2>
+            <ul className="grid gap-2 text-[14px]">
+              {[
+                "Reads and edits one repository you choose",
+                "Opens pull requests. You merge them.",
+                "Every change is logged and can be undone",
+              ].map((s) => (
+                <li key={s} className="flex items-start gap-3 rounded-xl border bg-background/40 px-3.5 py-2.5">
+                  <Check className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+                  {s}
+                </li>
+              ))}
+              <li className="flex items-start gap-3 rounded-xl border bg-background/40 px-3.5 py-2.5">
+                <X className="mt-0.5 size-4 shrink-0 text-signal-rust" strokeWidth={2.5} aria-hidden />
+                Never pushes to your main branch, deletes branches, or sees other repositories
+              </li>
+            </ul>
+            <div className="flex flex-wrap items-center gap-3">
+              {!githubConfigured ? (
+                <Button variant="sheen" size="xl" onClick={onRegister} disabled={busy !== null || killSwitch}>
+                  {busy === "register" ? "Opening GitHub…" : "Set up the GitHub app"}
+                </Button>
+              ) : (
+                <Button variant="sheen" size="xl" onClick={onConnect} disabled={busy !== null || killSwitch}>
+                  {busy === "connect" ? "Opening GitHub…" : "Connect GitHub"}
+                </Button>
+              )}
+              <p className="text-[12.5px] text-muted-foreground">
+                {githubConfigured
+                  ? "GitHub asks you to pick the repository in the same step."
+                  : "One-time setup. GitHub shows the exact permissions first."}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}

@@ -1,385 +1,279 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  ArrowRight,
-  Bot,
-  CheckCircle2,
-  ExternalLink,
-  Github,
-  ShieldCheck,
-  ShieldX,
-  Sparkles,
-  Wand2,
-} from "lucide-react";
+import { ArrowRight, ExternalLink, ShieldCheck, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { LogoLoader } from "@/components/logo-loader";
-import {
-  AgentApiError,
-  connectGithub,
-  disconnectGithub,
-  featureAgentEnabled,
-  getAgentConfig,
-  getAgentJobs,
-  registerGithubApp,
-  type AgentConnection,
-} from "@/lib/agent-client";
-import { listJobs } from "@/lib/data";
+import { AgentApiError, featureAgentEnabled, type AgentJob } from "@/lib/agent-client";
 import { fmtDateTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { Flower } from "@/components/v2/flower";
+import { Eyebrow, LivePill } from "@/components/v2/atoms";
+import { ConnectPanel } from "@/components/v2/agent/connect-panel";
+import { StateMessage } from "@/components/v2/agent/job-view";
+import { useAgentHub, type DisconnectResult } from "@/components/v2/agent/use-agent-hub";
+import { statusLine } from "@/components/v2/agent/fixers";
 
+/** Fix runs hub (brief §5B): connection, new run, run history. */
 export default function AgentPage() {
-  const [busy, setBusy] = useState<string | null>(null);
-
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    if (p.get("registered") === "1") toast.success("GitHub App registered. Connect your account to continue.");
-    if (p.get("registered") === "0") toast.error("App registration did not complete. Please try again.");
-    if (p.get("connected") === "0") {
-      const reason = p.get("reason");
-      toast.error(
-        reason === "not_installed"
-          ? "You authorized Olmene but no installation was found. Install the app on your site's repository, then reconnect."
-          : "GitHub connect did not complete. Please try again.",
-      );
-    }
-  }, []);
-
-  const { data: config, isLoading, error: configError, refetch } = useQuery({
-    queryKey: ["agent-config"],
-    queryFn: getAgentConfig,
-    retry: 1,
-  });
-  const { data: jobs } = useQuery({ queryKey: ["agent-jobs"], queryFn: getAgentJobs });
-  const { data: reports } = useQuery({ queryKey: ["jobs"], queryFn: () => listJobs() });
-
-  const activeConnection: AgentConnection | undefined = useMemo(
-    () => config?.github.connections.find((c) => c.status === "active"),
-    [config],
-  );
-
-  async function onRegisterApp() {
-    setBusy("register");
-    try {
-      const { url } = await registerGithubApp();
-      window.location.href = url;
-    } catch (e) {
-      toast.error(e instanceof AgentApiError ? e.message : "Could not start registration.");
-      setBusy(null);
-    }
-  }
-
-  async function onConnect() {
-    setBusy("connect");
-    try {
-      const { url } = await connectGithub();
-      window.location.href = url;
-    } catch (e) {
-      toast.error(e instanceof AgentApiError ? e.message : "Could not start the connect flow.");
-      setBusy(null);
-    }
-  }
-
-  async function onDisconnect() {
-    if (!activeConnection) return;
-    setBusy("disconnect");
-    try {
-      const res = await disconnectGithub(activeConnection.id);
-      if (res.verified) {
-        toast.success("Disconnected. Verified with GitHub that the credential is dead.");
-      } else {
-        toast.warning("We deleted the connection, but the GitHub App is still installed on your GitHub account.", {
-          description: "Finish revocation with the steps shown below.",
-          duration: 12000,
-        });
-      }
-      setDisconnectResult(res);
-      await refetch();
-    } catch (e) {
-      toast.error(e instanceof AgentApiError ? e.message : "Could not disconnect.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  const [disconnectResult, setDisconnectResult] = useState<{
-    verified: boolean;
-    evidence: Record<string, unknown>;
-    manualSteps: string[];
-    uninstallUrl: string;
-  } | null>(null);
+  const hub = useAgentHub();
+  const { config, jobs, activeConnection, completedReports, busy } = hub;
 
   if (!featureAgentEnabled()) {
     return (
-      <div className="mx-auto max-w-2xl py-16 text-center">
-        <Bot className="mx-auto mb-4 size-10 text-muted-foreground" aria-hidden />
-        <h1 className="text-xl font-semibold">The fix agent is not enabled</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This deployment has the agent feature turned off. It will be enabled soon.
-        </p>
-        <Button asChild variant="outline" size="sm" className="mt-6">
-          <Link href="/app/">Back to analyses</Link>
-        </Button>
-      </div>
+      <StateMessage
+        title="The fix agent isn't switched on yet"
+        body="Fix runs are not enabled on this deployment. Your reports and free scans work as usual."
+        action={
+          <Button asChild variant="hairline">
+            <Link href="/app/">Back to analyses</Link>
+          </Button>
+        }
+      />
     );
   }
 
-  if (configError) {
+  if (config.error) {
     const msg =
-      configError instanceof AgentApiError && configError.code === "agent_disabled"
-        ? "The agent is not enabled on the server side of this deployment."
+      config.error instanceof AgentApiError && config.error.code === "agent_disabled"
+        ? "Fix runs are switched off on the server for this deployment."
         : "Could not load the agent status. Check your connection and try again.";
     return (
-      <div className="mx-auto max-w-2xl py-16 text-center">
-        <Bot className="mx-auto mb-4 size-10 text-muted-foreground" aria-hidden />
-        <h1 className="text-xl font-semibold">Agent unavailable</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{msg}</p>
-        <Button asChild variant="outline" size="sm" className="mt-6" onClick={() => refetch()}>
-          <Link href="/app/agent/">Retry</Link>
-        </Button>
-      </div>
+      <StateMessage
+        title="Fix runs are unavailable"
+        body={msg}
+        action={
+          <Button variant="hairline" onClick={() => config.refetch()}>
+            Try again
+          </Button>
+        }
+      />
     );
   }
 
-  if (isLoading || !config) {
+  if (config.isLoading || !config.data) {
     return (
-      <div className="grid place-items-center py-24">
-        <LogoLoader size={44} glow />
+      <div className="grid place-items-center py-28">
+        <Flower size={44} variant="breathe" />
       </div>
     );
   }
 
-  const completedReports = (reports ?? []).filter((j) => j.status === "completed");
-  const entitlement = config.entitlement;
+  const cfg = config.data;
+  const ent = cfg.entitlement;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto grid max-w-5xl gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Fix agent</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Olmene turns your report into ready-to-review pull requests. You approve every change before anything
-            is written.
+        <div className="grid gap-2">
+          <Eyebrow>Fix agent</Eyebrow>
+          <h1 className="o-display text-[32px] leading-tight">Fix runs</h1>
+          <p className="max-w-xl text-[15px] text-muted-foreground">
+            Olmene turns your report into pull requests you review. Nothing is written until you approve.
           </p>
         </div>
-        {entitlement.allowed ? (
-          <Badge className="border-emerald-600/30 bg-emerald-600/10 text-emerald-500" variant="outline">
-            <Sparkles className="mr-1 size-3" aria-hidden />
-            {entitlement.planName} · {entitlement.remaining} of {entitlement.limit} applies left
-          </Badge>
+        {ent.allowed ? (
+          <LivePill tone="live" pulse={false}>
+            {ent.planName} · {ent.remaining} of {ent.limit} fixes left this period
+          </LivePill>
         ) : (
-          <Badge variant="outline" className="text-muted-foreground">
-            Plan + preview free · apply needs a subscription
-          </Badge>
+          <LivePill tone="neutral">Planning and previews are free · shipping fixes needs a plan</LivePill>
         )}
       </header>
 
-      {config.killSwitch && (
-        <Card className="border-amber-600/30 bg-amber-600/5">
-          <CardContent className="flex items-start gap-3 p-4 text-sm">
-            <ShieldX className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden />
-            <div>
-              <p className="font-medium">The agent is temporarily paused by the operator.</p>
-              <p className="text-muted-foreground">Existing pull requests are unaffected. Check back shortly.</p>
-            </div>
-          </CardContent>
-        </Card>
+      {cfg.killSwitch && (
+        <div className="flex items-start gap-3 rounded-2xl border border-signal-amber/40 bg-card p-5 text-[14px]">
+          <ShieldX className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-hidden />
+          <div>
+            <p className="font-medium">Fix runs are paused for maintenance</p>
+            <p className="text-muted-foreground">Pull requests already opened are not affected. Check back shortly.</p>
+          </div>
+        </div>
       )}
 
-      {/* Step 1 — GitHub connection */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Github className="size-4" aria-hidden /> 1 · Connect GitHub
-          </CardTitle>
-          <CardDescription>
-            A GitHub App with two permissions only: <strong>Contents</strong> and <strong>Pull requests</strong> (write).
-            It never pushes your default branch and can be uninstalled at any time — we verify access is really gone
-            when you disconnect.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!config.github.configured ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                First time setup (once per Olmene account): register the Olmene GitHub App under your GitHub
-                account. GitHub shows you the exact permissions before anything is created.
-              </p>
-              <Button onClick={onRegisterApp} disabled={busy !== null || config.killSwitch}>
-                {busy === "register" ? "Opening GitHub…" : "Register the GitHub App"}
-              </Button>
-            </div>
-          ) : activeConnection ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 p-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="size-5 text-emerald-500" aria-hidden />
-                <div>
-                  <p className="text-sm font-medium">
-                    Connected as <span className="font-mono">{activeConnection.account}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {activeConnection.repos?.length ?? 0} repos accessible · verified{" "}
-                    {activeConnection.lastVerifiedAt ? fmtDateTime(activeConnection.lastVerifiedAt) : "at connect"}
-                  </p>
-                </div>
+      {!activeConnection ? (
+        <ConnectPanel
+          hasScan={completedReports.length > 0}
+          githubConfigured={cfg.github.configured}
+          githubConnected={false}
+          killSwitch={cfg.killSwitch}
+          busy={busy}
+          onRegister={hub.onRegister}
+          onConnect={hub.onConnect}
+        />
+      ) : (
+        <>
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid size-9 place-items-center rounded-full bg-leaf-soft">
+                <ShieldCheck className="size-4 text-primary" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[14px] font-medium">
+                  Connected as <span className="font-mono">{activeConnection.account}</span>
+                </p>
+                <p className="text-[12.5px] text-muted-foreground">
+                  {activeConnection.repos?.length ?? 0} {activeConnection.repos?.length === 1 ? "repository" : "repositories"} ·
+                  verified {activeConnection.lastVerifiedAt ? fmtDateTime(activeConnection.lastVerifiedAt) : "at connect"}
+                </p>
               </div>
-              <Button variant="outline" size="sm" onClick={onDisconnect} disabled={busy !== null}>
-                {busy === "disconnect" ? "Disconnecting…" : "Disconnect & verify"}
-              </Button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                The app is registered. Connect it to the GitHub account that owns your site — GitHub will ask you to
-                install it on your repository in the same step.
+            <Button variant="hairline" onClick={hub.onDisconnect} disabled={busy !== null}>
+              {busy === "disconnect" ? "Disconnecting…" : "Disconnect and verify"}
+            </Button>
+          </section>
+
+          <section className="grid gap-4 rounded-2xl border bg-card p-6">
+            <div>
+              <h2 className="o-display text-2xl">Start a fix run</h2>
+              <p className="mt-1 text-[14px] text-muted-foreground">
+                Pick a completed report and the repository it should fix. You see the exact diff before anything is written.
               </p>
-              <Button onClick={onConnect} disabled={busy !== null || config.killSwitch}>
-                {busy === "connect" ? "Opening GitHub…" : "Connect GitHub"}
-              </Button>
             </div>
-          )}
-
-          {disconnectResult && (
-            <div
-              className={`rounded-lg border p-4 text-sm ${
-                disconnectResult.verified
-                  ? "border-emerald-600/30 bg-emerald-600/5"
-                  : "border-amber-600/30 bg-amber-600/5"
-              }`}
-            >
-              <p className="flex items-center gap-2 font-medium">
-                {disconnectResult.verified ? (
-                  <>
-                    <ShieldCheck className="size-4 text-emerald-500" aria-hidden /> Revocation verified
-                  </>
-                ) : (
-                  <>
-                    <ShieldX className="size-4 text-amber-500" aria-hidden /> One more step to fully revoke
-                  </>
-                )}
+            {completedReports.length === 0 ? (
+              <p className="text-[14px] text-muted-foreground">
+                No completed reports yet.{" "}
+                <Link href="/app/new/" className="text-primary underline underline-offset-4">
+                  Analyze your site first
+                </Link>
+                .
               </p>
-              <p className="mt-1 text-muted-foreground">
-                {String(disconnectResult.evidence.outcome ?? "Verification recorded.")}
-              </p>
-              {!disconnectResult.verified && disconnectResult.manualSteps.length > 0 && (
-                <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted-foreground">
-                  {disconnectResult.manualSteps.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ol>
-              )}
-              {!disconnectResult.verified && (
-                <Button asChild variant="outline" size="sm" className="mt-3">
-                  <a href={disconnectResult.uninstallUrl} target="_blank" rel="noreferrer">
-                    Open GitHub applications <ExternalLink className="ml-1 size-3" aria-hidden />
-                  </a>
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <NewRunForm
+                reports={completedReports.map((j) => ({ id: j.id, site: j.siteUrl, date: j.createdAt }))}
+                repos={activeConnection.repos ?? []}
+                killSwitch={cfg.killSwitch}
+              />
+            )}
+          </section>
+        </>
+      )}
 
-      {/* Step 2 — start a fix job */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Wand2 className="size-4" aria-hidden /> 2 · Apply a report
-          </CardTitle>
-          <CardDescription>
-            Pick a completed report and the repository it should fix. You will see an exact diff of every change
-            before anything is written — and nothing merges without you.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!activeConnection ? (
-            <p className="text-sm text-muted-foreground">Connect GitHub above to start.</p>
-          ) : completedReports.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No completed reports yet.{" "}
-              <Link href="/app/new/" className="underline underline-offset-4">
-                Run an analysis first
-              </Link>
-              .
-            </p>
-          ) : (
-            <NewJobForm
-              reports={completedReports.map((j) => ({ id: j.id, site: j.siteUrl, date: j.createdAt }))}
-              repos={activeConnection.repos ?? []}
-              killSwitch={config.killSwitch}
-              initialReportId={new URLSearchParams(window.location.search).get("report") ?? undefined}
-            />
-          )}
-        </CardContent>
-      </Card>
+      {hub.disconnectResult && <DisconnectNotice result={hub.disconnectResult} />}
 
-      {/* Step 3 — job history */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Recent fix jobs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {!jobs?.jobs?.length ? (
-            <p className="text-sm text-muted-foreground">Nothing yet.</p>
-          ) : (
-            <ul className="divide-y divide-border/70">
-              {jobs.jobs.slice(0, 8).map((j) => (
-                <li key={j.id} className="flex items-center justify-between gap-3 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{j.input?.targetRepo ?? j.id}</p>
-                    <p className="text-xs text-muted-foreground">{fmtDateTime(j.created_at)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <StatusBadge status={j.status} />
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href={`/app/agent/job/${j.id}`}>
-                        Open <ArrowRight className="ml-1 size-3" aria-hidden />
-                      </Link>
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <RunsTable jobs={jobs.data?.jobs ?? []} />
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === "completed"
-      ? "border-emerald-600/30 bg-emerald-600/10 text-emerald-500"
-      : status === "failed" || status === "killed"
-        ? "border-red-600/30 bg-red-600/10 text-red-500"
-        : status === "canceled"
-          ? "border-border bg-muted text-muted-foreground"
-          : "border-amber-600/30 bg-amber-600/10 text-amber-500";
+function RunsTable({ jobs }: { jobs: AgentJob[] }) {
   return (
-    <Badge variant="outline" className={`${cls} font-mono text-[11px]`}>
-      {status}
-    </Badge>
+    <section className="overflow-hidden rounded-2xl border bg-card">
+      <div className="border-b px-5 py-4">
+        <h2 className="o-display text-xl">Recent runs</h2>
+      </div>
+      {jobs.length === 0 ? (
+        <p className="px-5 py-6 text-[14px] text-muted-foreground">
+          No runs yet. Your first pull request shows up here.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-[13.5px]">
+            <thead>
+              <tr className="border-b text-start font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">
+                <th className="px-5 py-2.5 text-start font-medium">Repository</th>
+                <th className="px-5 py-2.5 text-start font-medium">Status</th>
+                <th className="px-5 py-2.5 text-start font-medium">Started</th>
+                <th className="px-5 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              {jobs.slice(0, 10).map((j) => (
+                <tr key={j.id} className="border-b last:border-0">
+                  <td className="px-5 py-3 font-mono text-[12.5px]" dir="ltr">
+                    {j.input?.targetRepo ?? j.id.slice(0, 8)}
+                  </td>
+                  <td className="px-5 py-3">
+                    <RunStatus status={j.status} />
+                  </td>
+                  <td className="px-5 py-3 text-muted-foreground">{fmtDateTime(j.created_at)}</td>
+                  <td className="px-5 py-3 text-end">
+                    <Link
+                      href={`/app/agent/job/${j.id}`}
+                      className="inline-flex items-center gap-1 text-[13px] text-primary hover:underline"
+                    >
+                      Open <ArrowRight className="size-3.5 rtl-flip" aria-hidden />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
-function NewJobForm({
+function RunStatus({ status }: { status: string }) {
+  const tone =
+    status === "completed"
+      ? "ok"
+      : status === "failed" || status === "killed"
+        ? "problem"
+        : status === "awaiting_approval"
+          ? "live"
+          : "neutral";
+  return (
+    <LivePill tone={tone} pulse={status === "awaiting_approval"}>
+      {statusLine(status)}
+    </LivePill>
+  );
+}
+
+function DisconnectNotice({ result }: { result: DisconnectResult }) {
+  return (
+    <div
+      className={cn(
+        "grid gap-2 rounded-2xl border p-5 text-[14px]",
+        result.verified ? "border-primary/35 bg-leaf-soft" : "border-signal-amber/40 bg-card",
+      )}
+    >
+      <p className="flex items-center gap-2 font-medium">
+        {result.verified ? (
+          <>
+            <ShieldCheck className="size-4 text-primary" aria-hidden /> Access removed and verified with GitHub
+          </>
+        ) : (
+          <>
+            <ShieldX className="size-4 text-signal-amber" aria-hidden /> One more step to fully remove access
+          </>
+        )}
+      </p>
+      <p className="text-muted-foreground">{String(result.evidence.outcome ?? "Verification recorded.")}</p>
+      {!result.verified && result.manualSteps.length > 0 && (
+        <ol className="list-decimal space-y-1 ps-5 text-muted-foreground">
+          {result.manualSteps.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ol>
+      )}
+      {!result.verified && (
+        <div>
+          <Button asChild variant="hairline" size="sm">
+            <a href={result.uninstallUrl} target="_blank" rel="noreferrer">
+              Open GitHub applications <ExternalLink className="size-3.5" aria-hidden />
+            </a>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NewRunForm({
   reports,
   repos,
   killSwitch,
-  initialReportId,
 }: {
   reports: Array<{ id: string; site: string; date: string }>;
   repos: string[];
   killSwitch: boolean;
-  initialReportId?: string;
 }) {
+  const initial = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("report") : null;
   const [reportId, setReportId] = useState(
-    initialReportId && reports.some((r) => r.id === initialReportId) ? initialReportId : (reports[0]?.id ?? ""),
+    initial && reports.some((r) => r.id === initial) ? initial : (reports[0]?.id ?? ""),
   );
   const [repo, setRepo] = useState(repos[0] ?? "");
   const [starting, setStarting] = useState(false);
@@ -391,20 +285,18 @@ function NewJobForm({
       const { jobId } = await startAgentJob(reportId, repo);
       window.location.href = `/app/agent/job/${jobId}`;
     } catch (e) {
-      toast.error(e instanceof AgentApiError ? e.message : "Could not start the job.");
+      toast.error(e instanceof AgentApiError ? e.message : "Could not start the run. Try again.");
       setStarting(false);
     }
   }
 
+  const select =
+    "h-11 w-full rounded-[10px] border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   return (
     <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-      <label className="block text-sm">
-        <span className="mb-1.5 block text-muted-foreground">Report</span>
-        <select
-          value={reportId}
-          onChange={(e) => setReportId(e.target.value)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
+      <label className="grid gap-1.5 text-[13px]" htmlFor="run-report">
+        <span className="text-muted-foreground">Report</span>
+        <select id="run-report" value={reportId} onChange={(e) => setReportId(e.target.value)} className={select}>
           {reports.map((r) => (
             <option key={r.id} value={r.id}>
               {r.site} — {fmtDateTime(r.date)}
@@ -412,14 +304,10 @@ function NewJobForm({
           ))}
         </select>
       </label>
-      <label className="block text-sm">
-        <span className="mb-1.5 block text-muted-foreground">Repository</span>
-        <select
-          value={repo}
-          onChange={(e) => setRepo(e.target.value)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {repos.length === 0 && <option value="">(install the app on a repo first)</option>}
+      <label className="grid gap-1.5 text-[13px]" htmlFor="run-repo">
+        <span className="text-muted-foreground">Repository</span>
+        <select id="run-repo" value={repo} onChange={(e) => setRepo(e.target.value)} className={select}>
+          {repos.length === 0 && <option value="">Install the app on a repository first</option>}
           {repos.map((r) => (
             <option key={r} value={r}>
               {r}
@@ -427,8 +315,8 @@ function NewJobForm({
           ))}
         </select>
       </label>
-      <Button onClick={start} disabled={starting || !reportId || !repo || killSwitch}>
-        {starting ? "Starting…" : "Start fix job"}
+      <Button variant="sheen" size="xl" onClick={start} disabled={starting || !reportId || !repo || killSwitch}>
+        {starting ? "Starting…" : "Start fix run"}
       </Button>
     </div>
   );

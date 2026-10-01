@@ -10,6 +10,7 @@ import { StepRail } from "@/components/v2/step-rail";
 import { DiffView } from "@/components/v2/diff-view";
 import { ConnectDiagram, FixFeed, ImpactChart, KpiTile, MergeRing, MetricBars } from "@/components/v2/data-viz";
 import { InView } from "@/components/v2/in-view";
+import { ConnectPanel } from "@/components/v2/agent/connect-panel";
 import { SAMPLE_DIFF, SAMPLE_FEED, SAMPLE_MRR_WEEKS, sampleClickSeries } from "@/lib/v2/sample-data";
 
 function Cell({ name, children }: { name: string; children: React.ReactNode }) {
@@ -178,6 +179,10 @@ export function ComponentGallery() {
               center={<Flower size={44} variant="breathe" />}
             />
           </div>
+        </Cell>
+
+        <Cell name="ConnectPanel · step 2 (GitHub not connected)">
+          <ConnectPanel hasScan githubConfigured githubConnected={false} killSwitch={false} busy={null} onRegister={() => {}} onConnect={() => {}} />
         </Cell>
 
         <Cell name="ProductFrame">

@@ -310,8 +310,9 @@ export interface DiagramNode {
 }
 
 /**
- * Three sources wired into the flower. Connected wires flow green (1.4s),
- * pending wires flow faint and slow (3s), off wires are static.
+ * Sources wired into the flower. Connected wires flow green (1.4s), pending
+ * wires flow faint and slow (3s), off wires are static. Two nodes (left
+ * column) or three (adds a right-hand source, e.g. Search Console).
  */
 export function ConnectDiagram({
   nodes,
@@ -319,25 +320,27 @@ export function ConnectDiagram({
   ariaLabel,
   className,
 }: {
-  /** exactly three: top-left, bottom-left, right */
-  nodes: [DiagramNode, DiagramNode, DiagramNode];
+  /** top-left, bottom-left, and optionally right */
+  nodes: [DiagramNode, DiagramNode] | [DiagramNode, DiagramNode, DiagramNode];
   center: React.ReactNode;
   ariaLabel: string;
   className?: string;
 }) {
+  const three = nodes.length === 3;
+  const cx = three ? 180 : 230;
   const wires = [
-    { d: "M104 50 C146 50 140 130 180 130", n: nodes[0] },
-    { d: "M104 210 C146 210 140 130 180 130", n: nodes[1] },
-    { d: "M256 130 L180 130", n: nodes[2] },
+    { d: `M104 50 C${cx - 34} 50 ${cx - 40} 130 ${cx} 130`, n: nodes[0] },
+    { d: `M104 210 C${cx - 34} 210 ${cx - 40} 130 ${cx} 130`, n: nodes[1] },
+    ...(three ? [{ d: "M256 130 L180 130", n: nodes[2] as DiagramNode }] : []),
   ];
   const boxes = [
     { x: 8, y: 28, w: 96, n: nodes[0] },
     { x: 8, y: 188, w: 96, n: nodes[1] },
-    { x: 256, y: 108, w: 98, n: nodes[2] },
+    ...(three ? [{ x: 256, y: 108, w: 98, n: nodes[2] as DiagramNode }] : []),
   ];
   return (
-    <svg viewBox="0 0 362 260" className={cn("block h-auto w-full", className)} role="img" aria-label={ariaLabel} direction="ltr">
-      <circle cx="180" cy="130" r="46" fill="var(--leaf-soft)" />
+    <svg viewBox={three ? "0 0 362 260" : "0 0 290 260"} className={cn("block h-auto w-full", className)} role="img" aria-label={ariaLabel} direction="ltr">
+      <circle cx={cx} cy="130" r="46" fill="var(--leaf-soft)" />
       {wires.map((w) => (
         <g key={w.n.key}>
           <path d={w.d} fill="none" stroke="var(--line-strong)" strokeWidth={1.5} />
@@ -382,7 +385,7 @@ export function ConnectDiagram({
           </text>
         </g>
       ))}
-      <foreignObject x="154" y="104" width="52" height="52">
+      <foreignObject x={cx - 26} y="104" width="52" height="52">
         <div className="grid size-full place-items-center">{center}</div>
       </foreignObject>
     </svg>
