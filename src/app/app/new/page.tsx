@@ -114,7 +114,7 @@ export default function NewAnalysisPage() {
         </p>
       </div>
 
-      {ent && !ent.active && (
+      {ent && !ent.active && ent.reportCredits === 0 && (
         <p className="mb-6 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">
           You need an active subscription to run analyses.{" "}
           <a href="/app/billing/" className="font-semibold underline underline-offset-2">

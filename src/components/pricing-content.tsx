@@ -6,13 +6,14 @@ import { Check, ShieldCheck } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlanGrid } from "@/components/v2/pricing/plan-grid";
+import type { Plan } from "@/lib/data";
 import { Eyebrow } from "@/components/v2/atoms";
 import { track } from "@/lib/track";
 import { useI18n, usePageMeta } from "@/i18n/provider";
 
 const RISK_REVERSAL = ["pricing.r1", "pricing.r2", "pricing.r3", "pricing.r4"];
 
-export function PricingContent() {
+export function PricingContent({ initialPlans }: { initialPlans?: Plan[] } = {}) {
   const { t } = useI18n();
   usePageMeta("meta.title.pricing", "meta.desc.pricing");
 
@@ -43,7 +44,7 @@ export function PricingContent() {
 
         <section className="pb-20">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
-            <PlanGrid />
+            <PlanGrid initialPlans={initialPlans} />
 
             {/* Risk reversal */}
             <div className="mt-10 grid gap-6 rounded-2xl border bg-card p-6 sm:p-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">

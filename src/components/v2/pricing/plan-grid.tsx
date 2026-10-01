@@ -36,11 +36,16 @@ function intervalOf(p: Plan): "month" | "year" | "once" {
  * no code change. The billing toggle exists only when yearly plans exist.
  * Signature motion: light travelling around the highlighted plan's border.
  */
-export function PlanGrid() {
+export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
   const { t } = useI18n();
   const { loggedIn } = useSession();
   const agentOn = featureAgentEnabled();
-  const { data: plans, isLoading, isError } = useQuery({ queryKey: ["plans"], queryFn: getPlans });
+  const { data: plans, isLoading, isError } = useQuery({
+    queryKey: ["plans"],
+    queryFn: getPlans,
+    // Server-rendered plans (pricing page) so prices are in the HTML.
+    initialData: initialPlans?.length ? initialPlans : undefined,
+  });
   const { data: ent } = useQuery({ queryKey: ["entitlement"], queryFn: getEntitlement, enabled: loggedIn });
 
   const sorted = useMemo(() => [...(plans ?? [])].sort((a, b) => a.sort_order - b.sort_order), [plans]);

@@ -96,6 +96,7 @@ function LoginForm() {
       });
       if (error) throw error;
       setSent(true); // the "Check your inbox" card says it all; no duplicate toast
+      setAuthError(null); // a fresh link supersedes the "expired link" notice
     } catch (err) {
       const key = friendlySendErrorKey(err);
       setSendError(key ? t(key) : err instanceof Error ? err.message : t("login.err.send"));
