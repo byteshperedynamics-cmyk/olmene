@@ -316,6 +316,8 @@ export interface GhPull {
   number: number;
   html_url: string;
   state: "open" | "closed";
+  /** Set by GitHub when the PR was merged (null when closed unmerged / open). */
+  merged_at?: string | null;
   head: { ref: string; sha: string };
   base: { ref: string };
   changed_files?: number;

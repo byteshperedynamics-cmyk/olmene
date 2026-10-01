@@ -10,7 +10,9 @@
 --      Existing subscribers keep working either way: the webhook and the
 --      entitlement read the subscription's polar_product_id, and inactive
 --      plans stay in the table.
--- Then: git mv supabase/pending/20261002_plans_v2_rows.sql supabase/migrations/
+-- Then move it with a version NEWER than the latest migration (versions must be
+-- unique), e.g.:
+--   git mv supabase/pending/plans_v2_rows.sql supabase/migrations/20261010_plans_v2_rows.sql
 -- (the push-to-main pipeline applies it via `supabase db push`).
 
 -- A. New plans --------------------------------------------------------------

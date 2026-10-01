@@ -46,6 +46,12 @@ export interface AgentJobRow {
   locked_until: string | null;
   attempts: number;
   completed_at?: string | null;
+  /** PR tracking (migration 20261002_pr_tracking) — set when the PR opens. */
+  pr_number?: number | null;
+  pr_url?: string | null;
+  pr_state?: "open" | "merged" | "closed" | null;
+  merged_at?: string | null;
+  pr_last_polled_at?: string | null;
 }
 
 export interface PlannedActionRow {
@@ -520,6 +526,9 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
     await db.updateJob(job.id, {
       status: "verifying",
       current_step: "verify",
+      pr_number: existingPr.number,
+      pr_url: existingPr.html_url,
+      pr_state: "open",
       step_outputs: {
         ...job.step_outputs,
         apply: {
@@ -670,6 +679,9 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   await db.updateJob(job.id, {
     status: "verifying",
     current_step: "verify",
+    pr_number: pr.number,
+    pr_url: pr.html_url,
+    pr_state: "open",
     step_outputs: {
       ...job.step_outputs,
       apply: {
