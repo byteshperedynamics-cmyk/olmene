@@ -367,7 +367,10 @@ Deno.serve(async (req: Request) => {
   } catch {
     return ok({ ignored: "unparseable" });
   }
-  const eventId = event.id;
+  // Polar puts the delivery id in the Standard Webhooks "webhook-id" header;
+  // the body has no top-level id. Reading only event.id made every real event
+  // look unknown, so no order or subscription was ever processed.
+  const eventId = event.id ?? req.headers.get("webhook-id") ?? undefined;
   const eventType = event.type ?? "";
   const isSubscriptionEvent = POLAR_SUBSCRIPTION_EVENTS.includes(eventType);
   const isOrderEvent = POLAR_ORDER_EVENTS.includes(eventType);
