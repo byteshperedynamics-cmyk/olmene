@@ -33,17 +33,17 @@ Applied automatically when the branch merges (`supabase/migrations/`, all additi
 2. `20261003_pr_tracking.sql` — PR columns on `agent_jobs` + backfill from `step_outputs`.
 3. `20261004_measure.sql` — `gsc_daily`, `fix_outcomes` (RLS select-own), `connections` provider check widened to include `google`.
 4. `20261005_public_stats.sql` — `public_stats()`, `current_mrr_eur()`, `metrics_weekly` + weekly pg_cron snapshot, `connections.public_feed_opt_in`.
+5. `20261010_plans_v2_rows.sql` — Fix/Team/€29 plans on the new Polar products; old plans deactivated.
 
 Waiting for you (`supabase/pending/`, NOT applied):
 
-- `plans_v2_rows.sql` — Fix/Team rows (needs Polar product IDs).
 - `cron_sync.sql` — 15-minute sync schedule (needs the cron secret).
 
 ## Human actions needed
 
 1. **Review and merge** `redesign/v2`. I could not push: the remote requires credentials this environment doesn't have. From the main checkout:
    `git push origin redesign/v2`, then open a PR.
-2. **Polar products** (EUR): Fix €49/mo, Fix €468/yr, Team €149/mo, Team €1,428/yr, Single report €29. Paste the IDs into `supabase/pending/plans_v2_rows.sql`, decide on step B (stop selling Starter/Pro/€14), then move the file into `supabase/migrations/` with a newer version.
+2. **Polar (new account "ByteSphere_Dynamics", done 2026-10-02):** default currency switched to EUR; products created (Fix €49/mo + €468/yr, Team €149/mo + €1,428/yr, Single report €29); webhook `2f566328…` → `polar-webhook` for order.* and subscription.* events; one-use 100%-off code for the end-to-end test (single report only, expires 2026-10-15). `supabase/migrations/20261010_plans_v2_rows.sql` points the plans at the new products and deactivates Starter/Pro/€14. **Still yours:** set the Supabase function secrets `POLAR_SERVER=production`, `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET` (values in `.dev.vars`) right after merging, and finish Polar's account review/payout setup.
 3. **Cron secret**: `openssl rand -base64 48`; `npx wrangler secret put OLMENE_CRON_SECRET`; store the same value in Supabase Vault as `olmene_cron_secret`; move `supabase/pending/cron_sync.sql` into migrations.
 4. **Google OAuth client** (for Measure): Google Cloud project → OAuth consent screen (scope `webmasters.readonly`) → Web client with redirect URI `https://olmene.com/api/measure/google/callback/`. Then `wrangler secret put GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Enable with `MEASURE_FEATURE_ENABLED=true` (Worker) and `NEXT_PUBLIC_FEATURE_MEASURE=true` (`.env.production`).
 5. **Agent in production** (when ready): `AGENT_FEATURE_ENABLED` + `NEXT_PUBLIC_FEATURE_AGENT=true`, register the GitHub App, run a real-repo end-to-end on a Next.js test site.
