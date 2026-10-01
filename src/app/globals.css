@@ -268,7 +268,7 @@
 
   /* v2 instrument tokens (light) */
   --surface-2: #F2F0EA;
-  --faint: #8A8883;
+  --faint: #706E69; /* AA on card, oat and surface-2 */
   --line-strong: rgba(38, 38, 36, 0.18);
   --leaf-soft: rgba(37, 96, 57, 0.09);
   --glow: rgba(37, 96, 57, 0.20);
@@ -326,7 +326,7 @@
 
   /* v2 instrument tokens (dark) */
   --surface-2: #2C2D2A;
-  --faint: #8C8B85;
+  --faint: #96958F; /* AA on every dark surface */
   --line-strong: rgba(245, 244, 239, 0.16);
   --leaf-soft: rgba(105, 194, 126, 0.14);
   --glow: rgba(105, 194, 126, 0.38);

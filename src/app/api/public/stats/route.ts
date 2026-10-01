@@ -12,10 +12,19 @@ export const dynamic = "force-dynamic";
  * included only when PUBLIC_METRICS_SHOW_MRR=true (owner decision).
  */
 export async function GET() {
-  const db = getServiceDb();
-  const { data, error } = await db.rpc("public_stats");
+  let data: unknown = null;
+  let error: unknown = null;
+  try {
+    const res = await getServiceDb().rpc("public_stats");
+    data = res.data;
+    error = res.error;
+  } catch (e) {
+    error = e; // e.g. service credentials missing in a local build
+  }
   if (error || !data) {
-    return NextResponse.json({ error: { code: "unavailable" } }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    // 200 + flag (not 5xx): a stats outage must never surface as a browser
+    // console error on marketing pages; callers keep their fallback numbers.
+    return NextResponse.json({ unavailable: true }, { headers: { "Cache-Control": "no-store" } });
   }
   const raw = data as Record<string, unknown>;
   const showMrr = (getEnv("PUBLIC_METRICS_SHOW_MRR") ?? "").toLowerCase() === "true";

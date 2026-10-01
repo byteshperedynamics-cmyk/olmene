@@ -207,7 +207,7 @@ function TierCard({
         </LivePill>
       )}
       <div>
-        <h3 className="o-display text-[22px]">{name}</h3>
+        <h2 className="o-display text-[22px]">{name}</h2>
         <p className="mt-3 flex items-baseline gap-1.5">
           <span key={amount} className="o-crossfade font-display text-[40px] leading-none tabular-nums">
             {amount}

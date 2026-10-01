@@ -101,7 +101,7 @@ export function DiffView({
               if (r.kind === "hunk") {
                 return (
                   <tr key={i}>
-                    <td colSpan={4} className="bg-surface-2/60 px-3 py-0.5 text-[11px] text-faint">
+                    <td colSpan={4} className="bg-surface-2/60 px-3 py-0.5 text-[11px] text-muted-foreground">
                       {r.text}
                     </td>
                   </tr>
@@ -118,8 +118,8 @@ export function DiffView({
                   )}
                   style={r.kind === "add" && animate ? { animationDelay: `${delay}ms` } : undefined}
                 >
-                  <td className="w-9 select-none pe-1 text-end text-faint">{r.oldNo ?? ""}</td>
-                  <td className="w-9 select-none pe-2 text-end text-faint">{r.newNo ?? ""}</td>
+                  <td className="w-9 select-none pe-1 text-end text-muted-foreground">{r.oldNo ?? ""}</td>
+                  <td className="w-9 select-none pe-2 text-end text-muted-foreground">{r.newNo ?? ""}</td>
                   <td
                     className={cn(
                       "w-4 select-none text-center",

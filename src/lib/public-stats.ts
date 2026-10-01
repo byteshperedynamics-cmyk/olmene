@@ -10,7 +10,8 @@ async function fetchStats(): Promise<PublicStats | null> {
   try {
     const res = await fetch("/api/public/stats/");
     if (!res.ok) return null;
-    return (await res.json()) as PublicStats;
+    const body = (await res.json()) as PublicStats | { unavailable: true };
+    return "unavailable" in body ? null : body;
   } catch {
     return null;
   }

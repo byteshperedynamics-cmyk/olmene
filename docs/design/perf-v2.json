@@ -1,0 +1,116 @@
+{
+  "measured_at": "2026-10-01",
+  "tool": "lighthouse 12.8.2 mobile; both builds served locally via wrangler dev on the same machine (not comparable to the live-site baseline in perf-baseline.json, which includes real network latency)",
+  "main_home": [
+    {
+      "categories": {
+        "performance": 83,
+        "accessibility": 100,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "lcp_ms": 4314,
+      "tbt_ms": 141,
+      "cls": 0.003,
+      "total_kb": 645
+    },
+    {
+      "categories": {
+        "performance": 90,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcp_ms": 3556,
+      "tbt_ms": 100,
+      "cls": 0.005,
+      "total_kb": 645
+    },
+    {
+      "categories": {
+        "performance": 84,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcp_ms": 4357,
+      "tbt_ms": 92,
+      "cls": 0.005,
+      "total_kb": 645
+    },
+    {
+      "categories": {
+        "performance": 85,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcp_ms": 4263,
+      "tbt_ms": 90,
+      "cls": 0.005,
+      "total_kb": 645
+    }
+  ],
+  "v2_home": [
+    {
+      "categories": {
+        "performance": 83,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcp_ms": 4274,
+      "tbt_ms": 114,
+      "cls": 0.003,
+      "total_kb": 632
+    },
+    {
+      "categories": {
+        "performance": 82,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcp_ms": 4338,
+      "tbt_ms": 169,
+      "cls": 0.003,
+      "total_kb": 632
+    },
+    {
+      "categories": {
+        "performance": 83,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcp_ms": 4257,
+      "tbt_ms": 128,
+      "cls": 0.003,
+      "total_kb": 632
+    }
+  ],
+  "main_pricing": {
+    "categories": {
+      "performance": 86,
+      "accessibility": 98,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "lcp_ms": 4098,
+    "tbt_ms": 44,
+    "cls": 0.003,
+    "total_kb": 632
+  },
+  "v2_pricing": {
+    "categories": {
+      "performance": 84,
+      "accessibility": 98,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "lcp_ms": 4403,
+    "tbt_ms": 35,
+    "cls": 0.003,
+    "total_kb": 638
+  }
+}
