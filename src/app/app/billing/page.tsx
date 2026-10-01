@@ -67,7 +67,7 @@ export default function BillingPage() {
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">Billing</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Plans are counted in reports, not seats. Cancel any time; access runs to the end of your period.
+          Plans are counted in fixes and reports, not seats. Cancel any time; access runs to the end of your period.
         </p>
       </div>
 
@@ -124,7 +124,8 @@ export default function BillingPage() {
         {sorted.map((p) => {
           const selected = selectedPlan === p.polar_product_id;
           // The plan you already pay for can't be "switched" to.
-          const current = !!ent?.active && !p.one_time && p.name === ent.planName;
+          const current =
+            !!ent?.active && !p.one_time && (ent.productId ? ent.productId === p.polar_product_id : p.name === ent.planName);
           return (
             <Card
               key={p.polar_product_id}
@@ -150,7 +151,13 @@ export default function BillingPage() {
                 <CardDescription>
                   {p.one_time
                     ? `One full analysis · credit valid for 90 days`
-                    : `${p.reports_per_period} full ${p.reports_per_period === 1 ? "analysis" : "analyses"} per month`}
+                    : [
+                        p.actions_per_period ? `Up to ${p.actions_per_period} fix pull requests a month` : null,
+                        `${p.reports_per_period} full ${p.reports_per_period === 1 ? "analysis" : "analyses"} a month`,
+                        p.sites_limit && p.sites_limit > 1 ? `up to ${p.sites_limit} sites` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-auto">

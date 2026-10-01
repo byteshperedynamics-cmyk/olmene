@@ -43,6 +43,8 @@ export interface ReportRow {
 export interface Entitlement {
   active: boolean;
   planName: string | null;
+  /** Polar product of the active subscription — distinguishes monthly vs yearly of the same plan. */
+  productId?: string | null;
   quotaUsed: number;
   quotaTotal: number;
   renewsAt: string | null;
@@ -224,6 +226,7 @@ export async function getEntitlement(): Promise<Entitlement> {
   return {
     active: true,
     planName: (plan as { name?: string } | null)?.name ?? "Subscribed",
+    productId: (sub as { polar_product_id: string }).polar_product_id,
     quotaUsed: count ?? 0,
     quotaTotal: (plan as { reports_per_period?: number } | null)?.reports_per_period ?? 0,
     renewsAt: (sub as { current_period_end: string | null }).current_period_end,

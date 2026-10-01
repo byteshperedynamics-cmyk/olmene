@@ -117,7 +117,7 @@ export function PlanGrid() {
           ? [0, 1].map((i) => <div key={i} className="o-skeleton h-[420px] rounded-2xl" />)
           : subs.map((p) => {
               const isHighlight = p === highlight;
-              const current = ent?.active && ent.planName === p.name;
+              const current = ent?.active && (ent.productId ? ent.productId === p.polar_product_id : ent.planName === p.name);
               const yearlyPlan = intervalOf(p) === "year";
               const price = yearlyPlan && p.monthly_equivalent_eur
                 ? { amount: `€${p.monthly_equivalent_eur}`, suffix: t("pc.perMonthYearly") }
