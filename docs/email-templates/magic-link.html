@@ -11,6 +11,7 @@
           <h1 style="margin:0 0 12px 0;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;font-weight:500;color:#1C1D1B;">Sign in to Olmene</h1>
           <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;color:#55534E;">Click the button below to sign in. The link works once and expires in about an hour.</p>
           <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2F6B45;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:600;padding:12px 22px;border-radius:10px;">Sign in to Olmene</a>
+          <p style="margin:20px 0 0 0;font-size:13px;line-height:1.6;color:#706E69;">If the button doesn&#8217;t work, open this link in the same browser where you asked for it:<br><a href="{{ .ConfirmationURL }}" style="color:#2F6B45;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
           <p style="margin:24px 0 0 0;font-size:13px;line-height:1.6;color:#706E69;">Didn&#8217;t ask to sign in? You can ignore this email; nothing happens without the link.</p>
         </td></tr>
         <tr><td style="padding:24px 32px 32px 32px;">
