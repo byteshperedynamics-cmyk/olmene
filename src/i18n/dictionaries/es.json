@@ -177,7 +177,7 @@
   "faq.q3": "¿Puede romper mi web?",
   "faq.a3": "Olmene nunca fusiona nada. Cada cambio llega como pull request en su propia rama, con una explicación y los pasos para deshacerlo, así que lo revisas como el trabajo de un compañero. Nunca hace push a tu rama principal y omite cualquier cambio del que no esté seguro.",
   "faq.q4": "¿Qué webs y frameworks son compatibles?",
-  "faq.a4": "Hoy las correcciones se entregan para webs en HTML estático. El soporte para Next.js y Astro está en desarrollo. Cualquier web pública puede usar el escaneo gratuito y el informe completo, esté hecha con lo que esté hecha.",
+  "faq.a4": "Las correcciones se entregan para webs en HTML estático, Next.js (App Router) y Astro. Otros frameworks llegarán más adelante. Cualquier web pública puede usar el escaneo gratuito y el informe completo, esté hecha con lo que esté hecha.",
   "faq.q5": "¿Y si mi web no está en GitHub?",
   "faq.a5": "Puedes seguir usando el escaneo gratuito y comprar una vez el informe completo con fuentes. Obtienes los mismos hallazgos y un plan priorizado; los cambios los haces tú.",
   "faq.q6": "¿Qué pasa después de fusionar?",

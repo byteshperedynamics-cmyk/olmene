@@ -9,11 +9,11 @@
  * lives in the API routes.
  */
 
-import { validatePlannedAction, type RepoAllowlist } from "./allowlist";
+import { isAllowedEditPath, validatePlannedAction, type PlanCheck, type RepoAllowlist } from "./allowlist";
 import { writeAudit } from "./audit";
 import { sha256Hex } from "./db";
 import { unifiedDiff } from "./diff";
-import { FIXERS, FIXER_IDS, FIXER_ORDER, type CopyDrafts, type FileEdit, type FixerContext } from "./fixers";
+import { FIXERS, FIXER_IDS, FIXER_ORDER, type CopyDrafts, type FileEdit, type FixerContext, type FrameworkTarget } from "./fixers";
 import type { ScopedGithubClient } from "./github/client";
 import { decodeContent } from "./github/client";
 import { detectTarget, normalizeSiteUrl } from "./htmlfile";
@@ -127,6 +127,27 @@ function userSafe(err: unknown): string {
   return msg.replace(/gh[a-z]_[A-Za-z0-9_]+/g, "[REDACTED]").slice(0, 300);
 }
 
+/** Validate EVERY file an action writes (not just the first) against the plan policy. */
+function validateAllFiles(
+  action: { fixer_id: string; action_class: string },
+  files: string[],
+  allow: RepoAllowlist,
+  defaultBranch: string,
+  target: Record<string, string>,
+): PlanCheck {
+  if (files.length === 0) return { ok: false, reason: "action has no files" };
+  for (const path of files) {
+    const check = validatePlannedAction(
+      { fixer_id: action.fixer_id, action_class: action.action_class, target: { ...target, path } },
+      allow,
+      FIXER_IDS,
+      defaultBranch,
+    );
+    if (!check.ok) return check;
+  }
+  return { ok: true };
+}
+
 /** Build the fixer context from the repo state. */
 async function buildFixerContext(
   gh: ScopedGithubClient,
@@ -148,6 +169,28 @@ async function buildFixerContext(
     const content = await gh.getContent(detection.homepagePath, defaultBranch);
     homepageHtml = content ? decodeContent(content) : null;
   }
+  const read = async (p: string) => {
+    const c = await gh.getContent(p, defaultBranch);
+    return c ? decodeContent(c) : null;
+  };
+  let framework: FrameworkTarget | null = null;
+  if (detection.repoType === "nextjs-app" && detection.nextLayoutPath) {
+    const layout = await read(detection.nextLayoutPath);
+    if (layout !== null) framework = { kind: "nextjs-app", headPath: detection.nextLayoutPath, headContent: layout };
+  } else if (detection.repoType === "astro" && detection.astroIndexPath) {
+    const index = await read(detection.astroIndexPath);
+    if (index !== null) {
+      // The homepage's layout owns <head> when index.astro imports one from src/layouts/.
+      const imp = index.match(/import\s+\w+\s+from\s+["']\.\.\/layouts\/([A-Za-z0-9_-]+\.astro)["']/);
+      const layoutPath = imp ? `src/layouts/${imp[1]}` : null;
+      const layout = layoutPath && paths.includes(layoutPath) ? await read(layoutPath) : null;
+      if (layout !== null && layoutPath && /<head[\s>]/i.test(layout)) {
+        framework = { kind: "astro", headPath: layoutPath, headContent: layout, pagePath: detection.astroIndexPath, pageContent: index };
+      } else if (/<head[\s>]/i.test(index)) {
+        framework = { kind: "astro", headPath: detection.astroIndexPath, headContent: index, pagePath: detection.astroIndexPath, pageContent: index };
+      }
+    }
+  }
   return {
     ctx: {
       report,
@@ -157,6 +200,7 @@ async function buildFixerContext(
       treePaths: paths,
       repo: { owner: allow.owner, name: allow.repo, defaultBranch },
       copy,
+      framework,
     },
     defaultBranch,
     headSha: branch.commit.sha,
@@ -311,7 +355,7 @@ async function runPreview(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
     detectedHomepage: ctx.homepagePath,
     defaultBranch,
     headSha: headSha.slice(0, 10),
-    repoType: ctx.homepagePath ? "static-html" : "unsupported",
+    repoType: ctx.framework?.kind ?? (ctx.homepagePath ? "static-html" : "unsupported"),
   };
   let viable = 0;
   for (const action of planned) {
@@ -349,18 +393,10 @@ async function runPreview(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
       expectedScoreChange: outcome.expectedScoreChange,
       revertSteps: outcome.revertSteps,
     };
-    // Plan-level allowlist validation BEFORE the action can ever be approved
+    // Plan-level allowlist validation BEFORE the action can ever be approved —
+    // every file the action writes, not just the first.
     const allow: RepoAllowlist = { owner: ctx.repo.owner, repo: ctx.repo.name };
-    const check = validatePlannedAction(
-      {
-        fixer_id: action.fixer_id,
-        action_class: action.action_class,
-        target: { ...(action.target as Record<string, string>), path: files[0] ?? "" },
-      },
-      allow,
-      FIXER_IDS,
-      defaultBranch,
-    );
+    const check = validateAllFiles(action, files, allow, defaultBranch, action.target as Record<string, string>);
     if (!check.ok) {
       await db.updatePlannedAction(action.id, { status: "skipped", skip_reason: `blocked by validator: ${check.reason}` });
       await db.audit({
@@ -471,17 +507,8 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   // Final allowlist validation of every action (deterministic, code-only)
   for (const action of approved) {
     const target = action.target as Record<string, string>;
-    const firstFile = (action.preview as { files?: string[] })?.files?.[0] ?? "";
-    const check = validatePlannedAction(
-      {
-        fixer_id: action.fixer_id,
-        action_class: action.action_class,
-        target: { ...target, path: firstFile, branch: branchName },
-      },
-      allow,
-      FIXER_IDS,
-      defaultBranch,
-    );
+    const files = (action.preview as { files?: string[] })?.files ?? [];
+    const check = validateAllFiles(action, files, allow, defaultBranch, { ...target, branch: branchName });
     if (!check.ok) {
       throw new RunnerError(`blocked by validator: ${check.reason}`);
     }
@@ -518,13 +545,29 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   const currentContent = new Map<string, string>(); // path → content (accumulated)
   const touched = new Set<string>();
   if (ctx.homepagePath && ctx.homepageHtml) currentContent.set(ctx.homepagePath, ctx.homepageHtml);
+  if (ctx.framework) {
+    currentContent.set(ctx.framework.headPath, ctx.framework.headContent);
+    if (ctx.framework.pagePath && ctx.framework.pageContent !== undefined) {
+      currentContent.set(ctx.framework.pagePath, ctx.framework.pageContent);
+    }
+  }
 
   for (const action of ordered) {
     const fixer = FIXERS.find((f) => f.id === action.fixer_id);
     if (!fixer) continue;
+    // Each fixer sees the content as already edited by the fixers before it.
+    const fw = ctx.framework;
     const stepCtx: FixerContext = {
       ...ctx,
       homepageHtml: ctx.homepagePath ? currentContent.get(ctx.homepagePath) ?? null : null,
+      framework: fw
+        ? {
+            ...fw,
+            headContent: currentContent.get(fw.headPath) ?? fw.headContent,
+            pageContent: fw.pagePath ? currentContent.get(fw.pagePath) ?? fw.pageContent : fw.pageContent,
+          }
+        : null,
+      treePaths: [...new Set([...ctx.treePaths, ...touched])],
     };
     const outcome = fixer.build(stepCtx);
     if ("skip" in outcome) continue;
@@ -534,6 +577,12 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
     }
   }
   if (touched.size === 0) throw new RunnerError("fixers produced no edits at apply time (report/repo state changed)");
+  // Defense in depth: every path about to be written passes the file policy.
+  for (const path of touched) {
+    if (!isAllowedEditPath(path) || path.includes("..") || path.startsWith("/")) {
+      throw new RunnerError(`blocked by validator: file not allowed for fixers: ${path}`);
+    }
+  }
 
   // Git write path: branch (idempotent) → tree → commit → PR
   let branchHead: string;

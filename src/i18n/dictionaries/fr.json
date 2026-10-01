@@ -177,7 +177,7 @@
   "faq.q3": "Peut-il casser mon site ?",
   "faq.a3": "Olmene ne fusionne jamais rien. Chaque modification arrive sous forme de pull request sur sa propre branche, avec une explication et les étapes pour l'annuler, pour que vous la relisiez comme le travail d'un collègue. Il ne pousse jamais sur votre branche principale et ignore toute modification dont il n'est pas sûr.",
   "faq.q4": "Quels sites et frameworks sont pris en charge ?",
-  "faq.a4": "Les correctifs sont livrés aujourd'hui pour les sites en HTML statique. La prise en charge de Next.js et d'Astro est en cours. Tout site public peut utiliser l'analyse gratuite et le rapport complet, quelle que soit sa technologie.",
+  "faq.a4": "Les correctifs sont livrés pour les sites en HTML statique, Next.js (App Router) et Astro. D'autres frameworks suivront. Tout site public peut utiliser l'analyse gratuite et le rapport complet, quelle que soit sa technologie.",
   "faq.q5": "Et si mon site n'est pas sur GitHub ?",
   "faq.a5": "Vous pouvez toujours utiliser l'analyse gratuite et acheter une fois le rapport complet et sourcé. Vous obtenez les mêmes constats et un plan priorisé ; c'est vous qui faites les modifications.",
   "faq.q6": "Que se passe-t-il après la fusion ?",

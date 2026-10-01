@@ -177,7 +177,7 @@
   "faq.q3": "Kann es meine Website kaputt machen?",
   "faq.a3": "Olmene mergt nie etwas. Jede Änderung kommt als Pull Request auf einem eigenen Branch, mit Erklärung und Schritten zum Rückgängigmachen, sodass du sie wie die Arbeit eines Teammitglieds prüfst. Es pusht nie auf deinen Main-Branch und überspringt jede Änderung, bei der es sich nicht sicher ist.",
   "faq.q4": "Welche Websites und Frameworks werden unterstützt?",
-  "faq.a4": "Fixes werden heute für statische HTML-Websites ausgeliefert. Unterstützung für Next.js und Astro ist in Arbeit. Jede öffentliche Website kann den Gratis-Scan und den vollständigen Bericht nutzen, egal womit sie gebaut ist.",
+  "faq.a4": "Fixes werden für statische HTML-Websites, Next.js (App Router) und Astro ausgeliefert. Für andere Frameworks folgen Fixes später. Jede öffentliche Website kann den Gratis-Scan und den vollständigen Bericht nutzen, egal womit sie gebaut ist.",
   "faq.q5": "Was, wenn meine Website nicht auf GitHub liegt?",
   "faq.a5": "Du kannst trotzdem den Gratis-Scan nutzen und einmalig den vollständigen Bericht mit Quellen kaufen. Du bekommst dieselben Befunde und einen priorisierten Plan; die Änderungen setzt du selbst um.",
   "faq.q6": "Was passiert nach dem Merge?",

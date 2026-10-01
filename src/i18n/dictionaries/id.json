@@ -177,7 +177,7 @@
   "faq.q3": "Bisakah ini merusak situs saya?",
   "faq.a3": "Olmene tidak pernah menggabungkan apa pun. Setiap perubahan datang sebagai pull request di branch tersendiri, dengan penjelasan dan langkah pembatalan, sehingga Anda meninjaunya seperti pekerjaan rekan tim. Olmene tidak pernah melakukan push ke branch utama Anda dan melewati perubahan apa pun yang tidak ia yakini.",
   "faq.q4": "Situs dan framework apa saja yang didukung?",
-  "faq.a4": "Saat ini perbaikan dikirim untuk situs HTML statis. Dukungan Next.js dan Astro sedang dikerjakan. Situs publik apa pun bisa memakai pemindaian gratis dan laporan lengkap, apa pun teknologinya.",
+  "faq.a4": "Perbaikan dikirim untuk situs HTML statis, Next.js (App Router), dan Astro. Framework lain menyusul. Situs publik apa pun bisa memakai pemindaian gratis dan laporan lengkap, apa pun teknologinya.",
   "faq.q5": "Bagaimana jika situs saya tidak ada di GitHub?",
   "faq.a5": "Anda tetap bisa memakai pemindaian gratis dan membeli sekali laporan lengkap bersumber. Anda mendapat temuan yang sama dan rencana berprioritas; perubahannya Anda lakukan sendiri.",
   "faq.q6": "Apa yang terjadi setelah saya menggabungkan?",

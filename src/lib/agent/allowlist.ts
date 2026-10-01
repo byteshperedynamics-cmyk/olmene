@@ -81,6 +81,24 @@ export function validateGithubRequest(
 
 export const ALLOWED_FILE_EXTENSIONS = [".html", ".htm", ".txt", ".xml"];
 
+/**
+ * Source files a fixer may edit in framework repos — exact, known locations
+ * only (brief §6.2). Anything else with a code extension is refused.
+ */
+export const FRAMEWORK_EDIT_PATHS: RegExp[] = [
+  /^(src\/)?app\/layout\.(tsx|jsx|ts|js)$/, // Next.js root layout (metadata + <body>)
+  /^(src\/)?components\/olmene-jsonld\.(tsx|jsx)$/, // the JSON-LD component Olmene adds
+  /^src\/layouts\/[A-Za-z0-9_-]+\.astro$/, // Astro layouts (<head>)
+  /^src\/pages\/index\.astro$/, // Astro homepage
+];
+
+/** True when a fixer may write this path (extension + location policy). */
+export function isAllowedEditPath(path: string): boolean {
+  const lower = path.toLowerCase();
+  if (ALLOWED_FILE_EXTENSIONS.some((ext) => lower.endsWith(ext))) return true;
+  return FRAMEWORK_EDIT_PATHS.some((re) => re.test(path));
+}
+
 /** Paths a fixer may never touch regardless of anything else. */
 const FORBIDDEN_PATH_PREFIXES = [
   ".github/",
@@ -131,9 +149,8 @@ export function validatePlannedAction(
   if (!path.startsWith("olmene/") && FORBIDDEN_PATH_PREFIXES.some((p) => path.startsWith(p))) {
     return { ok: false, reason: `protected path: ${path}` };
   }
-  const lower = path.toLowerCase();
-  if (!ALLOWED_FILE_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
-    return { ok: false, reason: `file extension not allowed for v1 fixers: ${path}` };
+  if (!isAllowedEditPath(path)) {
+    return { ok: false, reason: `file not allowed for fixers: ${path}` };
   }
   if (!branch || !branch.startsWith("olmene/fix-")) {
     return { ok: false, reason: `branch must be an olmene/fix- branch, got: ${branch}` };

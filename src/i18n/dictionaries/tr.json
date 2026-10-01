@@ -177,7 +177,7 @@
   "faq.q3": "Sitemi bozabilir mi?",
   "faq.a3": "Olmene hiçbir şeyi birleştirmez. Her değişiklik kendi dalında, açıklaması ve geri alma adımlarıyla birlikte bir pull request olarak gelir; siz de onu bir ekip arkadaşınızın işi gibi incelersiniz. Ana dalınıza asla push yapmaz ve emin olmadığı her değişikliği atlar.",
   "faq.q4": "Hangi siteler ve framework'ler destekleniyor?",
-  "faq.a4": "Düzeltmeler bugün statik HTML siteleri için gönderiliyor. Next.js ve Astro desteği üzerinde çalışılıyor. Hangi teknolojiyle yapılmış olursa olsun, herkese açık her site ücretsiz taramayı ve tam raporu kullanabilir.",
+  "faq.a4": "Düzeltmeler statik HTML siteleri, Next.js (App Router) ve Astro için gönderilir. Diğer framework'ler daha sonra gelecek. Hangi teknolojiyle yapılmış olursa olsun, herkese açık her site ücretsiz taramayı ve tam raporu kullanabilir.",
   "faq.q5": "Sitem GitHub'da değilse ne olur?",
   "faq.a5": "Yine de ücretsiz taramayı kullanabilir ve kaynaklı tam raporu bir kez satın alabilirsiniz. Aynı bulguları ve önceliklendirilmiş bir planı alırsınız; değişiklikleri kendiniz yaparsınız.",
   "faq.q6": "Birleştirdikten sonra ne olur?",

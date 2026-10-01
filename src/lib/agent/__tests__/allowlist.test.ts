@@ -239,3 +239,35 @@ describe("ScopedGithubClient enforcement", () => {
     expect(calls).toEqual([{ method: "GET", path: "/repos/octocat/site" }]);
   });
 });
+
+describe("framework edit paths (brief §6.2)", () => {
+  test("only exact, known framework files are editable", async () => {
+    const { isAllowedEditPath } = await import("../allowlist");
+    for (const ok of [
+      "app/layout.tsx",
+      "src/app/layout.js",
+      "components/olmene-jsonld.tsx",
+      "src/components/olmene-jsonld.jsx",
+      "src/layouts/BaseLayout.astro",
+      "src/pages/index.astro",
+      "public/robots.txt",
+      "public/sitemap.xml",
+    ]) {
+      expect(isAllowedEditPath(ok)).toBe(true);
+    }
+    for (const bad of [
+      "app/page.tsx",
+      "src/app/api/route.ts",
+      "components/header.tsx",
+      "src/pages/about.astro",
+      "src/layouts/nested/Deep.astro",
+      "next.config.ts",
+      "app/layout.tsx.bak",
+      "lib/app/layout.tsx",
+      "middleware.ts",
+    ]) {
+      expect(isAllowedEditPath(bad)).toBe(false);
+    }
+  });
+});
+

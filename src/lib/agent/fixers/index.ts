@@ -21,6 +21,7 @@ import {
   normalizeSiteUrl,
   replaceH1Text,
 } from "../htmlfile";
+import { addBodyComponent, addMetadataCanonical, setMetadataString } from "../jsfile";
 
 // ───────────────────────────────────────────────────────────────────────────
 // Types
@@ -47,6 +48,17 @@ export interface CopyDrafts {
   cta?: { current: string; next: string };
 }
 
+/** A framework repo's editable entry files (loaded by the runner). */
+export interface FrameworkTarget {
+  kind: "nextjs-app" | "astro";
+  /** Next.js: root layout. Astro: the file that owns <head> (layout or index). */
+  headPath: string;
+  headContent: string;
+  /** Astro: the homepage page file (for H1 edits). */
+  pagePath?: string;
+  pageContent?: string;
+}
+
 export interface FixerContext {
   report: ReportData;
   siteUrl: string;
@@ -55,7 +67,15 @@ export interface FixerContext {
   treePaths: string[];
   repo: { owner: string; name: string; defaultBranch: string };
   copy: CopyDrafts;
+  /** Set for Next.js / Astro repos; null for static HTML or unknown repos. */
+  framework?: FrameworkTarget | null;
 }
+
+const COMPONENT_CODE_SKIP =
+  "This change lives in component code in this framework — Olmene does not edit components yet, so it is left for you.";
+
+/** Paths of dynamic robots/sitemap routes that must not be shadowed by static files. */
+const DYNAMIC_SEO_ROUTE = /^(src\/)?app\/(robots|sitemap)\.(ts|tsx|js|jsx)$|^src\/pages\/(robots\.txt|sitemap[\w.-]*\.xml)\.(ts|js)$/;
 
 export type BuildOutcome = FixerBuildResult | { skip: string };
 
@@ -96,6 +116,31 @@ const metaDescriptionFixer: Fixer = {
     if (desc.length < 50 || desc.length > 160) {
       return { skip: `Drafted meta description is ${desc.length} chars (need 50–160) — not shipping a weak tag.` };
     }
+    const fw = ctx.framework;
+    if (fw) {
+      let after: string | null = null;
+      if (fw.kind === "nextjs-app") {
+        const r = setMetadataString(fw.headContent, "description", desc);
+        if (!r.ok) return { skip: r.reason };
+        after = r.content;
+      } else {
+        if (/<meta\s+[^>]*name=["']description["']/i.test(fw.headContent)) {
+          return { skip: "The layout already sets a meta description (possibly from a prop) — not overriding it." };
+        }
+        after = insertMetaDescription(fw.headContent, desc);
+        if (after === null) return { skip: "No <head> or <title> found in the Astro layout." };
+      }
+      return {
+        edits: [{ path: fw.headPath, before: fw.headContent, after }],
+        explanation:
+          fw.kind === "nextjs-app"
+            ? `Sets a ${desc.length}-character description in the root layout's metadata export. Nothing else in the file changes.`
+            : `Adds a ${desc.length}-character meta description to the layout's <head>.`,
+        evidence: `Report check "Meta description" failed: ${check(ctx.report, "Meta description")?.detail ?? "missing"}. Copy drafted from the report's product profile (${ctx.report.product.name}).`,
+        expectedScoreChange: "SEO checklist: Meta description fail → pass (+1 of 21 checks)",
+        revertSteps: ["Close the PR without merging", `Or remove the description line added to ${fw.headPath}`],
+      };
+    }
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     const after = insertMetaDescription(ctx.homepageHtml, desc);
     if (after === null || after === ctx.homepageHtml) {
@@ -120,6 +165,29 @@ const canonicalFixer: Fixer = {
   title: "Canonical URL",
   detect: (report) => triggeredBy(check(report, "Canonical URL")),
   build: (ctx) => {
+    const fw = ctx.framework;
+    if (fw) {
+      const canonicalUrl = normalizeSiteUrl(ctx.siteUrl);
+      let after: string | null;
+      if (fw.kind === "nextjs-app") {
+        const r = addMetadataCanonical(fw.headContent, canonicalUrl);
+        if (!r.ok) return { skip: r.reason };
+        after = r.content;
+      } else {
+        after = insertCanonical(fw.headContent, canonicalUrl);
+        if (after === null) return { skip: "Canonical link already present or no <head> found in the Astro layout." };
+      }
+      return {
+        edits: [{ path: fw.headPath, before: fw.headContent, after }],
+        explanation:
+          fw.kind === "nextjs-app"
+            ? `Adds alternates.canonical (${canonicalUrl}) to the root layout's metadata export.`
+            : `Adds <link rel="canonical" href="${canonicalUrl}"> to the layout's <head>.`,
+        evidence: `Report check "Canonical URL" flagged: ${check(ctx.report, "Canonical URL")?.detail ?? "missing"}.`,
+        expectedScoreChange: "SEO checklist: Canonical URL warn → pass",
+        revertSteps: ["Close the PR without merging", `Or remove the canonical entry added to ${fw.headPath}`],
+      };
+    }
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     const canonical = normalizeSiteUrl(ctx.siteUrl);
     const after = insertCanonical(ctx.homepageHtml, canonical);
@@ -143,7 +211,6 @@ const jsonLdFixer: Fixer = {
   title: "Organization + WebApplication JSON-LD",
   detect: (report) => triggeredBy(check(report, "Structured data (JSON-LD)")),
   build: (ctx) => {
-    if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     const url = normalizeSiteUrl(ctx.siteUrl);
     const org = {
       "@context": "https://schema.org",
@@ -167,6 +234,9 @@ const jsonLdFixer: Fixer = {
     // Multiple <script type="application/ld+json"> blocks are valid and are
     // merged by search engines — safer than rewriting an existing @graph.
     const payload = { "@context": "https://schema.org", "@graph": [org, webApp] };
+    const fw = ctx.framework;
+    if (fw) return buildFrameworkJsonLd(ctx, fw, payload);
+    if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     const after = insertJsonLd(ctx.homepageHtml, payload);
     if (after === null) return { skip: "No </head> anchor found for the JSON-LD script." };
     return {
@@ -205,8 +275,11 @@ const sitemapRobotsFixer: Fixer = {
     return { triggered: false, ref: {} };
   },
   build: (ctx) => {
-    // Only act when the repo is confidently understood as static HTML —
-    // framework repos serve these files from build dirs we must not touch.
+    // Framework repos: static files go in public/ (served at the site root by
+    // Next.js and Astro) — unless a dynamic robots/sitemap route exists.
+    if (ctx.framework) return buildFrameworkSitemapRobots(ctx);
+    // Otherwise only act when the repo is confidently understood as static
+    // HTML — unknown layouts serve these files from build dirs we must not touch.
     if (!ctx.homepagePath) {
       return { skip: "Repository layout not confidently identified as a static site — not creating files blind." };
     }
@@ -255,6 +328,7 @@ const imageAltFixer: Fixer = {
   title: "Image alt text",
   detect: (report) => triggeredBy(check(report, "Image alt coverage")),
   build: (ctx) => {
+    if (ctx.framework) return { skip: COMPONENT_CODE_SKIP };
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     const imgs = ctx.homepageHtml.match(/<img\b[^>]*>/gi) ?? [];
     const missing = imgs.filter((t) => !/\balt\s*=/i.test(t));
@@ -296,6 +370,7 @@ const pricingLinkFixer: Fixer = {
   title: "Visible Pricing link",
   detect: (report) => triggeredBy(check(report, "Pricing page")),
   build: (ctx) => {
+    if (ctx.framework) return { skip: COMPONENT_CODE_SKIP };
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     // Prefer an existing pricing page file in the repo when one exists.
     const pricingFile =
@@ -337,6 +412,22 @@ const h1Fixer: Fixer = {
   build: (ctx) => {
     const draft = ctx.copy.h1?.trim();
     if (!draft) return { skip: "No H1 rewrite drafted from report evidence." };
+    if (ctx.framework) {
+      const fw = ctx.framework;
+      if (fw.kind !== "astro" || !fw.pagePath || !fw.pageContent) return { skip: COMPONENT_CODE_SKIP };
+      const h1s = fw.pageContent.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi) ?? [];
+      if (h1s.length !== 1) return { skip: "The Astro homepage does not have exactly one literal <h1> — not guessing which to change." };
+      if (/[{}]/.test(h1s[0])) return { skip: "The homepage <h1> is built from an expression — not rewriting it." };
+      const after = replaceH1Text(fw.pageContent, draft);
+      if (after === null) return { skip: "H1 rewrite could not be applied safely." };
+      return {
+        edits: [{ path: fw.pagePath, before: fw.pageContent, after }],
+        explanation: "Rewrites the text inside the homepage <h1>. Tags, classes and surrounding markup are preserved.",
+        evidence: "Report messaging finding recommends a clearer headline.",
+        expectedScoreChange: "Messaging/conversion quality (subjective) — SEO unchanged",
+        revertSteps: ["Close the PR without merging", "Or restore the previous H1 text from the PR diff"],
+      };
+    }
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     const currentH1 = ctx.homepageHtml.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
     if (!currentH1) {
@@ -353,6 +444,103 @@ const h1Fixer: Fixer = {
     };
   },
 };
+
+// ───────────────────────────────────────────────────────────────────────────
+// Framework helpers (Next.js App Router, Astro)
+// ───────────────────────────────────────────────────────────────────────────
+
+function buildFrameworkJsonLd(ctx: FixerContext, fw: FrameworkTarget, payload: unknown): BuildOutcome {
+  const evidence = `Report check "Structured data (JSON-LD)" flagged: ${check(ctx.report, "Structured data (JSON-LD)")?.detail ?? "missing"}.`;
+  if (/application\/ld\+json/i.test(fw.headContent)) {
+    return { skip: "The layout already emits JSON-LD — not adding a second, possibly conflicting block." };
+  }
+  const json = JSON.stringify(payload, null, 2);
+  if (json.length > 20_000) return { skip: "Structured data payload unexpectedly large." };
+
+  if (fw.kind === "astro") {
+    const close = fw.headContent.search(/<\/head>/i);
+    if (close < 0) return { skip: "No </head> found in the Astro layout." };
+    const lineStart = fw.headContent.lastIndexOf("\n", close) + 1;
+    const indent = (fw.headContent.slice(lineStart, close).match(/^[ \t]*/)?.[0] ?? "") + "  ";
+    const body = json.split("\n").map((l, i) => (i === 0 ? l : indent + l)).join("\n");
+    const tag = `${indent}<script type="application/ld+json" is:inline set:html={JSON.stringify(${body})} />\n`;
+    const after = `${fw.headContent.slice(0, lineStart)}${tag}${fw.headContent.slice(lineStart)}`;
+    return {
+      edits: [{ path: fw.headPath, before: fw.headContent, after }],
+      explanation: "Adds Organization + WebApplication structured data to the layout's <head>, rendered with Astro's set:html so the JSON is emitted as-is.",
+      evidence,
+      expectedScoreChange: "SEO checklist: Structured data warn → pass",
+      revertSteps: ["Close the PR without merging", `Or delete the added <script type="application/ld+json"> line in ${fw.headPath}`],
+    };
+  }
+
+  // Next.js: a small component + one import + one element in <body>
+  const srcDir = fw.headPath.startsWith("src/");
+  const ext = /\.(tsx|ts)$/.test(fw.headPath) ? "tsx" : "jsx";
+  const compPath = `${srcDir ? "src/" : ""}components/olmene-jsonld.${ext}`;
+  if (ctx.treePaths.some((p) => /(^|\/)components\/olmene-jsonld\.(tsx|jsx)$/.test(p))) {
+    return { skip: "components/olmene-jsonld already exists — not overwriting it." };
+  }
+  const component = [
+    "/**",
+    " * Added by Olmene: Organization + WebApplication structured data, so search",
+    " * engines and AI answers can identify the product behind this site.",
+    " */",
+    "export function OlmeneJsonLd() {",
+    `  const data = ${json.split("\n").join("\n  ")};`,
+    "  return (",
+    "    <script",
+    "      type=\"application/ld+json\"",
+    "      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}",
+    "    />",
+    "  );",
+    "}",
+    "",
+  ].join("\n");
+  const r = addBodyComponent(fw.headContent, "OlmeneJsonLd", "../components/olmene-jsonld");
+  if (!r.ok) return { skip: r.reason };
+  return {
+    edits: [
+      { path: compPath, before: null, after: component },
+      { path: fw.headPath, before: fw.headContent, after: r.content },
+    ],
+    explanation: `Adds ${compPath} (Organization + WebApplication JSON-LD built from the report's product profile) and renders it once at the top of <body> in the root layout.`,
+    evidence,
+    expectedScoreChange: "SEO checklist: Structured data warn → pass",
+    revertSteps: ["Close the PR without merging", `Or delete ${compPath} and the two lines that import and render it`],
+  };
+}
+
+function buildFrameworkSitemapRobots(ctx: FixerContext): BuildOutcome {
+  const dynamic = ctx.treePaths.find((p) => DYNAMIC_SEO_ROUTE.test(p));
+  if (dynamic) return { skip: `A dynamic route (${dynamic}) already generates this file — not shadowing it with a static one.` };
+  const base = normalizeSiteUrl(ctx.siteUrl);
+  const edits: FileEdit[] = [];
+  if (!ctx.treePaths.includes("public/robots.txt")) {
+    edits.push({ path: "public/robots.txt", before: null, after: buildRobotsTxt(base) });
+  }
+  if (!ctx.treePaths.includes("public/sitemap.xml")) {
+    const urls = new Set<string>([`${base}/`]);
+    for (const src of ctx.report.sources ?? []) {
+      try {
+        const u = new URL(src.url);
+        const site = new URL(base);
+        if (u.host === site.host && u.protocol === site.protocol) urls.add(u.toString());
+      } catch {
+        /* ignore malformed */
+      }
+    }
+    edits.push({ path: "public/sitemap.xml", before: null, after: buildSitemapXml([...urls], new Date().toISOString().slice(0, 10)) });
+  }
+  if (edits.length === 0) return { skip: "public/robots.txt and public/sitemap.xml already exist." };
+  return {
+    edits,
+    explanation: `Creates ${edits.map((e) => e.path).join(" and ")} — ${ctx.framework?.kind === "astro" ? "Astro" : "Next.js"} serves files in public/ at the site root.`,
+    evidence: `Report checks flagged: robots.txt (${check(ctx.report, "/robots.txt")?.status ?? "n/a"}), sitemap.xml (${check(ctx.report, "/sitemap.xml")?.status ?? "n/a"}).`,
+    expectedScoreChange: "SEO checklist: /robots.txt and/or /sitemap.xml warn → pass",
+    revertSteps: ["Close the PR without merging", "Or delete the created files in public/"],
+  };
+}
 
 // ───────────────────────────────────────────────────────────────────────────
 // Registry

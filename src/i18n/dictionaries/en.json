@@ -177,7 +177,7 @@
   "faq.q3": "Can it break my site?",
   "faq.a3": "Olmene never merges anything. Every change arrives as a pull request on its own branch, with an explanation and undo steps, so you review it like a teammate's work. It never pushes to your main branch, and it skips any change it is not confident about.",
   "faq.q4": "Which sites and frameworks are supported?",
-  "faq.a4": "Fixes ship today for static HTML sites. Next.js and Astro support is in progress. Any public website can use the free scan and the full report, whatever it is built with.",
+  "faq.a4": "Fixes ship for static HTML sites, Next.js (App Router) and Astro. Other frameworks will follow. Any public website can use the free scan and the full report, whatever it is built with.",
   "faq.q5": "What if my site is not on GitHub?",
   "faq.a5": "You can still run the free scan and buy the full cited report once. You get the same findings and a prioritized plan; you make the changes yourself.",
   "faq.q6": "What happens after I merge?",

@@ -6,15 +6,23 @@
  *    single homepage file is confidently identified.
  *  - "Preserve CSS classes/style": edits insert/replace the smallest possible
  *    fragment; surrounding markup is byte-preserved.
- *  - v1 supports static HTML targets only. Framework repos (Next.js/Vite/…)
- *    are detected and skipped with an explicit reason.
+ *  - Supported targets: static HTML, Next.js App Router (root layout) and
+ *    Astro (pages/index.astro + its layout). Other frameworks are detected
+ *    and skipped with an explicit reason.
  */
 
 export interface TargetDetection {
   homepagePath: string | null;
   reason?: string;
-  repoType: "static-html" | "framework" | "unknown";
+  repoType: "static-html" | "nextjs-app" | "astro" | "framework" | "unknown";
+  /** Next.js: the root layout file (app/layout.* or src/app/layout.*). */
+  nextLayoutPath?: string;
+  /** Astro: the homepage page file. */
+  astroIndexPath?: string;
 }
+
+const NEXT_LAYOUTS = ["app/layout.tsx", "app/layout.jsx", "app/layout.ts", "app/layout.js"];
+const ASTRO_CONFIGS = ["astro.config.mjs", "astro.config.ts", "astro.config.js", "astro.config.cjs"];
 
 const COMMON_DIRS = ["", "site/", "docs/", "public/", "www/", "_site/", "dist/", "static/", "src/"];
 const FRAMEWORK_MARKERS = [
@@ -36,7 +44,24 @@ export function detectTarget(paths: string[]): TargetDetection {
   const set = new Set(paths.filter((p) => !p.startsWith(".github/")));
   if (set.size === 0) return { homepagePath: null, reason: "empty repository", repoType: "unknown" };
 
-  // Framework repos: code, not static HTML — v1 skips these explicitly.
+  // Next.js App Router: the root layout is where head metadata lives.
+  const nextLayouts = [...NEXT_LAYOUTS, ...NEXT_LAYOUTS.map((p) => `src/${p}`)].filter((p) => set.has(p));
+  if (nextLayouts.length === 1 && [...set].some((p) => p.startsWith("next.config"))) {
+    return { homepagePath: null, repoType: "nextjs-app", nextLayoutPath: nextLayouts[0] };
+  }
+  if (nextLayouts.length > 1) {
+    return {
+      homepagePath: null,
+      reason: `Multiple root layouts (${nextLayouts.join(", ")}) — cannot pick confidently.`,
+      repoType: "framework",
+    };
+  }
+  // Astro: src/pages/index.astro is the homepage.
+  if (ASTRO_CONFIGS.some((c) => set.has(c)) && set.has("src/pages/index.astro")) {
+    return { homepagePath: null, repoType: "astro", astroIndexPath: "src/pages/index.astro" };
+  }
+
+  // Other framework repos: code we do not edit yet.
   const hasPackageJson = set.has("package.json");
   const hasFrameworkMarker = FRAMEWORK_MARKERS.some((m) => set.has(m));
   const htmlFiles = [...set].filter((p) => p.endsWith(".html") || p.endsWith(".htm"));
@@ -45,7 +70,7 @@ export function detectTarget(paths: string[]): TargetDetection {
     return {
       homepagePath: null,
       reason:
-        "This repository is a code project (framework or package.json detected). Phase 1 supports static HTML sites only — code-level fixes are on the roadmap.",
+        "This repository uses a framework Olmene can't edit yet. Supported today: static HTML sites, Next.js (App Router) and Astro.",
       repoType: "framework",
     };
   }

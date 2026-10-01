@@ -177,7 +177,7 @@
   "faq.q3": "Ela pode quebrar meu site?",
   "faq.a3": "A Olmene nunca faz merge de nada. Cada mudança chega como pull request em uma branch própria, com explicação e passos para desfazer, então você revisa como o trabalho de um colega. Ela nunca faz push na sua branch principal e pula qualquer mudança da qual não tenha certeza.",
   "faq.q4": "Quais sites e frameworks são suportados?",
-  "faq.a4": "Hoje as correções são entregues para sites em HTML estático. O suporte a Next.js e Astro está em desenvolvimento. Qualquer site público pode usar o escaneamento grátis e o relatório completo, seja qual for a tecnologia.",
+  "faq.a4": "As correções são entregues para sites em HTML estático, Next.js (App Router) e Astro. Outros frameworks virão depois. Qualquer site público pode usar o escaneamento grátis e o relatório completo, seja qual for a tecnologia.",
   "faq.q5": "E se meu site não estiver no GitHub?",
   "faq.a5": "Você ainda pode usar o escaneamento grátis e comprar uma vez o relatório completo com fontes. Recebe as mesmas descobertas e um plano priorizado; as mudanças você mesmo faz.",
   "faq.q6": "O que acontece depois do merge?",

@@ -368,4 +368,116 @@ describe("agent runner E2E (fake GitHub)", () => {
     expect(job?.error).not.toContain("ghs_ohno12345"); // userSafe() scrubs it
     expect(job?.error).toContain("[REDACTED]");
   });
+
+  // ── Framework repos (brief §6.2) ─────────────────────────────────────────
+
+  const NEXT_LAYOUT = [
+    'import type { Metadata } from "next";',
+    'import "./globals.css";',
+    "",
+    "export const metadata: Metadata = {",
+    '  title: "Acme",',
+    "};",
+    "",
+    "export default function RootLayout({ children }: { children: React.ReactNode }) {",
+    "  return (",
+    '    <html lang="en">',
+    "      <body>{children}</body>",
+    "    </html>",
+    "  );",
+    "}",
+    "",
+  ].join("\n");
+
+  async function runToApply(ports: RunnerPorts, db: MemoryDb, jobId: string) {
+    await advanceJob(jobId, ports, "user-1"); // planning
+    const status = await advanceJob(jobId, ports, "user-1"); // preview
+    return { status, actions: await db.getPlannedActions(jobId) };
+  }
+
+  test("Next.js App Router repo: metadata, canonical, JSON-LD and public/ files ship in one PR", async () => {
+    const { gh, db, ports, jobId } = makeFixture();
+    gh.files.clear();
+    gh.files.set("package.json", "{}");
+    gh.files.set("next.config.ts", "export default {}");
+    gh.files.set("app/layout.tsx", NEXT_LAYOUT);
+    gh.files.set("app/page.tsx", "export default function Page() { return <h1>We build widgets</h1>; }");
+
+    const { status, actions } = await runToApply(ports, db, jobId);
+    expect(status).toBe("awaiting_approval");
+    const byId = Object.fromEntries(actions.map((a) => [a.fixer_id, a]));
+    for (const id of ["meta-description", "canonical-url", "json-ld-org", "sitemap-robots"]) {
+      expect(byId[id]?.status).toBe("planned");
+    }
+    // component-level changes are skipped with a reason, never guessed
+    for (const id of ["image-alt", "pricing-link", "h1-rewrite"]) {
+      expect(byId[id]?.status).toBe("skipped");
+      expect(String(byId[id]?.skip_reason)).toContain("component code");
+    }
+
+    await approveAll(db, jobId);
+    expect(await advanceJob(jobId, ports, "user-1")).toBe("verifying");
+    const commit = gh.commits[gh.commits.length - 1];
+    const paths = commit.tree.map((t) => t.path).sort();
+    expect(paths).toEqual(["app/layout.tsx", "components/olmene-jsonld.tsx", "public/robots.txt", "public/sitemap.xml"]);
+    const layout = commit.tree.find((t) => t.path === "app/layout.tsx")!.content;
+    // all three edits composed into the one layout file
+    expect(layout).toContain('description: "Acme builds fine widgets for teams that ship fast');
+    expect(layout).toContain('alternates: { canonical: "https://acme.test" },');
+    expect(layout).toContain('import { OlmeneJsonLd } from "../components/olmene-jsonld";');
+    expect(layout).toContain("<body>\n        <OlmeneJsonLd />{children}</body>");
+    expect(layout).toContain('title: "Acme",');
+    const comp = commit.tree.find((t) => t.path === "components/olmene-jsonld.tsx")!.content;
+    expect(comp).toContain('"@type": "Organization"');
+    expect(comp).toContain("export function OlmeneJsonLd()");
+    expect(gh.branches.get("main")).toBe("sha-main-0001");
+  });
+
+  test("Next.js with generateMetadata: metadata fixers skip with a reason, others still work", async () => {
+    const { gh, db, ports, jobId } = makeFixture();
+    gh.files.clear();
+    gh.files.set("next.config.mjs", "export default {}");
+    gh.files.set(
+      "src/app/layout.tsx",
+      'export async function generateMetadata() { return { title: "x" }; }\nexport default function L({ children }) { return <html><body>{children}</body></html>; }\n',
+    );
+    const { actions } = await runToApply(ports, db, jobId);
+    const byId = Object.fromEntries(actions.map((a) => [a.fixer_id, a]));
+    expect(byId["meta-description"].status).toBe("skipped");
+    expect(String(byId["meta-description"].skip_reason)).toContain("generateMetadata");
+    expect(byId["canonical-url"].status).toBe("skipped");
+    expect(byId["json-ld-org"].status).toBe("planned");
+    expect(byId["json-ld-org"].preview?.files).toEqual(["src/components/olmene-jsonld.tsx", "src/app/layout.tsx"]);
+  });
+
+  test("Astro repo: head fixes land in the layout, the H1 in index.astro", async () => {
+    const { gh, db, ports, jobId } = makeFixture();
+    gh.files.clear();
+    gh.files.set("astro.config.mjs", "export default {}");
+    gh.files.set(
+      "src/layouts/Layout.astro",
+      ["---", "const { title } = Astro.props;", "---", "<html lang=\"en\">", "  <head>", "    <title>{title}</title>", "  </head>", "  <body><slot /></body>", "</html>", ""].join("\n"),
+    );
+    gh.files.set(
+      "src/pages/index.astro",
+      ["---", "import Layout from \"../layouts/Layout.astro\";", "---", "<Layout title=\"Acme\">", "  <h1 class=\"hero\">We build widgets</h1>", "</Layout>", ""].join("\n"),
+    );
+    const { status, actions } = await runToApply(ports, db, jobId);
+    expect(status).toBe("awaiting_approval");
+    const byId = Object.fromEntries(actions.map((a) => [a.fixer_id, a]));
+    expect(byId["h1-rewrite"].status).toBe("planned");
+    expect(byId["image-alt"].status).toBe("skipped");
+
+    await approveAll(db, jobId);
+    await advanceJob(jobId, ports, "user-1");
+    const commit = gh.commits[gh.commits.length - 1];
+    const layout = commit.tree.find((t) => t.path === "src/layouts/Layout.astro")!.content;
+    expect(layout).toContain('<meta name="description"');
+    expect(layout).toContain('rel="canonical"');
+    expect(layout).toContain('<script type="application/ld+json" is:inline set:html={JSON.stringify(');
+    expect(layout).toContain("const { title } = Astro.props;"); // frontmatter untouched
+    const index = commit.tree.find((t) => t.path === "src/pages/index.astro")!.content;
+    expect(index).toContain('<h1 class="hero">Fine widgets for teams that ship fast</h1>');
+    expect(commit.tree.map((t) => t.path)).toContain("public/robots.txt");
+  });
 });
