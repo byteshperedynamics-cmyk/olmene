@@ -15,6 +15,7 @@ import { Flower } from "../flower";
  */
 export function ConnectPanel({
   hasScan,
+  canAnalyze = true,
   githubConfigured,
   githubConnected,
   killSwitch,
@@ -23,6 +24,8 @@ export function ConnectPanel({
   onConnect,
 }: {
   hasScan: boolean;
+  /** False when the account has no plan or report credit (the analysis form would refuse). */
+  canAnalyze?: boolean;
   githubConfigured: boolean;
   githubConnected: boolean;
   killSwitch: boolean;
@@ -60,11 +63,17 @@ export function ConnectPanel({
             <h2 className="o-display text-[28px] leading-tight">Start with a scan of your site</h2>
             <p className="text-[15px] text-muted-foreground">
               Olmene plans fixes from a completed analysis of your site. Run one first; it takes a few minutes.
+              {!canAnalyze && " Analyses are part of every paid plan, or available as a single report."}
             </p>
-            <div>
+            <div className="flex flex-wrap gap-2">
               <Button asChild variant="sheen" size="xl">
-                <Link href="/app/new/">Analyze my site</Link>
+                <Link href={canAnalyze ? "/app/new/" : "/app/billing/"}>{canAnalyze ? "Analyze my site" : "Choose a plan"}</Link>
               </Button>
+              {!canAnalyze && (
+                <Button asChild variant="hairline" size="xl">
+                  <Link href="/">Free scan first</Link>
+                </Button>
+              )}
             </div>
           </>
         ) : (

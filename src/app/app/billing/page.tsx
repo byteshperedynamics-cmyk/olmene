@@ -123,13 +123,20 @@ export default function BillingPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         {sorted.map((p) => {
           const selected = selectedPlan === p.polar_product_id;
+          // The plan you already pay for can't be "switched" to.
+          const current = !!ent?.active && !p.one_time && p.name === ent.planName;
           return (
             <Card
               key={p.polar_product_id}
               className={`relative flex flex-col ${p.one_time ? "border-dashed" : ""} ${
-                selected ? "border-primary/60 ring-2 ring-primary/30" : ""
+                selected || current ? "border-primary/60 ring-2 ring-primary/30" : ""
               }`}
             >
+              {current && !selected && (
+                <span className="absolute -top-2.5 start-4 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">
+                  Current plan
+                </span>
+              )}
               {selected && (
                 <span className="absolute -top-2.5 start-4 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">
                   Your selection
@@ -150,10 +157,12 @@ export default function BillingPage() {
                 <Button
                   className="w-full"
                   variant={selected || (!ent?.active && !creditOnly) ? "default" : "outline"}
-                  disabled={busy === p.polar_product_id}
+                  disabled={busy === p.polar_product_id || current}
                   onClick={() => subscribe(p.polar_product_id, p.name)}
                 >
-                  {busy === p.polar_product_id ? (
+                  {current ? (
+                    "You're on this plan"
+                  ) : busy === p.polar_product_id ? (
                     <LogoLoader size={16} />
                   ) : (
                     <>

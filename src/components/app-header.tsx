@@ -5,12 +5,13 @@ import { LogOut, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Logo } from "@/components/logo";
+import { featureAgentEnabled, featureMeasureEnabled } from "@/lib/agent-client";
 
 const NAV = [
   { href: "/app/", label: "Analyses", on: true },
   { href: "/app/billing/", label: "Billing", on: true },
-  { href: "/app/agent/", label: "Fix runs", on: process.env.NEXT_PUBLIC_FEATURE_AGENT === "true" },
-  { href: "/app/impact/", label: "Impact", on: process.env.NEXT_PUBLIC_FEATURE_MEASURE === "true" },
+  { href: "/app/agent/", label: "Fix runs", on: featureAgentEnabled() },
+  { href: "/app/impact/", label: "Impact", on: featureMeasureEnabled() },
 ].filter((n) => n.on);
 
 // Sub-pages that belong to a nav item without sharing its path prefix.

@@ -10,6 +10,8 @@ import { fmtDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Flower } from "@/components/v2/flower";
 import { Eyebrow, LivePill } from "@/components/v2/atoms";
+import { useQuery } from "@tanstack/react-query";
+import { getEntitlement } from "@/lib/data";
 import { ConnectPanel } from "@/components/v2/agent/connect-panel";
 import { StateMessage } from "@/components/v2/agent/job-view";
 import { useAgentHub, type DisconnectResult } from "@/components/v2/agent/use-agent-hub";
@@ -18,6 +20,7 @@ import { statusLine } from "@/components/v2/agent/fixers";
 /** Fix runs hub (brief §5B): connection, new run, run history. */
 export default function AgentPage() {
   const hub = useAgentHub();
+  const { data: billing } = useQuery({ queryKey: ["entitlement"], queryFn: getEntitlement });
   const { config, jobs, activeConnection, completedReports, busy } = hub;
 
   if (!featureAgentEnabled()) {
@@ -74,11 +77,13 @@ export default function AgentPage() {
           </p>
         </div>
         {ent.allowed ? (
-          <LivePill tone="live" pulse={false}>
+          <LivePill tone="live" pulse={false} className="max-w-full whitespace-normal leading-snug">
             {ent.planName} · {ent.remaining} of {ent.limit} fixes left this period
           </LivePill>
         ) : (
-          <LivePill tone="neutral">Planning and previews are free · shipping fixes needs a plan</LivePill>
+          <LivePill tone="neutral" className="max-w-full whitespace-normal leading-snug">
+            Planning and previews are free · shipping fixes needs a plan
+          </LivePill>
         )}
       </header>
 
@@ -95,6 +100,7 @@ export default function AgentPage() {
       {!activeConnection ? (
         <ConnectPanel
           hasScan={completedReports.length > 0}
+          canAnalyze={!billing || billing.active || billing.reportCredits > 0}
           githubConfigured={cfg.github.configured}
           githubConnected={false}
           killSwitch={cfg.killSwitch}

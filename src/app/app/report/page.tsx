@@ -11,6 +11,9 @@ import { AgentConsole, AnalysisCompleteBanner } from "@/components/agent-console
 import { ReportViewer } from "@/components/report-viewer";
 import { advanceAnalysis } from "@/lib/api";
 import { getJob, getReportByJobId, type Job } from "@/lib/data";
+import { featureAgentEnabled } from "@/lib/agent-client";
+import { ArrowRight } from "lucide-react";
+import { Flower } from "@/components/v2/flower";
 import { STEPS, waitReasonMessage, JOB_STATUS } from "@/lib/steps";
 import { fmtDateTime } from "@/lib/format";
 import { ADVANCE_MAX_BACKOFF_MS, WAIT_POLL_MS } from "@/lib/config";
@@ -170,17 +173,20 @@ function ReportPageInner() {
           <div className="space-y-6">
             <div className="print:hidden">
               <AnalysisCompleteBanner job={jobState} />
-              {process.env.NEXT_PUBLIC_FEATURE_AGENT === "true" && report.data.meta?.siteUrl && (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/30 p-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Want the agent to apply these fixes?</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Connect your repository and get a reviewable pull request — you approve every change.
-                    </p>
+              {featureAgentEnabled() && report.data.meta?.siteUrl && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-leaf-soft p-4 sm:p-5">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <Flower size={22} variant="breathe" className="mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-medium">Turn these findings into a pull request</p>
+                      <p className="mt-0.5 text-[13px] text-muted-foreground">
+                        Olmene drafts the fixes on its own branch. You see every diff and approve before anything is written.
+                      </p>
+                    </div>
                   </div>
-                  <Button asChild size="sm" variant="outline">
+                  <Button asChild variant="sheen" className="shrink-0">
                     <Link href={`/app/agent/?report=${encodeURIComponent(id ?? "")}`}>
-                      Apply fixes with the agent
+                      Apply fixes with Olmene <ArrowRight className="size-4 rtl-flip" aria-hidden />
                     </Link>
                   </Button>
                 </div>

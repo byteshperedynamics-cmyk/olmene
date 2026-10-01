@@ -84,12 +84,22 @@ export function ImpactChart({
   formatX?: (x: number) => string;
   className?: string;
 }) {
-  const W = 640;
-  const H = 230;
-  const L = 44;
-  const R = 624;
-  const T = 22;
-  const B = 196;
+  // The viewBox tracks the rendered width so the SVG draws at 1:1 — labels
+  // stay 11px on a phone and on a wide dashboard instead of scaling with it.
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [W, setW] = useState(640);
+  useIsoLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([e]) => setW(Math.max(280, Math.round(e.contentRect.width))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const H = Math.round(Math.min(280, Math.max(200, W * 0.34)));
+  const L = 40;
+  const R = W - 14;
+  const T = 24;
+  const B = H - 30;
   const lineRef = useRef<SVGPathElement | null>(null);
   const [len, setLen] = useState(0);
 
@@ -121,7 +131,7 @@ export function ImpactChart({
         placed.push({ x: px, lx, label: m.label });
       });
     return { ticks, sx, sy, line, area, last: { x: sx(last.x), y: sy(last.y) }, xt, placed };
-  }, [points, markers]);
+  }, [points, markers, R, B]);
 
   useIsoLayoutEffect(() => {
     if (lineRef.current) setLen(lineRef.current.getTotalLength());
@@ -130,7 +140,8 @@ export function ImpactChart({
   if (!geo) return null;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className={cn("block h-auto w-full overflow-visible", className)} role="img" aria-label={ariaLabel}>
+    <div ref={wrapRef} className={cn("w-full", className)}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full overflow-visible" role="img" aria-label={ariaLabel}>
       <defs>
         <linearGradient id="o-area" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="var(--primary)" stopOpacity="0.26" />
@@ -141,13 +152,13 @@ export function ImpactChart({
         {geo.ticks.map((v) => (
           <g key={v}>
             <line x1={L} x2={R} y1={geo.sy(v)} y2={geo.sy(v)} stroke="var(--border)" strokeWidth={1} />
-            <text x={L - 8} y={geo.sy(v) + 3} textAnchor="end" fill="var(--faint)" fontFamily="var(--font-mono-code), monospace" fontSize={10}>
+            <text x={L - 8} y={geo.sy(v) + 3} textAnchor="end" fill="var(--faint)" fontFamily="var(--font-mono-code), monospace" fontSize={11}>
               {v}
             </text>
           </g>
         ))}
         {geo.xt.map((x, i) => (
-          <text key={i} x={geo.sx(x)} y={B + 18} textAnchor="middle" fill="var(--faint)" fontFamily="var(--font-mono-code), monospace" fontSize={10}>
+          <text key={i} x={geo.sx(x)} y={B + 18} textAnchor="middle" fill="var(--faint)" fontFamily="var(--font-mono-code), monospace" fontSize={11}>
             {(xLabel ?? formatX)(x)}
           </text>
         ))}
@@ -167,7 +178,7 @@ export function ImpactChart({
       {geo.placed.map((m) => (
         <g key={m.label + m.x}>
           <line x1={m.x} x2={m.x} y1={T} y2={B} stroke="var(--signal-amber)" strokeWidth={1} strokeDasharray="3 3" />
-          <text x={m.lx} y={T - 6} fill="var(--signal-amber)" fontFamily="var(--font-mono-code), monospace" fontSize={10}>
+          <text x={m.lx} y={T - 6} fill="var(--signal-amber)" fontFamily="var(--font-mono-code), monospace" fontSize={11}>
             {m.label}
           </text>
         </g>
@@ -181,7 +192,8 @@ export function ImpactChart({
         className="o-anim animate-[o-ring_2s_ease-out_infinite] [transform-box:fill-box] [transform-origin:center]"
       />
       <circle cx={geo.last.x} cy={geo.last.y} r={4} fill="var(--primary)" />
-    </svg>
+      </svg>
+    </div>
   );
 }
 

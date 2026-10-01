@@ -21,14 +21,16 @@ function QuotaCard() {
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <p className="text-sm font-medium">
-            {ent.active ? `${ent.planName} plan` : "No active subscription"}
+            {ent.active ? `${ent.planName} plan` : ent.reportCredits > 0 ? "Single report" : "No active subscription"}
           </p>
           <p className="text-sm text-muted-foreground">
             {ent.active
               ? ent.quotaTotal > 0
                 ? `${ent.quotaUsed} of ${ent.quotaTotal} reports used`
                 : "Unlimited"
-              : "Subscribe to run analyses"}
+              : ent.reportCredits > 0
+                ? `${ent.reportCredits} report ${ent.reportCredits === 1 ? "credit" : "credits"} available`
+                : "Pick a plan or a single report"}
           </p>
         </div>
         {ent.active && ent.quotaTotal > 0 && (
@@ -44,7 +46,7 @@ function QuotaCard() {
             )}
           </>
         )}
-        {!ent.active && (
+        {!ent.active && ent.reportCredits === 0 && (
           <Button asChild size="sm">
             <Link href="/app/billing/">
               Subscribe to run analyses <ArrowRight className="size-4" aria-hidden />
@@ -66,6 +68,9 @@ function safeHost(url: string): string {
 }
 
 export default function DashboardPage() {
+  const { data: ent } = useQuery({ queryKey: ["entitlement"], queryFn: getEntitlement });
+  // While entitlement loads, assume they can run (the common case for returning users).
+  const canRun = !ent || ent.active || ent.reportCredits > 0;
   const { data: jobs, isLoading } = useQuery({
     queryKey: ["jobs"],
     queryFn: listJobs,
@@ -114,18 +119,34 @@ export default function DashboardPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Point Olmene at your website and get your first 90-day plan.
           </p>
-          <Button asChild className="mt-5">
-            <Link href="/app/new/">
-              Start your first analysis <ArrowRight className="size-4" aria-hidden />
-            </Link>
-          </Button>
+          {canRun ? (
+            <Button asChild className="mt-5">
+              <Link href="/app/new/">
+                Start your first analysis <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            </Button>
+          ) : (
+            // No plan or credit yet: don't send them to a form they can't submit.
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <Button asChild>
+                <Link href="/app/billing/">
+                  See plans <ArrowRight className="size-4" aria-hidden />
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/">Run a free scan first</Link>
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
           {jobs.map((job, i) => {
             const status = JOB_STATUS[job.status] ?? JOB_STATUS.queued;
             const stepIdx = STEPS.findIndex((s) => s.id === job.currentStep);
-            const pct = job.status === "completed" ? 100 : job.status === "failed" || job.status === "canceled" ? 0 : Math.round(((stepIdx + 0.5) / STEPS.length) * 100);
+            // Unknown/missing step (queued, or a step id the UI doesn't list yet) must
+            // not produce a negative width — the browser would then draw a full bar.
+            const pct = job.status === "completed" ? 100 : job.status === "failed" || job.status === "canceled" ? 0 : Math.max(4, Math.round(((Math.max(stepIdx, 0) + 0.5) / STEPS.length) * 100));
             const live = job.status === "queued" || job.status === "running";
             return (
               <Reveal key={job.id} delay={Math.min(i * 0.06, 0.3)} y={12}>
