@@ -889,6 +889,12 @@
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes o-travel-x {
+  0% { transform: translateX(calc(-100% * var(--o-dir, 1))); opacity: 0; }
+  10% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateX(0); opacity: 0; }
+}
 @keyframes o-sweep-once {
   from { background-position: -60% 0; }
   to { background-position: 160% 0; }
@@ -1022,4 +1028,22 @@
   .o-sheen::after {
     display: none;
   }
+}
+
+/* Scripts that join or stack glyphs (Arabic, Urdu, Devanagari, Bengali) and
+   CJK must never get letter-spacing, and read badly in the Latin mono face.
+   Translated mono labels fall back to the UI sans there; code surfaces
+   (always wrapped in dir="ltr") keep the mono face. */
+:is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) .font-mono,
+:is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) .o-eyebrow,
+:is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) .o-readout {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: normal;
+}
+:is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) [class*="tracking-"] {
+  letter-spacing: normal;
+}
+:is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) [dir="ltr"] .font-mono,
+:is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) .font-mono[dir="ltr"] {
+  font-family: var(--font-mono-code), ui-monospace, monospace;
 }

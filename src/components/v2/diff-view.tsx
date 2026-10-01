@@ -72,7 +72,7 @@ export function DiffView({
   return (
     <div className={cn("min-w-0 overflow-hidden rounded-xl border bg-card", className)} dir="ltr">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-        <div className="flex min-w-0 gap-1 overflow-x-auto" role="tablist">
+        <div className="flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
           {files.map((f, i) => (
             <button
               key={f.path + i}

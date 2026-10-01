@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -40,7 +40,22 @@ function CheckRow({ c }: { c: FreeAuditCheck }) {
   );
 }
 
-export function FreeAuditForm({ compact = false }: { compact?: boolean }) {
+interface FreeAuditState {
+  url: string;
+  setUrl: (v: string) => void;
+  loading: boolean;
+  result: FreeAuditResult | null;
+  submit: (e: React.FormEvent) => void;
+}
+
+const FreeAuditContext = createContext<FreeAuditState | null>(null);
+
+/**
+ * Holds the free-audit state so several inputs (hero + final CTA) share one
+ * result, rendered once by <FreeAuditResult/>. Logic and API calls are
+ * unchanged from the original single-component form.
+ */
+export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,45 +91,129 @@ export function FreeAuditForm({ compact = false }: { compact?: boolean }) {
     }
   }
 
+  return (
+    <FreeAuditContext.Provider value={{ url, setUrl, loading, result, submit }}>{children}</FreeAuditContext.Provider>
+  );
+}
+
+function useFreeAudit(): FreeAuditState {
+  const ctx = useContext(FreeAuditContext);
+  if (!ctx) throw new Error("FreeAudit components must be inside <FreeAuditProvider>");
+  return ctx;
+}
+
+/** Sample domains typed into the empty field's placeholder (stops on focus/input). */
+const SAMPLE_DOMAINS = ["acme-analytics.com", "launchkit.dev", "fernbooks.io"];
+
+function useTypedPlaceholder(base: string, active: boolean) {
+  const [text, setText] = useState(base);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    setText(base);
+    if (!active || typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let word = 0;
+    let chars = 0;
+    let dir = 1;
+    const tick = () => {
+      const w = SAMPLE_DOMAINS[word];
+      chars += dir;
+      let wait = dir > 0 ? 75 : 35;
+      if (chars >= w.length) {
+        dir = -1;
+        wait = 2200;
+      } else if (chars <= 0) {
+        dir = 1;
+        word = (word + 1) % SAMPLE_DOMAINS.length;
+        wait = 400;
+      }
+      setText(w.slice(0, Math.max(chars, 0)) || base);
+      timer.current = setTimeout(tick, wait);
+    };
+    const start = () => (timer.current = setTimeout(tick, 1600));
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
+    if (idle) idle(start);
+    else start();
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [base, active]);
+  return text;
+}
+
+/** The URL field + submit button. `variant="hero"` is the v2 instrument style. */
+export function FreeAuditInput({ variant = "hero", className }: { variant?: "hero" | "cta"; className?: string }) {
+  const { t } = useI18n();
+  const { url, setUrl, loading, submit } = useFreeAudit();
+  const [focused, setFocused] = useState(false);
+  const placeholder = useTypedPlaceholder(t("form.placeholder"), variant === "hero" && !focused && !url);
+
+  return (
+    <form onSubmit={submit} className={`w-full max-w-xl ${className ?? ""}`} aria-label={t("form.aria")}>
+      <div className="flex w-full flex-col gap-2 rounded-2xl border border-line-strong bg-card p-1.5 shadow-[0_0_0_4px_var(--leaf-soft)] transition-[border-color,box-shadow] duration-[var(--dur-state)] focus-within:border-primary/60 focus-within:shadow-[0_0_0_5px_var(--leaf-soft),0_20px_50px_-24px_var(--glow)] min-[480px]:flex-row min-[480px]:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-faint" aria-hidden />
+          <Input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={placeholder}
+            className="h-11 border-0 bg-transparent ps-9 font-mono text-[15px] shadow-none placeholder:text-faint focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
+            autoComplete="url"
+            inputMode="url"
+            aria-label={t("form.urlLabel")}
+            disabled={loading}
+          />
+        </div>
+        <Button
+          type="submit"
+          variant={variant === "hero" ? "sheen" : "default"}
+          size="xl"
+          className="w-full shrink-0 min-[480px]:w-auto"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <LogoLoader size={16} /> {t("form.analyzing")}
+            </>
+          ) : (
+            <>
+              {t("form.submit")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+            </>
+          )}
+        </Button>
+      </div>
+      {loading && (
+        <div className="mt-4 flex items-center gap-3" role="status" aria-live="polite">
+          <LogoLoader size={22} glow />
+          <ShimmerText className="text-sm font-medium">{t("form.reading", { n: CHECK_COUNT })}</ShimmerText>
+        </div>
+      )}
+    </form>
+  );
+}
+
+/** Original combined form (input + result), kept for any non-v2 caller. */
+export function FreeAuditForm() {
+  return (
+    <FreeAuditProvider>
+      <div className="space-y-8">
+        <FreeAuditInput variant="cta" />
+        <FreeAuditResult />
+      </div>
+    </FreeAuditProvider>
+  );
+}
+
+/** The diagnosis card; renders nothing until a scan has completed. */
+export function FreeAuditResult() {
+  const { t } = useI18n();
+  const { result } = useFreeAudit();
   const highImpact = result?.highImpactCount ?? result?.findings.filter((f) => f.severity === "critical" || f.severity === "high").length ?? 0;
 
   return (
-    <div className={compact ? "" : "space-y-8"}>
-      <form onSubmit={submit} className="w-full max-w-xl" aria-label={t("form.aria")}>
-        <div className="flex w-full flex-col gap-2 rounded-2xl border bg-card p-2 shadow-lg shadow-foreground/[0.04] transition-colors focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/10 min-[480px]:flex-row min-[480px]:items-center">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder={t("form.placeholder")}
-              className="h-10 border-0 bg-transparent ps-9 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-              autoComplete="url"
-              inputMode="url"
-              aria-label={t("form.urlLabel")}
-              disabled={loading}
-            />
-          </div>
-          <Button type="submit" className="h-10 w-full shrink-0 rounded-xl px-5 text-base min-[480px]:w-auto" disabled={loading}>
-            {loading ? (
-              <>
-                <LogoLoader size={16} /> {t("form.analyzing")}
-              </>
-            ) : (
-              <>
-                {t("form.submit")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
-              </>
-            )}
-          </Button>
-        </div>
-        {loading && (
-          <div className="mt-4 flex items-center gap-3" role="status" aria-live="polite">
-            <LogoLoader size={22} glow />
-            <ShimmerText className="text-sm font-medium">{t("form.reading", { n: CHECK_COUNT })}</ShimmerText>
-          </div>
-        )}
-      </form>
-
+    <>
       {result && (
         <div id="diagnosis" className="fade-up-in scroll-mt-24">
           <div className="overflow-hidden rounded-xl border bg-card shadow-lg">
@@ -236,6 +335,6 @@ export function FreeAuditForm({ compact = false }: { compact?: boolean }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -6,7 +6,7 @@ import { Analytics } from "@/components/analytics";
 import { CookieConsent } from "@/components/cookie-consent";
 import { SkipLink } from "@/components/skip-link";
 import { I18nProvider } from "@/i18n/provider";
-import { APP_NAME, APP_DESCRIPTION, APP_URL } from "@/lib/config";
+import { APP_NAME, APP_DESCRIPTION, APP_TAGLINE, APP_URL } from "@/lib/config";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -46,7 +46,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: `${APP_NAME} — Know exactly what to fix to get more customers`,
+    default: `${APP_NAME} — ${APP_TAGLINE}`,
     template: `%s — ${APP_NAME}`,
   },
   description: APP_DESCRIPTION,
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   alternates: { canonical: "./" },
   openGraph: {
-    title: `${APP_NAME} — Know exactly what to fix to get more customers`,
+    title: `${APP_NAME} — ${APP_TAGLINE}`,
     description: APP_DESCRIPTION,
     url: APP_URL,
     siteName: APP_NAME,
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${APP_NAME} — Know exactly what to fix to get more customers`,
+    title: `${APP_NAME} — ${APP_TAGLINE}`,
     description: APP_DESCRIPTION,
   },
 };
