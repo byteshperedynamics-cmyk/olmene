@@ -89,11 +89,11 @@ function DiffVignette() {
 function VerifyVignette() {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-4" aria-hidden>
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1" aria-hidden>
       <span className="font-display text-3xl text-faint line-through decoration-1">61</span>
       <ArrowRight className="size-4 text-faint rtl-flip" />
       <span className="font-display text-5xl text-primary">94</span>
-      <span className="max-w-[6rem] font-mono text-[10px] uppercase leading-tight tracking-[0.1em] text-faint">
+      <span className="max-w-[6rem] font-mono text-[10px] uppercase leading-tight tracking-[0.1em] text-faint max-lg:basis-full max-lg:max-w-none max-lg:text-center">
         {t("scores.readiness")}
       </span>
     </div>

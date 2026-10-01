@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Inbox, Mail, ShieldCheck, TriangleAlert } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +50,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  // Inline (not toast-only) so the reason stays next to the field on phones.
+  const [sendError, setSendError] = useState<string | null>(null);
 
   // Surface magic-link failures (forwarded from /app/ or present in the URL
   // hash by GoTrue) instead of failing silently.
@@ -77,9 +78,10 @@ function LoginForm() {
     if (loading) return;
     const trimmed = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      toast.error(t("login.toastInvalid"));
+      setSendError(t("login.toastInvalid"));
       return;
     }
+    setSendError(null);
     setLoading(true);
     try {
       const supabase = getSupabase();
@@ -93,13 +95,10 @@ function LoginForm() {
         },
       });
       if (error) throw error;
-      setSent(true);
-      toast.success(t("login.toastSentTitle"), {
-        description: t("login.toastSentDesc", { email: trimmed }),
-      });
+      setSent(true); // the "Check your inbox" card says it all; no duplicate toast
     } catch (err) {
       const key = friendlySendErrorKey(err);
-      toast.error(key ? t(key) : err instanceof Error ? err.message : t("login.err.send"));
+      setSendError(key ? t(key) : err instanceof Error ? err.message : t("login.err.send"));
     } finally {
       setLoading(false);
     }
@@ -191,13 +190,24 @@ function LoginForm() {
                       placeholder={t("login.emailPlaceholder")}
                       className="h-11 ps-9"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (sendError) setSendError(null);
+                      }}
+                      aria-invalid={sendError ? true : undefined}
+                      aria-describedby={sendError ? "login-send-error" : undefined}
                       autoComplete="email"
                       disabled={loading}
                       required
                       autoFocus
                     />
                   </div>
+                  {sendError && (
+                    <p id="login-send-error" role="alert" className="flex items-start gap-2 pt-1 text-[13px] leading-relaxed text-destructive">
+                      <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+                      {sendError}
+                    </p>
+                  )}
                 </div>
                 <Button type="submit" size="lg" className="h-11 w-full" disabled={loading}>
                   {loading ? (

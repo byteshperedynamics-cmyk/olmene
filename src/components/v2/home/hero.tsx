@@ -66,6 +66,7 @@ export function HomeHero() {
               toastTitle={t("scan.toast")}
               toastMeta={`${t("scan.toastMeta")} →`}
               previewLabel={t("scan.preview")}
+              scoreLabel={t("scores.readiness")}
             />
           </InView>
         </div>

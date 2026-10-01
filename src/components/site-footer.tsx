@@ -43,8 +43,8 @@ export function SiteFooter() {
         </div>
         <div className="mt-10 flex flex-col gap-3 border-t border-border/60 pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p>{t("footer.copyright", { year: new Date().getFullYear() })}</p>
-          <div className="flex items-center gap-4">
-            <p className="font-mono">{t("footer.motto")}</p>
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <p className="whitespace-nowrap font-mono">{t("footer.motto")}</p>
             <LanguageSelector size="sm" up />
           </div>
         </div>

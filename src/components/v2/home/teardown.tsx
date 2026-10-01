@@ -60,18 +60,22 @@ export function Teardown() {
 
       {/* Real output screenshot — also gives our image-alt check something to check */}
       <figure className="mt-12">
-        <div className="o-elevated overflow-hidden rounded-2xl border border-line-strong bg-card">
-          <img
-            src="/img/teardown-001-diagnosis-768.webp"
-            srcSet="/img/teardown-001-diagnosis-480.webp 480w, /img/teardown-001-diagnosis-768.webp 768w, /img/teardown-001-diagnosis-1064.webp 1064w"
-            sizes="(min-width: 1152px) 1104px, calc(100vw - 32px)"
-            alt={t("teardown.screenshotAlt", { n: CHECK_COUNT })}
-            className="w-full"
-            width={768}
-            height={279}
-            loading="lazy"
-            decoding="async"
-          />
+        {/* Light and dark captures of the same real result; the hidden one is display:none, so it neither loads nor is announced. */}
+        <div className="o-elevated overflow-hidden rounded-2xl bg-card">
+          {(["", "-dark"] as const).map((v) => (
+            <img
+              key={v || "light"}
+              src={`/img/teardown-001-diagnosis${v}-768.webp`}
+              srcSet={[480, 768, 1064].map((w) => `/img/teardown-001-diagnosis${v}-${w}.webp ${w}w`).join(", ")}
+              sizes="(min-width: 1152px) 1104px, calc(100vw - 32px)"
+              alt={t("teardown.screenshotAlt", { n: CHECK_COUNT })}
+              className={`w-full ${v ? "hidden dark:block" : "dark:hidden"}`}
+              width={1064}
+              height={478}
+              loading="lazy"
+              decoding="async"
+            />
+          ))}
         </div>
         <figcaption className="mt-3 text-center font-mono text-[11px] text-faint">
           {t("teardown.figcaption", { n: CHECK_COUNT })}

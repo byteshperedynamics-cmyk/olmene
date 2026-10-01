@@ -67,7 +67,7 @@ export function ReviewShowcase() {
                     <span className="grid size-4 shrink-0 place-items-center rounded bg-primary text-primary-foreground">
                       <Check className="size-3" strokeWidth={3} />
                     </span>
-                    <span className="min-w-0 flex-1 truncate">{c.label}</span>
+                    <span className="min-w-0 flex-1 leading-snug">{c.label}</span>
                     <LivePill tone={c.impact === "high" ? "problem" : "neutral"}>
                       {t(c.impact === "high" ? "review.impact.high" : "review.impact.medium")}
                     </LivePill>

@@ -4,8 +4,10 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   ChevronDown,
+  RotateCcw,
   Search,
   TriangleAlert,
   XCircle,
@@ -14,11 +16,10 @@ import { Button } from "@/components/ui/button";
 import { CHECK_COUNT } from "@/lib/config";
 import { Input } from "@/components/ui/input";
 import { LogoLoader, ShimmerText } from "@/components/logo-loader";
-import { runFreeAudit, type FreeAuditResult, type FreeAuditCheck } from "@/lib/api";
+import { ApiRequestError, runFreeAudit, type FreeAuditResult, type FreeAuditCheck } from "@/lib/api";
 import { ScoreRing, ScoreBar } from "@/components/score-ring";
 import { severityClass } from "@/lib/format";
 import { track } from "@/lib/track";
-import { toast } from "sonner";
 import { useI18n, Tx } from "@/i18n/provider";
 import { SEVERITY_KEYS } from "@/i18n/keys";
 
@@ -40,12 +41,18 @@ function CheckRow({ c }: { c: FreeAuditCheck }) {
   );
 }
 
+type Origin = "hero" | "cta";
+
 interface FreeAuditState {
   url: string;
   setUrl: (v: string) => void;
   loading: boolean;
   result: FreeAuditResult | null;
-  submit: (e: React.FormEvent) => void;
+  /** Inline error for the last scan (stays until the next attempt). */
+  error: string | null;
+  /** Which input started the scan — progress and errors render under it. */
+  origin: Origin;
+  submit: (e: React.FormEvent, origin?: Origin) => void;
 }
 
 const FreeAuditContext = createContext<FreeAuditState | null>(null);
@@ -60,17 +67,21 @@ export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<FreeAuditResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [origin, setOrigin] = useState<Origin>("hero");
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent, from: Origin = "hero") {
     e.preventDefault();
     if (loading) return;
+    setOrigin(from);
     const trimmed = url.trim();
     if (!trimmed) {
-      toast.error(t("form.toastEmpty"));
+      setError(t("form.toastEmpty"));
       return;
     }
     setLoading(true);
     setResult(null);
+    setError(null);
     track("audit_start", { site_url: trimmed });
     try {
       const r = await runFreeAudit(trimmed);
@@ -85,14 +96,17 @@ export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
         document.getElementById("diagnosis")?.scrollIntoView({ behavior: "smooth", block: "start" }),
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("form.toastError"));
+      // Server errors carry a readable reason ("couldn't reach that site");
+      // network failures don't, so they get the translated fallback.
+      const msg = err instanceof ApiRequestError ? err.message : t("form.toastError");
+      setError(msg);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <FreeAuditContext.Provider value={{ url, setUrl, loading, result, submit }}>{children}</FreeAuditContext.Provider>
+    <FreeAuditContext.Provider value={{ url, setUrl, loading, result, error, origin, submit }}>{children}</FreeAuditContext.Provider>
   );
 }
 
@@ -144,12 +158,13 @@ function useTypedPlaceholder(base: string, active: boolean) {
 /** The URL field + submit button. `variant="hero"` is the v2 instrument style. */
 export function FreeAuditInput({ variant = "hero", className }: { variant?: "hero" | "cta"; className?: string }) {
   const { t } = useI18n();
-  const { url, setUrl, loading, submit } = useFreeAudit();
+  const { url, setUrl, loading, error, origin, submit } = useFreeAudit();
+  const mine = origin === variant;
   const [focused, setFocused] = useState(false);
   const placeholder = useTypedPlaceholder(t("form.placeholder"), variant === "hero" && !focused && !url);
 
   return (
-    <form onSubmit={submit} className={`w-full max-w-xl ${className ?? ""}`} aria-label={t("form.aria")}>
+    <form onSubmit={(e) => submit(e, variant)} className={`w-full max-w-xl ${className ?? ""}`} aria-label={t("form.aria")}>
       <div className="flex w-full flex-col gap-2 rounded-2xl border border-line-strong bg-card p-1.5 shadow-[0_0_0_4px_var(--leaf-soft)] transition-[border-color,box-shadow] duration-[var(--dur-state)] focus-within:border-primary/60 focus-within:shadow-[0_0_0_5px_var(--leaf-soft),0_20px_50px_-24px_var(--glow)] min-[480px]:flex-row min-[480px]:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-faint" aria-hidden />
@@ -184,13 +199,82 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
           )}
         </Button>
       </div>
-      {loading && (
-        <div className="mt-4 flex items-center gap-3" role="status" aria-live="polite">
-          <LogoLoader size={22} glow />
-          <ShimmerText className="text-sm font-medium">{t("form.reading", { n: CHECK_COUNT })}</ShimmerText>
+      {loading && mine && <ScanProgress />}
+      {!loading && error && mine && (
+        <div
+          role="alert"
+          className="mt-3 flex items-start gap-3 rounded-xl border border-signal-rust/35 bg-signal-rust/[0.06] px-3.5 py-3 text-start text-sm fade-up-in"
+        >
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-signal-rust" aria-hidden />
+          <p className="min-w-0 flex-1 leading-relaxed">
+            <span className="font-medium">{t("form.errorTitle")}</span> <span className="text-muted-foreground">{error}</span>
+          </p>
+          {url.trim() && (
+            <button
+              type="submit"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              <RotateCcw className="size-3.5" aria-hidden /> {t("form.retry")}
+            </button>
+          )}
         </div>
       )}
     </form>
+  );
+}
+
+/** Steps shown while a scan runs; the last stays active until the result lands. */
+const SCAN_STEPS = [
+  { key: "form.stepFetch", at: 0 },
+  { key: "form.stepRead", at: 2200 },
+  { key: "form.stepCrawl", at: 4800 },
+  { key: "form.stepScore", at: 8000 },
+] as const;
+
+function ScanProgress() {
+  const { t } = useI18n();
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const t0 = Date.now();
+    const iv = setInterval(() => setElapsed(Date.now() - t0), 250);
+    return () => clearInterval(iv);
+  }, []);
+  const active = SCAN_STEPS.reduce((acc, s, i) => (elapsed >= s.at ? i : acc), 0);
+  // Asymptotic bar: moves fast at first, never claims 100% before the result.
+  const pct = Math.min(92, 100 * (1 - Math.exp(-elapsed / 7000)));
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-line-strong bg-card/80 text-start fade-up-in" role="status" aria-live="polite">
+      <div className="h-0.5 bg-surface-2">
+        <div
+          className="h-full origin-[left] bg-primary shadow-[0_0_10px_var(--glow)] transition-transform duration-300 ease-out rtl:origin-[right]"
+          style={{ transform: `scaleX(${pct / 100})` }}
+        />
+      </div>
+      <div className="flex items-center gap-2.5 px-3.5 pt-3">
+        <LogoLoader size={18} glow />
+        <ShimmerText className="text-[13px] font-medium">{t("form.reading", { n: CHECK_COUNT })}</ShimmerText>
+      </div>
+      <ol className="grid gap-1.5 px-3.5 pb-3.5 pt-2.5 font-mono text-[12px]">
+        {SCAN_STEPS.map((s, i) => {
+          const done = i < active;
+          const now = i === active;
+          return (
+            <li key={s.key} className={`flex items-center gap-2.5 transition-colors duration-300 ${done ? "text-muted-foreground" : now ? "text-foreground" : "text-faint"}`}>
+              <span className="grid size-4 shrink-0 place-items-center">
+                {done ? (
+                  <Check className="size-3.5 text-primary" strokeWidth={3} aria-hidden />
+                ) : now ? (
+                  <span className="o-pulse-dot size-1.5 rounded-full bg-primary" aria-hidden />
+                ) : (
+                  <span className="size-1.5 rounded-full bg-line-strong" aria-hidden />
+                )}
+              </span>
+              {t(s.key)}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 
@@ -216,18 +300,24 @@ export function FreeAuditResult() {
     <>
       {result && (
         <div id="diagnosis" className="fade-up-in scroll-mt-24">
-          <div className="overflow-hidden rounded-xl border bg-card shadow-lg">
+          <div className="o-elevated relative overflow-hidden rounded-2xl border border-line-strong bg-card">
+            {/* One-shot scan line across the card as the result lands */}
+            <div aria-hidden className="o-anim o-diff-sweep pointer-events-none absolute inset-x-0 top-0 h-px" />
             {/* ── Instrument header: the numbers, straight up ── */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-secondary/40 px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-strong bg-surface-2/50 px-5 py-3.5">
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("form.instant")}</p>
-                <p className="truncate font-mono text-sm">{result.siteUrl}</p>
+                <p className="o-eyebrow">{t("form.instant")}</p>
+                <p className="mt-0.5 truncate font-mono text-sm" dir="ltr">{result.siteUrl}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
+                <span className="rounded-full border border-line-strong bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
                   {t("form.checksPassed", { a: result.passedChecks, b: result.totalChecks })}
                 </span>
-                <span className="rounded-full bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
+                <span
+                  className={`rounded-full border px-3 py-1 font-mono text-xs ${
+                    highImpact > 0 ? "border-signal-rust/35 bg-signal-rust/[0.06] text-signal-rust" : "border-primary/30 bg-leaf-soft text-primary"
+                  }`}
+                >
                   {highImpact > 0 ? t("form.highImpact", { n: highImpact }) : t("form.noHighImpact")}
                 </span>
               </div>
@@ -246,7 +336,7 @@ export function FreeAuditResult() {
             </div>
 
             {/* ── Methodology disclosure — the "evidence you can check" contract ── */}
-            <div className="border-t bg-secondary/20 px-5 py-3 sm:px-6">
+            <div className="border-t border-line-strong bg-surface-2/30 px-5 py-3 sm:px-6">
               <details className="group">
                 <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
                   <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden />
@@ -273,7 +363,7 @@ export function FreeAuditResult() {
                   <p className="text-sm font-semibold">{t("form.found")}</p>
                   <ul className="space-y-3">
                     {result.findings.map((f, i) => (
-                      <li key={i} className="rounded-lg border bg-background p-4">
+                      <li key={i} className="rounded-xl border border-line-strong bg-background p-4">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${severityClass(f.severity)}`}>
                             {t(SEVERITY_KEYS[f.severity] ?? f.severity)}
@@ -307,8 +397,8 @@ export function FreeAuditResult() {
                 </p>
               )}
 
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t("common.biggestOpportunity")}</p>
+              <div className="rounded-xl border border-primary/30 bg-leaf-soft p-4">
+                <p className="o-eyebrow">{t("common.biggestOpportunity")}</p>
                 <p className="mt-1 font-medium">{result.opportunity.title}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{result.opportunity.why}</p>
               </div>
@@ -322,13 +412,15 @@ export function FreeAuditResult() {
             </div>
 
             {/* ── Bridge: facts are free, strategy is the product ── */}
-            <div className="flex flex-col items-start gap-3 border-t bg-secondary/40 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex flex-col items-start gap-3 border-t border-line-strong bg-surface-2/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <p className="max-w-md text-sm text-muted-foreground">
                 <Tx k="form.bridge" />
               </p>
-              <Button asChild size="lg" className="shrink-0">
-                <Link href="/pricing/">
-                  {t("form.unlock")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+              {/* Nothing to fix → the next useful step is the full report, not "fix these". */}
+              <Button asChild variant="sheen" size="lg" className="shrink-0">
+                <Link href={result.findings.length > 0 ? "/pricing/" : "/sample-report/"}>
+                  {result.findings.length > 0 ? t("form.unlock") : t("teardown.paidLayerLink")}{" "}
+                  <ArrowRight className="size-4 rtl-flip" aria-hidden />
                 </Link>
               </Button>
             </div>

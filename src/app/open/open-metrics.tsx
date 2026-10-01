@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Eyebrow, LivePill } from "@/components/v2/atoms";
@@ -29,6 +31,10 @@ export function OpenMetrics() {
 }
 
 export function OpenMetricsView({ data, isLoading }: { data: PublicStats | null; isLoading: boolean }) {
+  // Relative times and the local timestamp depend on the viewer's clock and
+  // time zone: render them after mount so server and client markup match.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const mergeRate = data && data.prsOpened >= 5 ? Math.round((data.prsMerged / data.prsOpened) * 100) : null;
   const weeks = data?.mrr?.weeks ?? [];
   const wow =
@@ -60,7 +66,17 @@ export function OpenMetricsView({ data, isLoading }: { data: PublicStats | null;
                 <Flower size={40} variant="breathe" />
               </div>
             ) : !data ? (
-              <p className="py-16 text-center text-muted-foreground">The numbers are not available right now. Try again in a few minutes.</p>
+              <div className="mx-auto grid max-w-md justify-items-center gap-3 rounded-2xl border border-dashed border-line-strong bg-card/60 px-6 py-12 text-center">
+                <Flower size={32} variant="breathe" />
+                <h2 className="o-display text-2xl">The live numbers are offline for a moment</h2>
+                <p className="text-[14px] leading-relaxed text-muted-foreground">
+                  This page reads straight from the production database and shows nothing it can&apos;t verify. Check back in a few
+                  minutes.
+                </p>
+                <Link href="/" className="mt-1 text-[14px] font-medium text-primary underline underline-offset-4 hover:text-primary/80">
+                  Run a free scan meanwhile
+                </Link>
+              </div>
             ) : (
               <InView className="grid gap-4">
                 <div className={`grid gap-4 ${data.mrr ? "lg:grid-cols-[1.4fr_1fr]" : ""}`}>
@@ -139,7 +155,7 @@ export function OpenMetricsView({ data, isLoading }: { data: PublicStats | null;
                         id: f.mergedAt + i,
                         title: f.fixes.length ? f.fixes.join(", ") : "Fix",
                         site: f.site ?? "a site",
-                        ago: ago(f.mergedAt),
+                        ago: mounted ? ago(f.mergedAt) : "",
                       }))}
                     />
                   ) : (
@@ -148,7 +164,7 @@ export function OpenMetricsView({ data, isLoading }: { data: PublicStats | null;
                 </div>
 
                 <p className="text-center font-mono text-[11px] text-faint">
-                  Updated {new Date(data.generatedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. A fix counts as
+                  {mounted && <>Updated {new Date(data.generatedAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. </>}A fix counts as
                   merged when its pull request is merged on GitHub.
                 </p>
               </InView>
