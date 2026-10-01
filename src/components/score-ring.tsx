@@ -13,7 +13,7 @@ export function ScoreRing({ value, size = 96, label }: { value: number; size?: n
   const off = c - (Math.min(100, Math.max(0, value)) / 100) * c;
   const numClass = size >= 108 ? "text-[1.75rem]" : "text-2xl";
   return (
-    <figure className="inline-flex flex-col items-center gap-2">
+    <figure className="inline-flex flex-col items-center gap-3.5">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90" aria-hidden>
           <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={8} className="fill-none stroke-muted" />
@@ -37,7 +37,7 @@ export function ScoreRing({ value, size = 96, label }: { value: number; size?: n
         </div>
       </div>
       {label ? (
-        <figcaption className="max-w-[10rem] text-center text-[10px] uppercase leading-tight tracking-wider text-muted-foreground">
+        <figcaption className="max-w-[10rem] text-center text-[10px] uppercase leading-snug tracking-[0.12em] text-muted-foreground">
           {label}
         </figcaption>
       ) : null}

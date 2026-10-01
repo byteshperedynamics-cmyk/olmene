@@ -53,10 +53,10 @@ export function CookieConsent() {
       aria-modal="false"
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-desc"
-      className="fixed inset-x-0 bottom-0 z-50 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-300"
+      className="fixed inset-x-0 bottom-0 z-50 p-3 sm:end-auto sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-300"
     >
-      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background/95 p-5 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-background/90 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background/95 p-4 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-background/90 sm:mx-0 sm:max-w-sm sm:p-5">
+        <div className="flex flex-col gap-3 sm:gap-4">
           <div className="min-w-0 space-y-1.5">
             <h2 id="cookie-consent-title" className="font-display text-base font-semibold text-foreground">
               {t("cookie.title")}
@@ -71,11 +71,11 @@ export function CookieConsent() {
               </Link>
             </p>
           </div>
-          <div className="flex shrink-0 flex-row gap-2 sm:flex-col sm:items-stretch">
-            <Button size="sm" className="h-11 px-5 sm:h-9 sm:px-3" onClick={accept}>
+          <div className="flex shrink-0 flex-row gap-2">
+            <Button size="sm" className="h-11 flex-1 px-5 sm:h-9 sm:px-3" onClick={accept}>
               {t("cookie.accept")}
             </Button>
-            <Button size="sm" className="h-11 px-5 sm:h-9 sm:px-3" variant="outline" onClick={reject}>
+            <Button size="sm" className="h-11 flex-1 px-5 sm:h-9 sm:px-3" variant="outline" onClick={reject}>
               {t("cookie.reject")}
             </Button>
           </div>

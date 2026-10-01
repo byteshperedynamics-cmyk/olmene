@@ -127,9 +127,9 @@ function ScoreCard({
   return (
     <div className={`rounded-2xl border p-5 ${after ? "border-primary/35 bg-leaf-soft" : "bg-card"}`}>
       <p className={`font-mono text-[11px] uppercase tracking-[0.12em] ${after ? "text-primary" : "text-faint"}`}>{label}</p>
-      <div className="mt-3 flex items-end gap-2">
+      <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
         <span className={`font-display text-6xl font-medium leading-none ${after ? "text-primary" : "score-mid"}`}>{value}</span>
-        <span className="pb-1 text-xs text-muted-foreground">{readiness}</span>
+        <span className="whitespace-nowrap pb-1 text-xs text-muted-foreground">{readiness}</span>
       </div>
       <p className="mt-2 font-mono text-[11px] text-muted-foreground">{checks}</p>
       <ul className="mt-4 grid gap-2 border-t pt-3 text-[12.5px] leading-relaxed text-muted-foreground">

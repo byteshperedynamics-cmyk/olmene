@@ -99,13 +99,11 @@ export default function CheckoutSuccessPage() {
 
   const plan = plans?.find((p) => p.name === ent?.planName) ?? null;
   const oneTimePlan = plans?.find((p) => p.one_time) ?? null;
-  // Total analyses available: for credit-only accounts quotaTotal already
-  // counts the credits (data.ts) — do not add reportCredits again.
-  const totalCount = ent
-    ? creditOnly
-      ? ent.quotaTotal
-      : ent.quotaTotal + ent.reportCredits
-    : 0;
+  // Plan quota and one-time credits are shown separately: mixing them read
+  // as "5 of 6 remaining" on a 5-report plan. For credit-only accounts
+  // quotaTotal already counts the credits (data.ts).
+  const totalCount = ent ? ent.quotaTotal : 0;
+  const extraCredits = ent && !creditOnly ? ent.reportCredits : 0;
   const remaining = ent ? Math.max(0, totalCount - ent.quotaUsed) : 0;
   const counted = useCountUp(remaining, phase === "success");
 
@@ -255,9 +253,17 @@ export default function CheckoutSuccessPage() {
                   </dt>
                   <dd className="font-medium">
                     <span className="font-display text-base font-semibold text-primary">{counted}</span>{" "}
-                    {creditOnly ? "included" : <>of {totalCount} remaining</>}
+                    {creditOnly ? "included" : <>of {totalCount} left</>}
                   </dd>
                 </div>
+                {extraCredits > 0 && (
+                  <div className="flex items-baseline justify-between gap-4">
+                    <dt className="text-muted-foreground">Report credits</dt>
+                    <dd className="font-medium">
+                      {extraCredits} on top of your plan
+                    </dd>
+                  </div>
+                )}
                 {creditOnly ? (
                   ent?.creditsExpireAt && (
                     <div className="flex items-baseline justify-between gap-4">
