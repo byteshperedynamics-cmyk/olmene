@@ -11,11 +11,10 @@ import { Teardown } from "@/components/v2/home/teardown";
 import { CanCannot, Comparison, FinalCta, HomeFaq, PricingBand } from "@/components/v2/home/blocks";
 import { CHECK_COUNT } from "@/lib/config";
 import { usePageMeta } from "@/i18n/provider";
+import { usePublicStats } from "@/lib/public-stats";
 
-// Proof strip — real, all-time numbers from the production database
-// (free_audits / reports row counts; CHECK_COUNT = the deterministic checklist
-// the free audit runs today; 15 languages). Refresh periodically (or wire to
-// /api/public/stats, brief §6.5) as usage grows; never inflate.
+// Proof strip fallback — real numbers measured 2026-10-01, shown until the live
+// /api/public/stats response arrives (or if it is unavailable). Never inflate.
 const STATS: ProofStat[] = [
   { value: 73, label: "stats.audits" },
   { value: 198, label: "stats.sources" },
@@ -30,6 +29,16 @@ const STATS: ProofStat[] = [
  */
 export default function HomePage() {
   usePageMeta("meta.title.home", "meta.desc.home");
+  const { data: live } = usePublicStats();
+  const stats: ProofStat[] = live
+    ? [
+        { value: live.freeScans, label: "stats.audits" },
+        { value: live.sourcesCited, label: "stats.sources" },
+        { value: CHECK_COUNT, label: "stats.checks" },
+        // fixes shipped replaces languages once the number means something
+        live.prsMerged >= 20 ? { value: live.prsMerged, label: "stats.fixes" } : STATS[3],
+      ]
+    : STATS;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -37,7 +46,7 @@ export default function HomePage() {
       <FreeAuditProvider>
         <main id="main-content" className="flex-1">
           <HomeHero />
-          <ProofStrip stats={STATS} />
+          <ProofStrip stats={stats} />
           <HomeLoop />
           <ReviewShowcase />
           <Teardown />

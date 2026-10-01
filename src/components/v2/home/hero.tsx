@@ -2,6 +2,7 @@
 
 import { FreeAuditInput, FreeAuditResult } from "@/components/free-audit-form";
 import { featureAgentEnabled } from "@/lib/agent-client";
+import { usePublicStats } from "@/lib/public-stats";
 import { useI18n, Tx } from "@/i18n/provider";
 import { LivePill } from "../atoms";
 import { InView } from "../in-view";
@@ -15,6 +16,8 @@ import { ScanPreview } from "../scan-preview";
 export function HomeHero() {
   const { t } = useI18n();
   const agentOn = featureAgentEnabled();
+  const { data: stats } = usePublicStats();
+  const shipped = stats?.prsMerged ?? 0;
 
   return (
     <>
@@ -29,7 +32,7 @@ export function HomeHero() {
           <div className="min-w-0">
             {agentOn && (
               <div className="hero-in" style={{ animationDelay: "0.02s" }}>
-                <LivePill tone="live">{t("hero.pill")}</LivePill>
+                <LivePill tone="live">{shipped >= 50 ? t("hero.pillCount", { n: shipped }) : t("hero.pill")}</LivePill>
               </div>
             )}
             <h1
