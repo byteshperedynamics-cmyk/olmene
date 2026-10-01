@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { featureMeasureEnabled } from "@/lib/agent-client";
 import { Eyebrow } from "../atoms";
 import { ConnectDiagram } from "../data-viz";
 import { Flower } from "../flower";
@@ -30,20 +31,24 @@ export function ConnectPanel({
   onConnect: () => void;
 }) {
   const step = !hasScan ? 1 : 2;
+  const measure = featureMeasureEnabled();
+  const siteNode = { key: "site", label: "Your site", status: hasScan ? "scanned" : "scan first", state: hasScan ? ("connected" as const) : ("pending" as const) };
+  const ghNode = {
+    key: "gh",
+    label: "GitHub",
+    status: githubConnected ? "connected" : "pending",
+    state: githubConnected ? ("connected" as const) : ("pending" as const),
+  };
   return (
     <section className="grid items-center gap-8 overflow-hidden rounded-2xl border bg-card p-6 sm:p-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div className="mx-auto w-full max-w-sm">
         <ConnectDiagram
           ariaLabel={`Your site ${hasScan ? "scanned" : "not scanned yet"}, GitHub ${githubConnected ? "connected" : "not connected"}`}
-          nodes={[
-            { key: "site", label: "Your site", status: hasScan ? "scanned" : "scan first", state: hasScan ? "connected" : "pending" },
-            {
-              key: "gh",
-              label: "GitHub",
-              status: githubConnected ? "connected" : "pending",
-              state: githubConnected ? "connected" : "pending",
-            },
-          ]}
+          nodes={
+            measure
+              ? [siteNode, ghNode, { key: "gsc", label: "Search Console", status: "optional", state: "off" }]
+              : [siteNode, ghNode]
+          }
           center={<Flower size={44} variant={githubConnected ? "static" : "breathe"} />}
         />
       </div>

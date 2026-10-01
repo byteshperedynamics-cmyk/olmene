@@ -57,7 +57,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
               {process.env.NEXT_PUBLIC_FEATURE_AGENT === "true" && (
                 <Link href="/app/agent/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                  Agent
+                  Fix runs
+                </Link>
+              )}
+              {process.env.NEXT_PUBLIC_FEATURE_MEASURE === "true" && (
+                <Link href="/app/impact/" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  Impact
                 </Link>
               )}
             </nav>

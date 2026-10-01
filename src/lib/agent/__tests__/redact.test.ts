@@ -51,3 +51,16 @@ describe("redaction", () => {
     expect(redactString("repos/octocat/site contents index.html")).toBe("repos/octocat/site contents index.html");
   });
 });
+
+describe("Google token redaction (Measure)", () => {
+  test("access, refresh and client-secret formats are scrubbed", async () => {
+    const { redactString } = await import("../redact");
+    const out = redactString(
+      "access ya29.a0AfB_byC1x-Y2z3 refresh 1//0gAbCdEfGhIjKlMnOpQrStUvWxYz secret GOCSPX-abc123_DEF",
+    );
+    expect(out).not.toContain("ya29.a0AfB");
+    expect(out).not.toContain("1//0gAbCdEf");
+    expect(out).not.toContain("GOCSPX-abc123");
+  });
+});
+

@@ -29,6 +29,10 @@ const TOKEN_PATTERNS: Array<{ re: RegExp; label: string }> = [
   // Polar
   { re: /\bwhsec_[A-Za-z0-9+/=_-]+/g, label: "whsec_…" },
   { re: /\bpolar_(?:sc|so)_[A-Za-z0-9]+/g, label: "polar_…" },
+  // Google OAuth (Search Console): access tokens ya29.…, refresh tokens 1//…
+  { re: /\bya29\.[A-Za-z0-9_-]+/g, label: "ya29.…" },
+  { re: /\b1\/\/[A-Za-z0-9_-]{20,}/g, label: "google_refresh" },
+  { re: /\bGOCSPX-[A-Za-z0-9_-]+/g, label: "GOCSPX-…" },
   // Generic bearer/authorization headers
   { re: /(Authorization\s*:\s*Bearer\s+)[^\s"']+/gi, label: "bearer" },
   // JWTs (three base64url segments) — access tokens etc.

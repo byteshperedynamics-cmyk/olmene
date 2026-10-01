@@ -159,3 +159,14 @@ export const rejectAgentJob = (id: string) => call<{ ok: boolean }>("POST", `/ap
 export const cancelAgentJob = (id: string) => call<{ ok: boolean }>("POST", `/api/agent/jobs/${id}/cancel/`);
 export const getAgentReceipt = (id: string) =>
   call<{ content: string; createdAt: string }>("GET", `/api/agent/jobs/${id}/receipt/`);
+
+// ── Measure (Search Console impact) ────────────────────────────────────────
+
+export const featureMeasureEnabled = () =>
+  (process.env.NEXT_PUBLIC_FEATURE_MEASURE ?? "").toLowerCase() === "true" ||
+  (process.env.NEXT_PUBLIC_FEATURE_MEASURE ?? "") === "1";
+
+export const getMeasureOverview = () =>
+  call<import("@/lib/measure/types").MeasureOverview>("GET", "/api/measure/overview/");
+export const connectSearchConsole = () => call<{ url: string }>("POST", "/api/measure/connect/google/");
+
