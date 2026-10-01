@@ -1,0 +1,28 @@
+{
+  "measured_at": "2026-10-01",
+  "tool": "lighthouse 12.8.2, mobile emulation, live olmene.com",
+  "home": {
+    "categories": {
+      "performance": 70,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "lcp_ms": 5115,
+    "cls": 0.002,
+    "tbt_ms": 335,
+    "total_kb": 663
+  },
+  "pricing": {
+    "categories": {
+      "performance": 78,
+      "accessibility": 98,
+      "best-practices": 100,
+      "seo": 100
+    },
+    "lcp_ms": 4875,
+    "cls": 0,
+    "tbt_ms": 37,
+    "total_kb": 651
+  }
+}

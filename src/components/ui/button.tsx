@@ -20,12 +20,19 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
+        // v2: the one primary CTA per view — a diagonal light passes every 3.2s
+        sheen:
+          "o-sheen bg-primary text-primary-foreground shadow-[0_8px_24px_-12px_var(--glow)] hover:bg-primary/92",
+        // v2: hairline secondary action
+        hairline:
+          "border border-line-strong bg-transparent text-foreground hover:bg-surface-2",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
         sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
+        xl: "h-11 rounded-[10px] px-5 text-[15px] has-[>svg]:px-4",
       },
     },
     defaultVariants: {
