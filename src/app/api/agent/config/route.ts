@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
-import { agentEnabled } from "@/lib/agent/env";
+import { agentEnabled, isAgentAdmin } from "@/lib/agent/env";
 import { ERR, requireUser } from "@/lib/agent/http";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
 import { readFlags } from "@/lib/agent/audit";
@@ -34,6 +34,8 @@ export async function GET(req: Request) {
     killSwitch: flags.globalKillSwitch || !flags.providerGithubEnabled,
     github: {
       configured: Boolean(app),
+      // Only the owner sees the one-time "set up the GitHub app" action.
+      canRegister: !app && isAgentAdmin(auth.user.email),
       appSlug: app?.appSlug ?? null,
       connections: (connections ?? []).map((c: Record<string, unknown>) => ({
         id: c.id,

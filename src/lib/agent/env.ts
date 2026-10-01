@@ -22,6 +22,23 @@ export function agentEnabled(): boolean {
   return v === "true" || v === "1" || v === "on";
 }
 
+/**
+ * Owner allow-list for registering Olmene's GitHub App (AGENT_ADMIN_EMAILS,
+ * comma-separated). Registration decides which app every customer installs,
+ * so it fails closed: with the variable unset, nobody can register.
+ */
+export function agentAdminEmails(): string[] {
+  return (process.env.AGENT_ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function isAgentAdmin(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return agentAdminEmails().includes(email.trim().toLowerCase());
+}
+
 export function getEnv(name: string): string | undefined {
   const v = process.env[name];
   return v && v.length > 0 ? v : undefined;

@@ -17,6 +17,7 @@ export function ConnectPanel({
   hasScan,
   canAnalyze = true,
   githubConfigured,
+  canRegister = false,
   githubConnected,
   killSwitch,
   busy,
@@ -27,6 +28,8 @@ export function ConnectPanel({
   /** False when the account has no plan or report credit (the analysis form would refuse). */
   canAnalyze?: boolean;
   githubConfigured: boolean;
+  /** Owner-only one-time app registration (the server decides). */
+  canRegister?: boolean;
   githubConnected: boolean;
   killSwitch: boolean;
   busy: string | null;
@@ -96,7 +99,11 @@ export function ConnectPanel({
               </li>
             </ul>
             <div className="flex flex-wrap items-center gap-3">
-              {!githubConfigured ? (
+              {!githubConfigured && !canRegister ? (
+                <p className="rounded-xl border border-dashed px-4 py-3 text-[14px] text-muted-foreground">
+                  GitHub connections are opening shortly. Your scan and report are ready in the meantime.
+                </p>
+              ) : !githubConfigured ? (
                 <Button variant="sheen" size="xl" onClick={onRegister} disabled={busy !== null || killSwitch}>
                   {busy === "register" ? "Opening GitHub…" : "Set up the GitHub app"}
                 </Button>
@@ -105,11 +112,13 @@ export function ConnectPanel({
                   {busy === "connect" ? "Opening GitHub…" : "Connect GitHub"}
                 </Button>
               )}
-              <p className="text-[12.5px] text-muted-foreground">
+              {(githubConfigured || canRegister) && (
+                <p className="text-[12.5px] text-muted-foreground">
                 {githubConfigured
                   ? "GitHub asks you to pick the repository in the same step."
                   : "One-time setup. GitHub shows the exact permissions first."}
-              </p>
+                </p>
+              )}
             </div>
           </>
         )}

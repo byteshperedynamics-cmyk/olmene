@@ -102,6 +102,7 @@ export default function AgentPage() {
           hasScan={completedReports.length > 0}
           canAnalyze={!billing || billing.active || billing.reportCredits > 0}
           githubConfigured={cfg.github.configured}
+          canRegister={cfg.github.canRegister ?? false}
           githubConnected={false}
           killSwitch={cfg.killSwitch}
           busy={busy}

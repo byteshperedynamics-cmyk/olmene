@@ -71,6 +71,8 @@ export interface AgentConfig {
   killSwitch: boolean;
   github: {
     configured: boolean;
+    /** True only for the owner while no app is registered. */
+    canRegister?: boolean;
     appSlug: string | null;
     connections: AgentConnection[];
   };

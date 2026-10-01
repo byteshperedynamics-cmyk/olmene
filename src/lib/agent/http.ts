@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { agentEnabled } from "./env";
+import { agentEnabled, isAgentAdmin } from "./env";
 import { getUserFromRequest, type AuthedUser } from "./db";
 
 export function jsonError(status: number, code: string, message: string): NextResponse {
@@ -15,6 +15,7 @@ export const ERR = {
   disabled: () => jsonError(503, "agent_disabled", "The fix agent is not enabled on this deployment."),
   unauthorized: () => jsonError(401, "unauthorized", "Sign in to use the fix agent."),
   forbidden: () => jsonError(403, "forbidden", "Not yours."),
+  ownerOnly: () => jsonError(403, "owner_only", "Only the Olmene owner can register the GitHub App."),
   notFound: (what = "resource") => jsonError(404, "not_found", `${what} not found.`),
   badRequest: (message: string) => jsonError(400, "bad_request", message),
   notConfigured: () =>
@@ -29,6 +30,14 @@ export async function requireUser(req: Request): Promise<{ user: AuthedUser } | 
   const user = await getUserFromRequest(req);
   if (!user) return { error: ERR.unauthorized() };
   return { user };
+}
+
+/** Signed-in AND on the AGENT_ADMIN_EMAILS allow-list (fails closed). */
+export async function requireAgentAdmin(req: Request): Promise<{ user: AuthedUser } | { error: NextResponse }> {
+  const auth = await requireUser(req);
+  if ("error" in auth) return auth;
+  if (!isAgentAdmin(auth.user.email)) return { error: ERR.ownerOnly() };
+  return auth;
 }
 
 export function isHttpError(e: unknown): NextResponse | null {

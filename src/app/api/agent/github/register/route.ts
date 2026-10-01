@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled, appUrl, githubWebBase } from "@/lib/agent/env";
-import { ERR, randomState, requireUser } from "@/lib/agent/http";
+import { ERR, randomState, requireAgentAdmin } from "@/lib/agent/http";
 import { agentLog } from "@/lib/agent/redact";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
+  // Owner only: whoever registers the app controls what every customer installs.
+  const auth = await requireAgentAdmin(req);
   if ("error" in auth) return auth.error;
   const db = getServiceDb();
 

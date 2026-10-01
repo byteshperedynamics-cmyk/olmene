@@ -57,6 +57,7 @@ export default function ConnectPage() {
       <ConnectPanel
         hasScan={hub.completedReports.length > 0}
         githubConfigured={hub.config.data.github.configured}
+        canRegister={hub.config.data.github.canRegister ?? false}
         githubConnected={connected}
         killSwitch={hub.config.data.killSwitch}
         busy={hub.busy}
