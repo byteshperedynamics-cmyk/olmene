@@ -962,6 +962,11 @@ function sleep(ms) {
   let lastError = new LlmCallError("no attempt made", true);
   for(let attempt = 0; attempt < MAX_ATTEMPTS; attempt++){
     const model = models[attempt % models.length];
+    // Long backoff only when the next attempt retries the SAME model; when it
+    // fails over to a different model/provider, switch almost immediately
+    // (a 503 on one Gemini model said nothing about GLM or flash-lite).
+    const nextModel = models[(attempt + 1) % models.length];
+    const pause = ()=>nextModel.id === model.id ? backoff(attempt) : sleep(800 + Math.floor(Math.random() * 700));
     // ── budget guards (before EVERY attempt) ──
     const dailyOk = await consume(supabase, llmDailyKey(), 1, dailyCap);
     if (!dailyOk) throw new BudgetExhaustedError("llm_daily");
@@ -1027,7 +1032,7 @@ function sleep(ms) {
     } catch (e) {
       clearTimeout(timer);
       lastError = new LlmCallError(`timeout/network: ${e.message}`, true);
-      await backoff(attempt);
+      await pause();
       continue;
     }
     clearTimeout(timer);
@@ -1037,21 +1042,21 @@ function sleep(ms) {
       if (Number.isFinite(retryAfter) && retryAfter > 0 && retryAfter <= 30) {
         await sleep(retryAfter * 1000);
       } else {
-        await backoff(attempt);
+        await pause();
       }
       continue;
     }
     if (!res.ok) {
       // 4xx (other than 429): model may be unavailable — try the next one.
       lastError = new LlmCallError(`upstream ${res.status}`, true);
-      await backoff(attempt);
+      await pause();
       continue;
     }
     const payload = await res.json().catch(()=>null);
     const content = payload?.choices?.[0]?.message?.content ?? "";
     if (!content.trim()) {
       lastError = new LlmCallError("empty content", true);
-      await backoff(attempt);
+      await pause();
       continue;
     }
     // ── parse + validate ──
@@ -1061,14 +1066,14 @@ function sleep(ms) {
     } catch (e) {
       lastError = new LlmCallError(`invalid JSON: ${e.message}`, true);
       opts.repairHint = `Your previous reply was not valid JSON (${e.message}). Return ONLY one corrected JSON object, no prose, no markdown fences.`;
-      await backoff(attempt);
+      await pause();
       continue;
     }
     const check = opts.schema.safeParse(parsed);
     if (!check.success) {
       lastError = new LlmCallError(`schema validation failed: ${zodErrorSummary(check.error)}`, true);
       opts.repairHint = `Your previous JSON did not match the schema. Fix these issues:\n${zodErrorSummary(check.error)}\nReturn ONLY the corrected JSON object.`;
-      await backoff(attempt);
+      await pause();
       continue;
     }
     return {
