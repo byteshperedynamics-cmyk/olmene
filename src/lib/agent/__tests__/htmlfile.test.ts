@@ -137,3 +137,39 @@ describe("edit operations", () => {
     expect(sm.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
   });
 });
+
+// ── Regressions from the real-repo evaluation (2026-10-02) ─────────────────
+
+describe("addPricingLink on real-world markup", () => {
+  test("never clones a link from body copy (mdn/beginner-html-site-styled)", () => {
+    const html = '<html><head></head><body><h1>Hi</h1><p>Read the <a href="https://x.org/m">Mozilla Manifesto</a> to learn more.</p></body></html>';
+    expect(addPricingLink(html, "/pricing.html")).toBeNull();
+  });
+
+  test("label is always 'Pricing', never the sibling's text", () => {
+    const html = '<nav><a href="/" class="nav">Home</a> <a href="/about" class="nav">About us</a></nav>';
+    const out = addPricingLink(html, "/pricing.html")!;
+    expect(out).toContain('<a class="nav" href="/pricing.html">Pricing</a>');
+    expect(out.match(/About us/g)?.length).toBe(1);
+  });
+
+  test("adds a sibling <li> when links live in a list", () => {
+    const html = '<nav><ul class="menu"><li class="item"><a href="/">Home</a></li><li class="item"><a href="/blog">Blog</a></li></ul></nav>';
+    const out = addPricingLink(html, "/pricing/")!;
+    expect(out).toContain('<li class="item"><a href="/blog">Blog</a></li><li class="item"><a href="/pricing/">Pricing</a></li></ul>');
+  });
+});
+
+describe("head insertions keep the file's indentation", () => {
+  const html = "<html>\n  <head>\n    <meta charset=\"utf-8\">\n    <title>Acme</title>\n  </head>\n  <body></body>\n</html>";
+
+  test("canonical uses the children's indent", () => {
+    expect(insertCanonical(html, "https://acme.test/")).toContain('\n    <link rel="canonical" href="https://acme.test/">');
+  });
+
+  test("JSON-LD block sits before </head> without stealing its indent", () => {
+    const out = insertJsonLd(html, { "@context": "https://schema.org", "@type": "Organization" })!;
+    expect(out).toContain('    <script type="application/ld+json">\n      {');
+    expect(out).toContain("    </script>\n  </head>");
+  });
+});

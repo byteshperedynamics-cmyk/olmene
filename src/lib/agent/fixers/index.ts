@@ -65,6 +65,8 @@ export interface FixerContext {
   homepagePath: string | null;
   homepageHtml: string | null;
   treePaths: string[];
+  /** Raw package.json, when present (build-time generators, frameworks). */
+  packageJson?: string | null;
   repo: { owner: string; name: string; defaultBranch: string };
   copy: CopyDrafts;
   /** Set for Next.js / Astro repos; null for static HTML or unknown repos. */
@@ -74,6 +76,12 @@ export interface FixerContext {
 const COMPONENT_CODE_SKIP =
   "This change lives in component code in this framework — Olmene does not edit components yet, so it is left for you.";
 
+/** Head components that render description/canonical themselves (astrowind <Metadata/>, <SEO/>, <BaseHead/>…). */
+const SEO_COMPONENT = /<(?:SEO|Seo|Metadata|MetaTags|Meta|BaseHead|HeadSeo|HeadSEO|SeoHead|CommonHead|Head)\b[^>]*\/?>/;
+const SEO_COMPONENT_SKIP = "The layout renders its SEO tags through a component (e.g. <Metadata />) — adding a second tag would duplicate it. Set it via that component's props instead.";
+/** Packages that generate the sitemap/robots at build time. */
+const SITEMAP_GENERATOR = /"(@astrojs\/sitemap|next-sitemap|gatsby-plugin-sitemap|@nuxtjs\/sitemap|vite-plugin-sitemap|astro-sitemap|sitemap-generator)"/;
+const ROBOTS_GENERATOR = /"(astro-robots-txt|next-sitemap|gatsby-plugin-robots-txt|@nuxtjs\/robots)"/;
 /** Paths of dynamic robots/sitemap routes that must not be shadowed by static files. */
 const DYNAMIC_SEO_ROUTE = /^(src\/)?app\/(robots|sitemap)\.(ts|tsx|js|jsx)$|^src\/pages\/(robots\.txt|sitemap[\w.-]*\.xml)\.(ts|js)$/;
 
@@ -127,6 +135,7 @@ const metaDescriptionFixer: Fixer = {
         if (/<meta\s+[^>]*name=["']description["']/i.test(fw.headContent)) {
           return { skip: "The layout already sets a meta description (possibly from a prop) — not overriding it." };
         }
+        if (SEO_COMPONENT.test(fw.headContent)) return { skip: SEO_COMPONENT_SKIP };
         after = insertMetaDescription(fw.headContent, desc);
         if (after === null) return { skip: "No <head> or <title> found in the Astro layout." };
       }
@@ -167,13 +176,16 @@ const canonicalFixer: Fixer = {
   build: (ctx) => {
     const fw = ctx.framework;
     if (fw) {
-      const canonicalUrl = normalizeSiteUrl(ctx.siteUrl);
+      // Homepage canonical ends in "/": without it, subfolder sites (GitHub
+      // Pages project sites) point their canonical at a redirect.
+      const canonicalUrl = `${normalizeSiteUrl(ctx.siteUrl)}/`;
       let after: string | null;
       if (fw.kind === "nextjs-app") {
         const r = addMetadataCanonical(fw.headContent, canonicalUrl);
         if (!r.ok) return { skip: r.reason };
         after = r.content;
       } else {
+        if (SEO_COMPONENT.test(fw.headContent)) return { skip: SEO_COMPONENT_SKIP };
         after = insertCanonical(fw.headContent, canonicalUrl);
         if (after === null) return { skip: "Canonical link already present or no <head> found in the Astro layout." };
       }
@@ -189,7 +201,7 @@ const canonicalFixer: Fixer = {
       };
     }
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
-    const canonical = normalizeSiteUrl(ctx.siteUrl);
+    const canonical = `${normalizeSiteUrl(ctx.siteUrl)}/`;
     const after = insertCanonical(ctx.homepageHtml, canonical);
     if (after === null) return { skip: "Canonical link already present or no <head> anchor found." };
     return {
@@ -213,14 +225,12 @@ const jsonLdFixer: Fixer = {
   build: (ctx) => {
     const url = normalizeSiteUrl(ctx.siteUrl);
     const org = {
-      "@context": "https://schema.org",
       "@type": "Organization",
       name: ctx.report.product.name,
       url,
       description: ctx.report.product.oneLiner,
     };
     const webApp = {
-      "@context": "https://schema.org",
       "@type": "WebApplication",
       name: ctx.report.product.name,
       url,
@@ -231,8 +241,9 @@ const jsonLdFixer: Fixer = {
         description: ctx.report.product.pricingModel || undefined,
       },
     };
-    // Multiple <script type="application/ld+json"> blocks are valid and are
-    // merged by search engines — safer than rewriting an existing @graph.
+    // One @context on the @graph wrapper (nodes inherit it). Multiple
+    // <script type="application/ld+json"> blocks are valid and are merged by
+    // search engines — safer than rewriting an existing @graph.
     const payload = { "@context": "https://schema.org", "@graph": [org, webApp] };
     const fw = ctx.framework;
     if (fw) return buildFrameworkJsonLd(ctx, fw, payload);
@@ -372,17 +383,28 @@ const pricingLinkFixer: Fixer = {
   build: (ctx) => {
     if (ctx.framework) return { skip: COMPONENT_CODE_SKIP };
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
-    // Prefer an existing pricing page file in the repo when one exists.
+    // Only link to a pricing page that verifiably exists — a file in the repo,
+    // or a page on the live site the report found. Never create a dead link.
     const pricingFile =
-      ctx.treePaths.find((p) => /^pricing\.html?$/i.test(p)) ??
-      ctx.treePaths.find((p) => /^prices?\.html?$/i.test(p)) ??
-      null;
-    const href = pricingFile ? `/${pricingFile}` : "/pricing.html";
+      ctx.treePaths.find((p) => /^(?:pricing|prices?|plans)(?:\/index)?\.html?$/i.test(p)) ?? null;
+    let livePath: string | null = null;
+    try {
+      const siteHost = new URL(ctx.report.meta.siteUrl).host;
+      for (const src of ctx.report.sources ?? []) {
+        const u = new URL(src.url);
+        if (u.host === siteHost && /\/(?:pricing|prices?|plans)(?:\.html?)?\/?$/i.test(u.pathname)) {
+          livePath = u.pathname;
+          break;
+        }
+      }
+    } catch { /* malformed URLs: no live evidence */ }
+    const href = pricingFile ? `/${pricingFile.replace(/\/index\.html?$/i, "/")}` : livePath;
+    if (!href) return { skip: "No pricing page found in the repository or on the live site — add one first, then Olmene can link it." };
     const after = addPricingLink(ctx.homepageHtml, href);
-    if (after === null) return { skip: "No navigation/footer anchor found to attach a Pricing link safely." };
+    if (after === null) return { skip: "No <nav> or <footer> link list found to add a Pricing link to safely." };
     return {
       edits: [{ path: ctx.homepagePath, before: ctx.homepageHtml, after }],
-      explanation: `Adds a Pricing link (${href}) to the site navigation, reusing the classes of the neighboring link so styling is preserved.`,
+      explanation: `Adds a "Pricing" link (${href}) to the site navigation, reusing the classes of the neighboring link so styling is preserved.`,
       evidence: `Report check "Pricing page" flagged: ${check(ctx.report, "Pricing page")?.detail ?? "no visible pricing link"}.`,
       expectedScoreChange: "SEO checklist: Pricing page warn → pass",
       revertSteps: ["Close the PR (nothing merged)", "Or remove the single <a href=\"…/pricing\"> element"],
@@ -516,10 +538,16 @@ function buildFrameworkSitemapRobots(ctx: FixerContext): BuildOutcome {
   if (dynamic) return { skip: `A dynamic route (${dynamic}) already generates this file — not shadowing it with a static one.` };
   const base = normalizeSiteUrl(ctx.siteUrl);
   const edits: FileEdit[] = [];
-  if (!ctx.treePaths.includes("public/robots.txt")) {
-    edits.push({ path: "public/robots.txt", before: null, after: buildRobotsTxt(base) });
+  const pkg = ctx.packageJson ?? "";
+  const sitemapGen = pkg.match(SITEMAP_GENERATOR)?.[1];
+  const robotsGen = pkg.match(ROBOTS_GENERATOR)?.[1];
+  if (sitemapGen && robotsGen) return { skip: `${sitemapGen} already generates the sitemap and robots.txt at build time.` };
+  if (!ctx.treePaths.includes("public/robots.txt") && !robotsGen) {
+    // Point robots.txt at the sitemap the generator actually writes.
+    const sitemapPath = sitemapGen === "@astrojs/sitemap" ? "/sitemap-index.xml" : "/sitemap.xml";
+    edits.push({ path: "public/robots.txt", before: null, after: buildRobotsTxt(base, sitemapPath) });
   }
-  if (!ctx.treePaths.includes("public/sitemap.xml")) {
+  if (!ctx.treePaths.includes("public/sitemap.xml") && !sitemapGen) {
     const urls = new Set<string>([`${base}/`]);
     for (const src of ctx.report.sources ?? []) {
       try {
@@ -532,7 +560,9 @@ function buildFrameworkSitemapRobots(ctx: FixerContext): BuildOutcome {
     }
     edits.push({ path: "public/sitemap.xml", before: null, after: buildSitemapXml([...urls], new Date().toISOString().slice(0, 10)) });
   }
-  if (edits.length === 0) return { skip: "public/robots.txt and public/sitemap.xml already exist." };
+  if (edits.length === 0) {
+    return { skip: sitemapGen ? `${sitemapGen} already generates the sitemap; robots.txt already exists.` : "public/robots.txt and public/sitemap.xml already exist." };
+  }
   return {
     edits,
     explanation: `Creates ${edits.map((e) => e.path).join(" and ")} — ${ctx.framework?.kind === "astro" ? "Astro" : "Next.js"} serves files in public/ at the site root.`,

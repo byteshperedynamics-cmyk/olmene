@@ -120,6 +120,15 @@ function detectIndent(html: string, anchor: RegExp): string {
   return "  ";
 }
 
+/** Indentation used by children of <head> (first indented line after it). */
+function headChildIndent(html: string): string {
+  const headOpen = html.search(/<head[^>]*>/i);
+  if (headOpen < 0) return "  ";
+  const after = html.slice(headOpen).replace(/^<head[^>]*>/i, "");
+  const m = after.match(/\n([ \t]*)<(?!\/head)/i);
+  return m ? m[1] : detectIndent(html, /<head[^>]*>/i) + "  ";
+}
+
 /** Insert or replace <meta name="description">. Preserves existing formatting. */
 export function insertMetaDescription(html: string, description: string): string | null {
   const desc = escapeHtmlAttr(description.trim());
@@ -153,7 +162,7 @@ export function insertCanonical(html: string, canonicalUrl: string): string | nu
   const headOpen = html.search(/<head[^>]*>/i);
   if (headOpen < 0) return null;
   const insertAt = headOpen + html.slice(headOpen).search(/>/) + 1;
-  const indent = detectIndent(html, /<head[^>]*>/i);
+  const indent = headChildIndent(html);
   return `${html.slice(0, insertAt)}\n${indent}<link rel="canonical" href="${escapeHtmlAttr(canonicalUrl)}">${html.slice(insertAt)}`;
 }
 
@@ -163,12 +172,15 @@ export function insertJsonLd(html: string, jsonLd: unknown): string | null {
   if (!serialized || serialized.length > 20_000) return null;
   const headClose = html.search(/<\/head>/i);
   if (headClose < 0) return null;
-  const indent = detectIndent(html, /<\/head>/i);
+  const indent = headChildIndent(html);
+  // Insert at the start of the </head> line so its own indentation survives.
+  const lineStart = html.lastIndexOf("\n", headClose) + 1;
+  const insertAt = /^[ \t]*$/.test(html.slice(lineStart, headClose)) ? lineStart : headClose;
   const block = `${indent}<script type="application/ld+json">\n${serialized
     .split("\n")
-    .map((l) => indent + l)
+    .map((l) => indent + "  " + l)
     .join("\n")}\n${indent}</script>\n`;
-  return `${html.slice(0, headClose)}${block}${html.slice(headClose)}`;
+  return `${html.slice(0, insertAt)}${insertAt === headClose ? "\n" : ""}${block}${html.slice(insertAt)}`;
 }
 
 export interface ImgWithoutAlt {
@@ -226,31 +238,37 @@ export function hasPricingLink(html: string): boolean {
 }
 
 /**
- * Add a Pricing link to the first <nav> (or a footer <ul> as fallback),
- * reusing the classes of a sibling link so styling is preserved.
+ * Add a Pricing link to the first <nav>, else the <footer>, reusing the
+ * classes of a sibling link (and its <li> wrapper) so styling is preserved.
+ * Never falls back to the page body: the first <a> there can sit inside a
+ * sentence, and cloning it corrupted copy on a real site ("Mozilla
+ * ManifestoMozilla Manifesto"). The label is always "Pricing".
  */
 export function addPricingLink(html: string, pricingHref = "/pricing.html"): string | null {
   if (hasPricingLink(html)) return null;
 
-  const navMatch = html.match(/<nav\b[^>]*>([\s\S]*?)<\/nav>/i);
-  const containerMatch =
-    navMatch ?? html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/i) ?? html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const containerMatch = html.match(/<nav\b[^>]*>([\s\S]*?)<\/nav>/i) ?? html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/i);
   if (!containerMatch) return null;
 
   const [container, inner] = containerMatch;
-  // Template = the first existing <a> in the container (keeps classes/style)
-  const templateA = inner.match(/<a\b[^>]*>[\s\S]*?<\/a>/i);
-  if (!templateA) return null;
-  const attrs = templateA[0].match(/^<a\b([^>]*)>/i)?.[1] ?? "";
-  const innerText = templateA[0].replace(/^<a\b[^>]*>/i, "").replace(/<\/a>$/i, "");
-  // If the sibling link wraps elements (e.g. <span>), fall back to plain text.
-  const label = innerText.replace(/<[^>]+>/g, "").trim() || "Pricing";
-  const newLink = `<a${attrs.replace(/\s*href\s*=\s*["'][^"']*["']/i, "")} href="${escapeHtmlAttr(pricingHref)}">${/^[A-Za-z0-9][^<>]{0,60}$/.test(label) ? label : "Pricing"}</a>`;
+  // Template = the LAST link in the container (insert right after it).
+  const links = [...inner.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/gi)];
+  const last = links[links.length - 1];
+  if (!last || last.index === undefined) return null;
+  const attrs = last[0].match(/^<a\b([^>]*)>/i)?.[1] ?? "";
+  const newLink = `<a${attrs.replace(/\s*href\s*=\s*["'][^"']*["']/i, "")} href="${escapeHtmlAttr(pricingHref)}">Pricing</a>`;
 
-  const lastLinkEnd = inner.toLowerCase().lastIndexOf("</a>");
-  if (lastLinkEnd < 0) return null;
-  const insertAt = lastLinkEnd + "</a>".length;
-  const newInner = `${inner.slice(0, insertAt)}${newLink}${inner.slice(insertAt)}`;
+  // If the sibling link is the only child of an <li>, add a sibling <li>.
+  const afterLink = last.index + last[0].length;
+  const liClose = inner.slice(afterLink).match(/^\s*<\/li>/i);
+  const liOpen = inner.slice(0, last.index).match(/<li\b[^>]*>\s*$/i);
+  let newInner: string;
+  if (liClose && liOpen) {
+    const insertAt = afterLink + liClose[0].length;
+    newInner = `${inner.slice(0, insertAt)}${liOpen[0].trimEnd()}${newLink}</li>${inner.slice(insertAt)}`;
+  } else {
+    newInner = `${inner.slice(0, afterLink)} ${newLink}${inner.slice(afterLink)}`;
+  }
   return html.replace(container, container.replace(inner, newInner));
 }
 
@@ -278,9 +296,9 @@ export function replaceExactText(html: string, currentText: string, newText: str
 }
 
 /** Build the robots.txt content for a site. */
-export function buildRobotsTxt(siteUrl: string): string {
+export function buildRobotsTxt(siteUrl: string, sitemapPath = "/sitemap.xml"): string {
   const base = siteUrl.replace(/\/+$/, "");
-  return `User-agent: *\nAllow: /\n\nSitemap: ${base}/sitemap.xml\n`;
+  return `User-agent: *\nAllow: /\n\nSitemap: ${base}${sitemapPath}\n`;
 }
 
 /** Build a sitemap.xml from the homepage + known internal pages. */

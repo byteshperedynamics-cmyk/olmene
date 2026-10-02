@@ -423,7 +423,7 @@ describe("agent runner E2E (fake GitHub)", () => {
     const layout = commit.tree.find((t) => t.path === "app/layout.tsx")!.content;
     // all three edits composed into the one layout file
     expect(layout).toContain('description: "Acme builds fine widgets for teams that ship fast');
-    expect(layout).toContain('alternates: { canonical: "https://acme.test" },');
+    expect(layout).toContain('alternates: { canonical: "https://acme.test/" },');
     expect(layout).toContain('import { OlmeneJsonLd } from "../components/olmene-jsonld";');
     expect(layout).toContain("<body>\n        <OlmeneJsonLd />{children}</body>");
     expect(layout).toContain('title: "Acme",');

@@ -186,10 +186,25 @@ async function buildFixerContext(
   } else if (detection.repoType === "astro" && detection.astroIndexPath) {
     const index = await read(detection.astroIndexPath);
     if (index !== null) {
-      // The homepage's layout owns <head> when index.astro imports one from src/layouts/.
-      const imp = index.match(/import\s+\w+\s+from\s+["']\.\.\/layouts\/([A-Za-z0-9_-]+\.astro)["']/);
-      const layoutPath = imp ? `src/layouts/${imp[1]}` : null;
-      const layout = layoutPath && paths.includes(layoutPath) ? await read(layoutPath) : null;
+      // The homepage's layout owns <head> when index.astro imports one from
+      // src/layouts/ — relative ("../layouts/X.astro") or via the usual path
+      // aliases ("@/layouts/", "~/layouts/", "@layouts/"; astro-paper,
+      // astrowind). One nested hop: a page layout wrapping a base layout.
+      const layoutImport = (src: string) =>
+        src.match(/import\s+\w+\s+from\s+["'](?:\.{1,2}\/(?:\.\.\/)*|@\/|~\/|@|\/src\/)?layouts\/([A-Za-z0-9_-]+\.astro)["']/)?.[1] ?? null;
+      let layoutPath: string | null = null;
+      let layout: string | null = null;
+      let next = layoutImport(index);
+      for (let hop = 0; next && hop < 2; hop++) {
+        const candidate = `src/layouts/${next}`;
+        if (!paths.includes(candidate)) break;
+        const content = await read(candidate);
+        if (content === null) break;
+        layoutPath = candidate;
+        layout = content;
+        if (/<head[\s>]/i.test(content)) break;
+        next = layoutImport(content);
+      }
       if (layout !== null && layoutPath && /<head[\s>]/i.test(layout)) {
         framework = { kind: "astro", headPath: layoutPath, headContent: layout, pagePath: detection.astroIndexPath, pageContent: index };
       } else if (/<head[\s>]/i.test(index)) {
@@ -197,9 +212,11 @@ async function buildFixerContext(
       }
     }
   }
+  const packageJson = paths.includes("package.json") ? await read("package.json") : null;
   return {
     ctx: {
       report,
+      packageJson,
       siteUrl: normalizeSiteUrl(report.meta.siteUrl),
       homepagePath: detection.homepagePath,
       homepageHtml,
