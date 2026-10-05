@@ -293,7 +293,8 @@ export interface GhRepo {
 
 export interface GhBranch {
   name: string;
-  commit: { sha: string };
+  /** `commit.commit.tree.sha` is the head commit's tree (GET /branches returns it). */
+  commit: { sha: string; commit?: { tree?: { sha: string } } };
   protected: boolean;
 }
 

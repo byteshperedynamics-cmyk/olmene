@@ -18,7 +18,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const db = getServiceDb();
   const { data: job } = await db
     .from("agent_jobs")
-    .select("id, user_id, status, current_step, input, step_outputs, error, wait_reason, attempts, created_at, completed_at, report_id")
+    .select("id, user_id, status, current_step, input, step_outputs, error, wait_reason, attempts, created_at, completed_at, report_id, pr_number, pr_url, pr_state, merged_at")
     .eq("id", id)
     .maybeSingle();
   if (!job || job.user_id !== auth.user.id) return ERR.notFound("job");

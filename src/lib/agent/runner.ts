@@ -13,7 +13,7 @@ import { isAllowedEditPath, validatePlannedAction, type PlanCheck, type RepoAllo
 import { writeAudit } from "./audit";
 import { sha256Hex } from "./db";
 import { unifiedDiff } from "./diff";
-import { FIXERS, FIXER_IDS, FIXER_ORDER, type CopyDrafts, type FileEdit, type FixerContext, type FrameworkTarget } from "./fixers";
+import { FIXERS, FIXER_IDS, FIXER_ORDER, remainingChecks, type CopyDrafts, type FileEdit, type FixerContext, type FrameworkTarget } from "./fixers";
 import type { ScopedGithubClient } from "./github/client";
 import { decodeContent } from "./github/client";
 import { detectTarget, normalizeSiteUrl } from "./htmlfile";
@@ -479,6 +479,12 @@ async function runPreview(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   });
 }
 
+/** Fix branches are `olmene/fix-<job>-a<n>`; a new name per attempt, never a moved ref. */
+const MAX_FIX_BRANCH_ATTEMPTS = 5;
+function fixBranchName(jobId: string, attempt: number): string {
+  return `olmene/fix-${jobId.slice(0, 8)}-a${attempt}`;
+}
+
 async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   const { db, gh } = ports;
   await db.updateJob(job.id, { current_step: "apply" });
@@ -525,7 +531,7 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   const repoInfo = await client.getRepo();
   const defaultBranch = repoInfo.default_branch || "main";
   const baseBranch = await client.getBranch(defaultBranch);
-  const branchName = `olmene/fix-${job.id.slice(0, 8)}-a1`;
+  const branchName = fixBranchName(job.id, 1);
 
   // Final allowlist validation of every action (deterministic, code-only)
   for (const action of approved) {
@@ -537,8 +543,13 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
     }
   }
 
-  // Idempotency: if this job already opened a PR, do not open another.
-  const existingPr = await client.findPullForBranch(`${owner}:${branchName}`);
+  // Idempotency: if this job already opened a PR (on any attempt branch), do not open another.
+  let existingPr: Awaited<ReturnType<typeof client.findPullForBranch>> = null;
+  let existingPrBranch = branchName;
+  for (let attempt = 1; attempt <= MAX_FIX_BRANCH_ATTEMPTS && !existingPr; attempt++) {
+    existingPrBranch = fixBranchName(job.id, attempt);
+    existingPr = await client.findPullForBranch(`${owner}:${existingPrBranch}`);
+  }
   if (existingPr) {
     await db.updateJob(job.id, {
       status: "verifying",
@@ -552,7 +563,7 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
           prUrl: existingPr.html_url,
           prNumber: existingPr.number,
           commitSha: existingPr.head.sha,
-          branch: branchName,
+          branch: existingPrBranch,
           applied: approved.length,
           idempotentReplay: true,
         },
@@ -610,31 +621,51 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
     }
   }
 
-  // Git write path: branch (idempotent) → tree → commit → PR
-  let branchHead: string;
-  const existingBranch = await client.getBranch(branchName).catch(() => null);
-  if (existingBranch) {
-    branchHead = existingBranch.commit.sha; // reuse our own fix branch from a partial attempt
-  } else {
-    const ref = await client.createRef(`refs/heads/${branchName}`, baseBranch.commit.sha);
-    branchHead = ref.object.sha;
-  }
-
+  // Git write path: tree → commit → branch → PR. Refs are only ever CREATED
+  // (the client has no PATCH, by policy), so the commit must exist before the
+  // branch does: creating the branch first left it on the base commit and
+  // GitHub refused the pull request ("No commits between …").
   const treeItems = [...touched].map((path) => ({
     path,
     mode: "100644" as const,
     type: "blob" as const,
     content: currentContent.get(path) ?? "",
   }));
-  const tree = await client.createTree(baseBranch.commit.sha, treeItems);
+  // base_tree must be a TREE sha (GitHub docs); the branch payload carries it.
+  const baseTreeSha = baseBranch.commit.commit?.tree?.sha ?? baseBranch.commit.sha;
+  const tree = await client.createTree(baseTreeSha, treeItems);
 
   const fixerList = approved.map((a) => a.fixer_id).join(", ");
   const commit = await client.createCommit(
     `Olmene: apply ${approved.length} report-proven fix${approved.length === 1 ? "" : "es"} (${fixerList})`,
     tree.sha,
-    [branchHead],
+    [baseBranch.commit.sha],
   );
 
+  // A branch left behind by a partial attempt is reused only when it already
+  // holds exactly this tree; otherwise the next free attempt name is used.
+  let prBranch = branchName;
+  let headSha = commit.sha;
+  for (let attempt = 1; ; attempt++) {
+    const name = fixBranchName(job.id, attempt);
+    const existing = await client.getBranch(name).catch(() => null);
+    if (!existing) {
+      await client.createRef(`refs/heads/${name}`, commit.sha);
+      prBranch = name;
+      headSha = commit.sha;
+      break;
+    }
+    if (existing.commit.commit?.tree?.sha === tree.sha) {
+      prBranch = name;
+      headSha = existing.commit.sha;
+      break;
+    }
+    if (attempt >= MAX_FIX_BRANCH_ATTEMPTS) {
+      throw new RunnerError(`no free fix branch name after ${MAX_FIX_BRANCH_ATTEMPTS} attempts`);
+    }
+  }
+
+  const remaining = remainingChecks(report, actions);
   const prBody = [
     "This PR was generated by [Olmene](https://olmene.com) from your marketing report.",
     "",
@@ -650,12 +681,21 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
         "",
       ];
     }),
+    ...(remaining.length
+      ? [
+          "## Still on your list",
+          "The report also flagged these. They are not in this PR — each line says why.",
+          "",
+          ...remaining.map((r) => `- [ ] **${r.check}** (${r.status}): ${r.note}`),
+          "",
+        ]
+      : []),
     "## How to undo",
     "- Not merged yet? Just close this PR.",
-    `- Already merged? Run \`git revert ${commit.sha.slice(0, 12)}\` or use GitHub's *Revert* button.`,
+    `- Already merged? Run \`git revert ${headSha.slice(0, 12)}\` or use GitHub's *Revert* button.`,
     "",
     "## Scope guarantees",
-    `- Only these files were touched, on branch \`${branchName}\` only: ${[...touched].join(", ")}.`,
+    `- Only these files were touched, on branch \`${prBranch}\` only: ${[...touched].join(", ")}.`,
     `- Your default branch (\`${defaultBranch}\`) was never pushed to.`,
     "- The Olmene GitHub App has Contents + Pull requests (write) permission only.",
     "",
@@ -665,7 +705,7 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   const pr = await client.createPull({
     title: `Olmene: ${approved.length} report-proven fix${approved.length === 1 ? "" : "es"} for ${owner}/${repoName}`,
     body: prBody,
-    head: branchName,
+    head: prBranch,
     base: defaultBranch,
   });
 
@@ -676,7 +716,7 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
     const afterContent = currentContent.get(file) ?? "";
     await db.updatePlannedAction(action.id, {
       status: "applied",
-      apply_result: { prUrl: pr.html_url, prNumber: pr.number, commitSha: commit.sha, branch: branchName },
+      apply_result: { prUrl: pr.html_url, prNumber: pr.number, commitSha: headSha, branch: prBranch },
     });
     await db.audit({
       agent_job_id: job.id,
@@ -685,11 +725,11 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
       actor: "agent",
       action_type: "apply",
       provider: job.provider,
-      target: { repo: `${owner}/${repoName}`, path: file, branch: branchName },
+      target: { repo: `${owner}/${repoName}`, path: file, branch: prBranch },
       result: "success",
       before_hash: ctx.homepagePath === file && ctx.homepageHtml ? await sha256Hex(ctx.homepageHtml) : null,
       after_hash: await sha256Hex(afterContent),
-      detail: { fixer: action.fixer_id, pr: pr.number, commit: commit.sha.slice(0, 12), files: p.files },
+      detail: { fixer: action.fixer_id, pr: pr.number, commit: headSha.slice(0, 12), files: p.files },
     });
   }
 
@@ -704,8 +744,8 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
       apply: {
         prUrl: pr.html_url,
         prNumber: pr.number,
-        commitSha: commit.sha,
-        branch: branchName,
+        commitSha: headSha,
+        branch: prBranch,
         applied: approved.length,
         files: [...touched],
       },

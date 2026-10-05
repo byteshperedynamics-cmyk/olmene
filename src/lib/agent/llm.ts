@@ -1,6 +1,7 @@
 /**
  * LLM access for agent copy drafting. Reuses the same model routing as the
- * analysis pipeline (llm_models table → google/* on Gemini, else GLM) with a
+ * analysis pipeline (llm_models table → vertex/google/* on Vertex AI,
+ * google/* on the Gemini API, else GLM) with a
  * SEPARATE budget namespace (agent:llm:YYYY-MM-DD) so agent usage can never
  * starve report generation (user decision 2026-09-29).
  *
@@ -54,11 +55,32 @@ async function consumeBudget(db: SupabaseClient, amount: number): Promise<boolea
   return data === true;
 }
 
+/** Gemini on Vertex AI (Google Cloud credits): model ids are "vertex/google/<model>". */
+const VERTEX_PREFIX = "vertex/";
+
+function vertexUrl(): string | null {
+  const project = getEnv("VERTEX_PROJECT");
+  if (!project) return null;
+  const location = getEnv("VERTEX_LOCATION") ?? "global";
+  return `https://aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/endpoints/openapi/chat/completions`;
+}
+
 async function callModel(model: string, messages: LlmMessage[], maxTokens: number, timeoutMs = 45_000): Promise<string> {
-  const isGemini = model.startsWith("google/");
-  const apiKey = isGemini ? getEnv("GEMINI_API_KEY") : getEnv("GLM_API_KEY");
-  if (!apiKey) throw new Error(`${isGemini ? "GEMINI_API_KEY" : "GLM_API_KEY"} not configured`);
-  const url = isGemini ? GEMINI_BASE.replace("{model}", model.replace("google/", "")) : GLM_BASE;
+  const isVertex = model.startsWith(VERTEX_PREFIX);
+  const isGemini = model.startsWith("google/") || isVertex;
+  const keyName = isVertex ? "VERTEX_API_KEY" : isGemini ? "GEMINI_API_KEY" : "GLM_API_KEY";
+  const apiKey = getEnv(keyName);
+  if (!apiKey) throw new Error(`${keyName} not configured`);
+  const url = isVertex ? vertexUrl() : isGemini ? GEMINI_BASE.replace("{model}", model.replace("google/", "")) : GLM_BASE;
+  if (!url) throw new Error("VERTEX_PROJECT not configured");
+  // Vertex wants "google/<model>"; AI Studio's endpoint wants the bare model name.
+  const apiModel = isVertex ? model.slice(VERTEX_PREFIX.length) : isGemini ? model.replace("google/", "") : model;
+
+  // Gemini 3.x flash models think first and the hidden reasoning tokens count
+  // against max_tokens, so a 900-token copy request came back empty. Same
+  // treatment as the analysis engine: low reasoning + headroom; flash-lite's
+  // request stays as is (it rejects reasoning_effort "none").
+  const thinking = isGemini && !model.includes("lite");
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -68,13 +90,15 @@ async function callModel(model: string, messages: LlmMessage[], maxTokens: numbe
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        // Vertex authorization keys are rejected as Bearer tokens.
+        ...(isVertex ? { "x-goog-api-key": apiKey } : { Authorization: `Bearer ${apiKey}` }),
       },
       body: JSON.stringify({
-        model: isGemini ? model.replace("google/", "") : model,
+        model: apiModel,
         messages,
-        max_tokens: maxTokens,
+        max_tokens: maxTokens + (thinking ? 6000 : 0),
         temperature: 0.3,
+        ...(thinking ? { reasoning_effort: "low" } : {}),
         ...(isGemini ? {} : { thinking: { type: "disabled" } }),
       }),
     });

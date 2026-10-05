@@ -96,10 +96,18 @@ describe("setMetadataString", () => {
 });
 
 describe("addMetadataCanonical", () => {
-  test("adds alternates when absent", () => {
-    const r = addMetadataCanonical(LAYOUT, "https://acme.com");
+  test("adds a per-page canonical plus metadataBase when absent", () => {
+    const r = addMetadataCanonical(LAYOUT, "https://acme.com/");
     if (!r.ok) throw new Error(r.reason);
-    expect(r.content).toContain(`alternates: { canonical: "https://acme.com" },`);
+    // never a literal URL: the root layout's value is inherited by every route
+    expect(r.content).toContain(`alternates: { canonical: "./" },`);
+    expect(r.content).toContain(`metadataBase: new URL("https://acme.com/"),`);
+  });
+  test("keeps an existing metadataBase", () => {
+    const r = addMetadataCanonical(`export const metadata = {\n  metadataBase: new URL(baseUrl),\n  title: "A",\n};`, "https://acme.com/");
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.content).toContain(`alternates: { canonical: "./" },`);
+    expect(r.content.match(/metadataBase/g)?.length).toBe(1);
   });
   test("leaves existing alternates alone", () => {
     const r = addMetadataCanonical(`export const metadata = { alternates: { languages: {} } };`, "https://acme.com");

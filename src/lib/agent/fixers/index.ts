@@ -14,12 +14,17 @@ import {
   addPricingLink,
   buildRobotsTxt,
   buildSitemapXml,
+  decodeBasicEntities,
   escapeHtmlAttr,
+  insertAstroCanonical,
   insertCanonical,
   insertJsonLd,
   insertMetaDescription,
+  insertMetaTags,
+  insertViewport,
   normalizeSiteUrl,
   replaceH1Text,
+  type MetaTagSpec,
 } from "../htmlfile";
 import { addBodyComponent, addMetadataCanonical, setMetadataString } from "../jsfile";
 
@@ -176,25 +181,29 @@ const canonicalFixer: Fixer = {
   build: (ctx) => {
     const fw = ctx.framework;
     if (fw) {
-      // Homepage canonical ends in "/": without it, subfolder sites (GitHub
-      // Pages project sites) point their canonical at a redirect.
-      const canonicalUrl = `${normalizeSiteUrl(ctx.siteUrl)}/`;
+      // Layouts are shared by every page, so the canonical is derived per page
+      // (Next "./" + metadataBase, Astro.url.pathname); a literal homepage URL
+      // would tell search engines every page is a copy of the homepage.
+      const siteBase = `${normalizeSiteUrl(ctx.siteUrl)}/`;
       let after: string | null;
       if (fw.kind === "nextjs-app") {
-        const r = addMetadataCanonical(fw.headContent, canonicalUrl);
+        const r = addMetadataCanonical(fw.headContent, siteBase);
         if (!r.ok) return { skip: r.reason };
         after = r.content;
       } else {
         if (SEO_COMPONENT.test(fw.headContent)) return { skip: SEO_COMPONENT_SKIP };
-        after = insertCanonical(fw.headContent, canonicalUrl);
+        // index.astro with its own <head> is only the homepage: a literal URL is right there.
+        after = fw.headPath === fw.pagePath ? insertCanonical(fw.headContent, siteBase) : insertAstroCanonical(fw.headContent, siteBase);
         if (after === null) return { skip: "Canonical link already present or no <head> found in the Astro layout." };
       }
       return {
         edits: [{ path: fw.headPath, before: fw.headContent, after }],
         explanation:
           fw.kind === "nextjs-app"
-            ? `Adds alternates.canonical (${canonicalUrl}) to the root layout's metadata export.`
-            : `Adds <link rel="canonical" href="${canonicalUrl}"> to the layout's <head>.`,
+            ? `Adds a per-page canonical (alternates.canonical "./" resolved against ${siteBase}) to the root layout's metadata export.`
+            : fw.headPath === fw.pagePath
+              ? `Adds <link rel="canonical" href="${siteBase}"> to the homepage <head>.`
+              : `Adds a per-page <link rel="canonical"> (${siteBase} + each page's path) to the layout's <head>.`,
         evidence: `Report check "Canonical URL" flagged: ${check(ctx.report, "Canonical URL")?.detail ?? "missing"}.`,
         expectedScoreChange: "SEO checklist: Canonical URL warn → pass",
         revertSteps: ["Close the PR without merging", `Or remove the canonical entry added to ${fw.headPath}`],
@@ -215,12 +224,12 @@ const canonicalFixer: Fixer = {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
-// 3. json-ld-org (Organization + WebApplication, appended as its own script)
+// 3. json-ld-org (Organization + WebApplication/WebSite, appended as its own script)
 // ───────────────────────────────────────────────────────────────────────────
 
 const jsonLdFixer: Fixer = {
   id: "json-ld-org",
-  title: "Organization + WebApplication JSON-LD",
+  title: "Organization JSON-LD",
   detect: (report) => triggeredBy(check(report, "Structured data (JSON-LD)")),
   build: (ctx) => {
     const url = normalizeSiteUrl(ctx.siteUrl);
@@ -230,21 +239,30 @@ const jsonLdFixer: Fixer = {
       url,
       description: ctx.report.product.oneLiner,
     };
-    const webApp = {
-      "@type": "WebApplication",
-      name: ctx.report.product.name,
-      url,
-      applicationCategory: ctx.report.product.category || "BusinessApplication",
-      description: ctx.report.product.oneLiner,
-      offers: {
-        "@type": "Offer",
-        description: ctx.report.product.pricingModel || undefined,
-      },
-    };
+    // Software gets a WebApplication node; every other site (store, agency,
+    // bakery, blog) a WebSite node — declaring a shop an "application" is
+    // wrong data. No Offer: a price-less Offer is flagged as incomplete.
+    const kind = `${ctx.report.product.category ?? ""} ${ctx.report.product.oneLiner ?? ""}`;
+    const isSoftware = /\b(software|saas|apps?|applications?|platform|api|sdk|analytics|developer|plugin|extension|crm|erp|tool(?:s|kit)?)\b/i.test(kind);
+    const second = isSoftware
+      ? {
+          "@type": "WebApplication",
+          name: ctx.report.product.name,
+          url,
+          applicationCategory: "BusinessApplication",
+          description: ctx.report.product.oneLiner,
+        }
+      : {
+          "@type": "WebSite",
+          name: ctx.report.product.name,
+          url,
+          description: ctx.report.product.oneLiner,
+        };
+    const nodesLabel = isSoftware ? "Organization + WebApplication" : "Organization + WebSite";
     // One @context on the @graph wrapper (nodes inherit it). Multiple
     // <script type="application/ld+json"> blocks are valid and are merged by
     // search engines — safer than rewriting an existing @graph.
-    const payload = { "@context": "https://schema.org", "@graph": [org, webApp] };
+    const payload = { "@context": "https://schema.org", "@graph": [org, second] };
     const fw = ctx.framework;
     if (fw) return buildFrameworkJsonLd(ctx, fw, payload);
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
@@ -253,7 +271,7 @@ const jsonLdFixer: Fixer = {
     return {
       edits: [{ path: ctx.homepagePath, before: ctx.homepageHtml, after }],
       explanation:
-        "Appends a JSON-LD script (Organization + WebApplication in a @graph) built from the report's product profile. Existing structured data is left untouched.",
+        `Appends a JSON-LD script (${nodesLabel} in a @graph) built from the report's product profile. Existing structured data is left untouched.`,
       evidence: `Report check "Structured data (JSON-LD)" flagged: ${check(ctx.report, "Structured data (JSON-LD)")?.detail ?? "missing"}.`,
       expectedScoreChange: "SEO checklist: Structured data warn → pass",
       revertSteps: ["Close the PR (nothing merged)", "Or delete the added <script type=\"application/ld+json\"> block"],
@@ -468,6 +486,116 @@ const h1Fixer: Fixer = {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
+// 8. viewport-meta
+// ───────────────────────────────────────────────────────────────────────────
+
+const viewportFixer: Fixer = {
+  id: "viewport-meta",
+  title: "Mobile viewport",
+  detect: (report) => triggeredBy(check(report, "Mobile viewport")),
+  build: (ctx) => {
+    const evidence = `Report check "Mobile viewport" failed: ${check(ctx.report, "Mobile viewport")?.detail ?? "no viewport meta tag"}.`;
+    const explanation =
+      'Adds <meta name="viewport" content="width=device-width, initial-scale=1"> to the <head>, so phones render the page at device width instead of a zoomed-out desktop layout.';
+    const fw = ctx.framework;
+    if (fw) {
+      if (fw.kind === "nextjs-app") {
+        return { skip: "Next.js renders the viewport tag itself — if it is missing on the live site, check for a custom viewport export or a <head> override." };
+      }
+      // Head components such as <BaseHead /> usually render the viewport tag themselves.
+      if (SEO_COMPONENT.test(fw.headContent)) return { skip: SEO_COMPONENT_SKIP };
+      const after = insertViewport(fw.headContent, true);
+      if (after === null) return { skip: "The layout already has a viewport tag, or no <head> was found." };
+      return {
+        edits: [{ path: fw.headPath, before: fw.headContent, after }],
+        explanation,
+        evidence,
+        expectedScoreChange: "SEO checklist: Mobile viewport fail → pass (+1 of 21 checks)",
+        revertSteps: ["Close the PR without merging", `Or remove the viewport line added to ${fw.headPath}`],
+      };
+    }
+    if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
+    const after = insertViewport(ctx.homepageHtml);
+    if (after === null) return { skip: "The homepage already has a viewport tag, or no <head> was found." };
+    return {
+      edits: [{ path: ctx.homepagePath, before: ctx.homepageHtml, after }],
+      explanation,
+      evidence,
+      expectedScoreChange: "SEO checklist: Mobile viewport fail → pass (+1 of 21 checks)",
+      revertSteps: ["Close the PR (nothing merged)", 'Or remove the single <meta name="viewport"> line'],
+    };
+  },
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// 9. social-meta (Open Graph + Twitter card)
+// ───────────────────────────────────────────────────────────────────────────
+
+const socialMetaFixer: Fixer = {
+  id: "social-meta",
+  title: "Open Graph + Twitter card tags",
+  detect: (report) => {
+    const og = check(report, "Open Graph tags");
+    const tw = check(report, "Twitter card");
+    if ((og && og.status !== "pass") || (tw && tw.status !== "pass")) {
+      return { triggered: true, ref: { openGraph: og?.detail ?? null, twitterCard: tw?.detail ?? null } };
+    }
+    return { triggered: false, ref: {} };
+  },
+  build: (ctx) => {
+    // Social tags describe ONE page: added to a <head> shared by every page,
+    // they would give every page the homepage's title in link previews.
+    let path: string;
+    let html: string;
+    let selfClosing = false;
+    const fw = ctx.framework;
+    if (fw) {
+      if (fw.kind === "nextjs-app") {
+        return { skip: "In Next.js these come from metadata.openGraph and metadata.twitter in each page's metadata — not edited automatically yet." };
+      }
+      if (fw.headPath !== fw.pagePath) {
+        return { skip: "The <head> is a layout shared by every page, so per-page social tags must come from each page's props — left for you." };
+      }
+      if (SEO_COMPONENT.test(fw.headContent)) return { skip: SEO_COMPONENT_SKIP };
+      path = fw.headPath;
+      html = fw.headContent;
+      selfClosing = true;
+    } else {
+      if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
+      path = ctx.homepagePath;
+      html = ctx.homepageHtml;
+    }
+    // Only literal values: a title or description built from an expression is not copied.
+    const literalTitle = html.match(/<title[^>]*>([^<{}]+)<\/title>/i)?.[1]?.trim();
+    const title = literalTitle && literalTitle.length >= 3 ? decodeBasicEntities(literalTitle) : ctx.report.product.name;
+    const literalDesc = html.match(/<meta\s+[^>]*name=["']description["'][^>]*content="([^"{}]+)"/i)?.[1]?.trim();
+    const description = literalDesc ? decodeBasicEntities(literalDesc) : ctx.copy.metaDescription?.trim();
+    if (!title) return { skip: "No page title or product name to build the preview from." };
+    const specs: MetaTagSpec[] = [
+      { attr: "property", key: "og:type", content: "website" },
+      { attr: "property", key: "og:url", content: `${normalizeSiteUrl(ctx.siteUrl)}/` },
+      { attr: "property", key: "og:title", content: title },
+      ...(description ? [{ attr: "property" as const, key: "og:description", content: description }] : []),
+      { attr: "property", key: "og:site_name", content: ctx.report.product.name || title },
+      // summary (small card): no og:image is added, and a large card without an image renders empty.
+      { attr: "name", key: "twitter:card", content: "summary" },
+    ];
+    const r = insertMetaTags(html, specs, selfClosing);
+    if (r === null) return { skip: "No </head> found to add the tags to." };
+    if (r.added.length === 0) return { skip: "The page already has these social tags." };
+    const og = check(ctx.report, "Open Graph tags");
+    const tw = check(ctx.report, "Twitter card");
+    return {
+      edits: [{ path, before: html, after: r.html }],
+      explanation: `Adds ${r.added.length} social preview tag${r.added.length === 1 ? "" : "s"} (${r.added.join(", ")}) built from the page's own title${description ? " and description" : ""}, so links shared on LinkedIn, X, Slack and WhatsApp show a proper preview. Existing tags are kept.`,
+      evidence: `Report checks flagged: Open Graph tags (${og?.status ?? "n/a"}: ${og?.detail ?? "—"}), Twitter card (${tw?.status ?? "n/a"}: ${tw?.detail ?? "—"}).`,
+      expectedScoreChange: "SEO checklist: Open Graph tags and Twitter card warn → pass",
+      revertSteps: ["Close the PR without merging", `Or remove the added og:/twitter: meta lines in ${path}`],
+    };
+  },
+};
+
+// ───────────────────────────────────────────────────────────────────────────
 // Framework helpers (Next.js App Router, Astro)
 // ───────────────────────────────────────────────────────────────────────────
 
@@ -489,7 +617,7 @@ function buildFrameworkJsonLd(ctx: FixerContext, fw: FrameworkTarget, payload: u
     const after = `${fw.headContent.slice(0, lineStart)}${tag}${fw.headContent.slice(lineStart)}`;
     return {
       edits: [{ path: fw.headPath, before: fw.headContent, after }],
-      explanation: "Adds Organization + WebApplication structured data to the layout's <head>, rendered with Astro's set:html so the JSON is emitted as-is.",
+      explanation: "Adds Organization structured data (JSON-LD) to the layout's <head>, rendered with Astro's set:html so the JSON is emitted as-is.",
       evidence,
       expectedScoreChange: "SEO checklist: Structured data warn → pass",
       revertSteps: ["Close the PR without merging", `Or delete the added <script type="application/ld+json"> line in ${fw.headPath}`],
@@ -505,7 +633,7 @@ function buildFrameworkJsonLd(ctx: FixerContext, fw: FrameworkTarget, payload: u
   }
   const component = [
     "/**",
-    " * Added by Olmene: Organization + WebApplication structured data, so search",
+    " * Added by Olmene: Organization structured data (JSON-LD), so search",
     " * engines and AI answers can identify the product behind this site.",
     " */",
     "export function OlmeneJsonLd() {",
@@ -526,7 +654,7 @@ function buildFrameworkJsonLd(ctx: FixerContext, fw: FrameworkTarget, payload: u
       { path: compPath, before: null, after: component },
       { path: fw.headPath, before: fw.headContent, after: r.content },
     ],
-    explanation: `Adds ${compPath} (Organization + WebApplication JSON-LD built from the report's product profile) and renders it once at the top of <body> in the root layout.`,
+    explanation: `Adds ${compPath} (Organization JSON-LD built from the report's product profile) and renders it once at the top of <body> in the root layout.`,
     evidence,
     expectedScoreChange: "SEO checklist: Structured data warn → pass",
     revertSteps: ["Close the PR without merging", `Or delete ${compPath} and the two lines that import and render it`],
@@ -584,6 +712,8 @@ export const FIXERS: Fixer[] = [
   imageAltFixer,
   pricingLinkFixer,
   h1Fixer,
+  viewportFixer,
+  socialMetaFixer,
 ];
 
 export const FIXER_IDS = new Set(FIXERS.map((f) => f.id));
@@ -595,14 +725,58 @@ export function getFixer(id: string): Fixer | undefined {
 /** Ordering priority: fails first, then warns; sitemap/robots after head tags. */
 export const FIXER_ORDER: Record<string, number> = {
   "meta-description": 10,
+  "viewport-meta": 15,
   "canonical-url": 20,
   "json-ld-org": 30,
+  // After meta-description, so the previews reuse the description it adds.
+  "social-meta": 35,
   "image-alt": 40,
   "pricing-link": 50,
   "h1-rewrite": 60,
   "sitemap-robots": 70,
 };
 
-export const MAX_ACTIONS_PER_JOB = 8;
+export const MAX_ACTIONS_PER_JOB = 10;
+
+/** Report checklist labels each fixer resolves (for the PR's "still on your list"). */
+export const FIXER_CHECKS: Record<string, string[]> = {
+  "meta-description": ["Meta description"],
+  "viewport-meta": ["Mobile viewport"],
+  "canonical-url": ["Canonical URL"],
+  "json-ld-org": ["Structured data (JSON-LD)"],
+  "social-meta": ["Open Graph tags", "Twitter card"],
+  "image-alt": ["Image alt coverage"],
+  "pricing-link": ["Pricing page"],
+  "h1-rewrite": ["Single H1"],
+  "sitemap-robots": ["/robots.txt", "/sitemap.xml"],
+};
+
+/**
+ * Report checks this PR does not resolve, each with the reason: the fixer's
+ * own skip reason, or the report's detail when no fixer covers the check
+ * (copy, content and design changes need a person).
+ */
+export function remainingChecks(
+  report: ReportData,
+  actions: Array<{ fixer_id: string; status: string; skip_reason: string | null }>,
+): Array<{ check: string; status: string; note: string }> {
+  const fixedBy = new Set<string>();
+  const skippedReason = new Map<string, string>();
+  for (const a of actions) {
+    const labels = FIXER_CHECKS[a.fixer_id] ?? [];
+    for (const label of labels) {
+      if (a.status === "approved" || a.status === "applied") fixedBy.add(label);
+      else if (a.status === "skipped" && a.skip_reason) skippedReason.set(label, a.skip_reason);
+    }
+  }
+  return report.audit.seo.checklist
+    .filter((c) => c.status !== "pass" && !fixedBy.has(c.check))
+    .sort((a, b) => (a.status === b.status ? 0 : a.status === "fail" ? -1 : 1))
+    .map((c) => ({
+      check: c.check,
+      status: c.status,
+      note: skippedReason.get(c.check) ?? `${c.detail ?? "flagged in your report"} — needs a content or design change, so it is left for you.`,
+    }));
+}
 
 export { escapeHtmlAttr };

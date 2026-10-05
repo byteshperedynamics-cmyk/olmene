@@ -117,24 +117,22 @@ export async function POST(req: Request) {
     .eq("external_installation_id", String(instId))
     .maybeSingle();
 
-  const { data: connection, error } = await db
-    .from("connections")
-    .upsert(
-      {
-        user_id: auth.user.id,
-        provider: "github",
-        status: "active",
-        provider_account_id: accountLogin,
-        external_installation_id: String(instId),
-        resource_ids: resourceIds,
-        scopes: ["contents:write", "pull_requests:write"],
-        metadata: { installationType: match.type },
-        last_verified_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,provider,external_installation_id" },
-    )
-    .select("id")
-    .single();
+  // Update-or-insert (not .upsert): the conflict target must match a plain
+  // unique constraint, and older databases only had an expression index.
+  const connRow = {
+    user_id: auth.user.id,
+    provider: "github",
+    status: "active",
+    provider_account_id: accountLogin,
+    external_installation_id: String(instId),
+    resource_ids: resourceIds,
+    scopes: ["contents:write", "pull_requests:write"],
+    metadata: { installationType: match.type },
+    last_verified_at: new Date().toISOString(),
+  };
+  const { data: connection, error } = existing
+    ? await db.from("connections").update({ ...connRow, updated_at: new Date().toISOString() }).eq("id", existing.id).select("id").single()
+    : await db.from("connections").insert(connRow).select("id").single();
   if (error || !connection) {
     return NextResponse.json({ error: { code: "internal", message: "Could not save the connection." } }, { status: 500 });
   }

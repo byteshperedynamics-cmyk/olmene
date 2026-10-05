@@ -7,6 +7,8 @@ export const FIXER_META: Record<string, { label: string; impact: "high" | "mediu
   "image-alt": { label: "Image alt text", impact: "medium" },
   "pricing-link": { label: "Pricing link in navigation", impact: "high" },
   "h1-rewrite": { label: "Homepage headline (H1)", impact: "high" },
+  "viewport-meta": { label: "Mobile viewport", impact: "high" },
+  "social-meta": { label: "Social preview tags (Open Graph, X)", impact: "medium" },
   "next-metadata": { label: "Page title and meta description", impact: "high" },
   "next-metadata-routes": { label: "Sitemap and robots routes", impact: "medium" },
   "next-jsonld": { label: "Organization JSON-LD for AI search", impact: "high" },

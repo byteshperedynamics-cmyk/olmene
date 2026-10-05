@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, ArrowRight, ChevronDown, ExternalLink, Undo2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ExternalLink, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AuditRow, JobState, PlannedAction } from "@/lib/agent-client";
+import type { LiveCheckState } from "@/lib/agent/live-check";
 import { fmtDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Flower } from "@/components/v2/flower";
@@ -78,7 +79,7 @@ export function JobView({
         <RunRail status={job.status} currentStep={job.current_step} repo={repo} audit={audit ?? []} />
 
         <div key={job.status} className="o-crossfade grid min-w-0 gap-5">
-          {job.error && <ErrorBanner status={job.status} message={job.error} />}
+          {job.error && <ErrorBanner status={job.status} message={job.error} prOpened={Boolean(applyOut?.prUrl)} />}
 
           {(job.status === "queued" || job.status === "planning" || job.status === "previewing") && <DraftingState />}
 
@@ -134,13 +135,23 @@ export function JobView({
               <div className="flex items-start gap-4">
                 <Flower size={36} variant="bloom-once" />
                 <div className="min-w-0">
-                  <p className="o-display text-2xl">Pull request #{applyOut.prNumber} is open</p>
+                  <p className="o-display text-2xl">
+                    {job.pr_state === "merged"
+                      ? `Pull request #${applyOut.prNumber} was merged`
+                      : job.pr_state === "closed"
+                        ? `Pull request #${applyOut.prNumber} was closed without merging`
+                        : `Pull request #${applyOut.prNumber} is open`}
+                  </p>
                   <p className="mt-1 text-[14px] text-muted-foreground">
                     {applied.length} {applied.length === 1 ? "fix" : "fixes"} on{" "}
                     <code className="font-mono text-[12px]" dir="ltr">
                       {applyOut.branch}
                     </code>
-                    . Review and merge it on GitHub; Olmene re-checks your live site afterwards.
+                    {job.pr_state === "merged"
+                      ? ". Olmene checks your live site after the merge, then again every week."
+                      : job.pr_state === "closed"
+                        ? ". Nothing was merged, so nothing changed on your site."
+                        : ". Review and merge it on GitHub; Olmene then checks your live site to confirm each fix is live."}
                   </p>
                 </div>
               </div>
@@ -166,6 +177,10 @@ export function JobView({
                 </Button>
               </div>
             </div>
+          )}
+
+          {job.pr_state === "merged" && (
+            <LiveCheckPanel state={job.step_outputs?.liveCheck as LiveCheckState | undefined} mergedAt={job.merged_at ?? null} />
           )}
 
           {terminal && !applyOut?.prUrl && job.status === "completed" && (
@@ -388,7 +403,7 @@ function DraftingState() {
   );
 }
 
-function ErrorBanner({ status, message }: { status: string; message: string }) {
+function ErrorBanner({ status, message, prOpened }: { status: string; message: string; prOpened: boolean }) {
   const title =
     status === "killed"
       ? "A safety switch stopped this run"
@@ -399,7 +414,9 @@ function ErrorBanner({ status, message }: { status: string; message: string }) {
     status === "killed"
       ? "No changes were written. Fix runs are paused for your account; contact support if this is unexpected."
       : status === "failed"
-        ? "No pull request was opened for the failed step. You can start a new run from the fix runs page."
+        ? prOpened
+          ? "The pull request below was opened, but Olmene's final check did not match it. Review it on GitHub before merging, or start a new run."
+          : "No pull request was opened. You can start a new run from the fix runs page."
         : null;
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-signal-rust/40 bg-diff-del p-5 text-[14px]">
@@ -471,6 +488,63 @@ export function StateMessage({
       <p className="o-display text-2xl">{title}</p>
       <p className="text-[14px] text-muted-foreground">{body}</p>
       {action}
+    </div>
+  );
+}
+
+function LiveCheckPanel({ state, mergedAt }: { state: LiveCheckState | undefined; mergedAt: string | null }) {
+  const last = state?.last;
+  if (!last) {
+    return (
+      <div className="grid gap-1 rounded-2xl border bg-card p-6 text-[14px]">
+        <p className="font-medium">Checking your live site</p>
+        <p className="text-muted-foreground">
+          Olmene checks your public site about 10–20 minutes after the merge{mergedAt ? ` (merged ${fmtDateTime(mergedAt)})` : ""}, so your
+          deploy has time to finish. Results appear here.
+        </p>
+      </div>
+    );
+  }
+  const allLive = last.total > 0 && last.passed === last.total;
+  return (
+    <div className={cn("grid gap-4 rounded-2xl border p-6", allLive ? "border-primary/35 bg-leaf-soft" : "bg-card")}>
+      <div className="grid gap-1">
+        <p className="o-display text-2xl">
+          {last.fetchError
+            ? "Your live site could not be reached"
+            : allLive
+              ? "Every merged fix is live"
+              : `${last.passed} of ${last.total} merged fixes are live`}
+        </p>
+        <p className="text-[13px] text-muted-foreground">
+          Checked {fmtDateTime(last.checkedAt)} on <span dir="ltr">{last.siteUrl}</span>
+          {!state?.settled && !allLive ? " · checking again every 10 minutes for the first day" : " · re-checked weekly"}
+        </p>
+      </div>
+      {last.regressed.length > 0 && (
+        <p role="alert" className="rounded-lg border border-signal-rust/40 bg-diff-del px-3 py-2 text-[13px]">
+          Something regressed since the last check: {last.results.filter((r) => last.regressed.includes(r.fixer)).map((r) => r.label).join(", ")}.
+        </p>
+      )}
+      {last.fetchError ? (
+        <p className="text-[13px] text-muted-foreground">Olmene will try again on the next check ({last.fetchError}).</p>
+      ) : (
+        <ul className="grid gap-2">
+          {last.results.map((r) => (
+            <li key={r.fixer} className="flex items-start gap-3 text-[14px]">
+              {r.ok ? (
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-label="Live" />
+              ) : (
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-label="Not live yet" />
+              )}
+              <span className="min-w-0">
+                <span className="font-medium">{r.label}</span>
+                <span className="block text-[13px] text-muted-foreground">{r.detail}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

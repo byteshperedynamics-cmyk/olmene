@@ -118,6 +118,11 @@ export interface AgentJob {
   report_id: string | null;
   created_at: string;
   completed_at: string | null;
+  /** PR tracking (set when the PR opens; merged/closed by the cron sync). */
+  pr_number?: number | null;
+  pr_url?: string | null;
+  pr_state?: "open" | "merged" | "closed" | null;
+  merged_at?: string | null;
 }
 
 export interface JobState {

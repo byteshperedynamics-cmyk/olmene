@@ -7,7 +7,7 @@ import { assert, assertEquals } from "jsr:@std/assert@1";
 
 const src = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
 const patched = src.replace("Deno.serve(", "const __noServe = (") +
-  "\nexport { computeSeoSignals, buildFindings, findTrustSignals, CTA_PATTERN };\n";
+  "\nexport { computeSeoSignals, buildFindings, findTrustSignals, CTA_PATTERN, assertSafeTarget, TargetRejected, ScanError, scanFailure };\n";
 const tmp = await Deno.makeTempFile({ suffix: ".ts" });
 await Deno.writeTextFile(tmp, patched);
 const mod = await import(`file://${tmp}`);
@@ -78,4 +78,76 @@ Deno.test("Trust: social proof far down the page is still read (was cut at 12k c
 Deno.test("Favicon: /favicon.ico counts without a <link>", () => {
   const s = mod.computeSeoSignals(page("<p>x</p>"), "https://acme.test/", { ...extras, faviconIcoOk: true });
   assert(s.favicon);
+});
+
+// ── 2026-10-04 readiness fixes: pricing/trust/CTA false negatives, SSRF ────
+
+Deno.test("pricing: non-English pricing links count (Holded 'Precios', sevdesk '/preise/')", () => {
+  assert(signals(`<nav><a href="/es/precios">Precios</a></nav>`).hasPricingPage);
+  assert(signals(`<nav><a href="/preise/">Preise</a></nav>`).hasPricingPage);
+  assert(signals(`<nav><a href="/tarifs">Tarifs</a></nav>`).hasPricingPage);
+});
+
+Deno.test("pricing: prices on the homepage count ('$2.99/month' — Bear)", () => {
+  const s = signals(`<p>A 7 day free trial, then $2.99/month or $29.99/year.</p>`);
+  assertEquals(s.pricingEvidence, "homepage");
+  assertEquals(s.checklist.find((c: { check: string }) => c.check === "Pricing page").status, "pass");
+});
+
+Deno.test("store: product prices satisfy 'pricing'; product tiles are the CTA (demo.vercel.store)", () => {
+  const tiles = ["Shirt $20.00USD", "Bag $12.00USD", "Cup $15.00USD", "Mug $15.00USD", "Hoodie $50.00USD"]
+    .map((t, i) => `<a href="/product/item-${i}">${t}</a>`).join("");
+  const s = signals(tiles + `<a href="/cart">Cart</a>`);
+  assert(s.isStore);
+  assertEquals(s.pricingEvidence, "store");
+  assertEquals(s.ctaButtons, ["Product links"]);
+  const titles = mod.buildFindings(s).map((f: { title: string }) => f.title);
+  assert(!titles.includes("Pricing is hidden from the homepage"));
+  assert(!titles.includes("No clear call-to-action on the homepage"));
+});
+
+Deno.test("trust: quoted, attributed testimonials count (Buttondown)", () => {
+  const q = (t: string, who: string) => `<figure><blockquote>“${t}”</blockquote><figcaption>${who}</figcaption></figure>`;
+  const s = signals(q("Three years later, I'm still happy with the choice to shift to this platform.", "Jeremy Singer-Vine") +
+    q("I didn't want to sign on with a place that was going to pursue that metastatic overgrowth.", "Clive Thompson"));
+  assert(s.trustSignals.includes("customer quotes"), JSON.stringify(s.trustSignals));
+});
+
+Deno.test("trust: German and Spanish proof words and comma-decimal ratings count", () => {
+  const de = signals(`<p>Testsieger 2026 mit Note 1,2</p><p>Über 1.200 Bewertungen</p>`);
+  assert(de.trustSignals.includes("test winner") && de.trustSignals.includes("reviews"), JSON.stringify(de.trustSignals));
+  const es = signals(`<p>4,6/5 en Capterra</p><p>Más de 100.000 empresas confían en nosotros</p>`);
+  assert(es.trustSignals.includes("star rating"), JSON.stringify(es.trustSignals));
+});
+
+Deno.test("SSRF: IP literals in any encoding, private ranges, odd ports and IPv6 are rejected", async () => {
+  for (const u of [
+    "http://127.0.0.1/", "http://2130706433/", "http://0x7f000001/", "http://127.1/", "http://10.0.0.1/",
+    "http://169.254.169.254/latest/meta-data/", "http://192.168.1.1/", "http://[::1]/", "http://[fd00::1]/",
+    "http://example.com:6379/", "https://example.com:8443/",
+  ]) {
+    let rejected = false;
+    try {
+      await mod.assertSafeTarget(new URL(u));
+    } catch (e) {
+      rejected = e instanceof mod.TargetRejected;
+    }
+    assert(rejected, `${u} must be rejected`);
+  }
+});
+
+Deno.test("errors: bot-blocked sites get an honest message, never internal details", () => {
+  const blocked = mod.scanFailure(new mod.ScanError("blocked", "HTTP 429", 429));
+  assertEquals(blocked.code, "site_blocked");
+  assert(/blocks automated visitors/.test(blocked.message) && !/check the url/i.test(blocked.message));
+  const generic = mod.scanFailure(new Error("error sending request from 10.33.3.10:44080"));
+  assert(!/10\.33/.test(generic.message));
+});
+
+Deno.test("trust: unmarked testimonials (quoted sentence + name) and app awards count", () => {
+  const s = signals(`<div>"Three years later, I'm still happy with the choice to shift to this platform."<a>Jeremy Singer-Vine</a></div>
+    <div>"I didn't want to sign on with a place that was going to pursue that metastatic overgrowth."<a>Clive Thompson</a></div>`);
+  assert(s.trustSignals.includes("customer quotes"), JSON.stringify(s.trustSignals));
+  assert(signals(`<p>Editor's Choice 2020 · Apple Design Award</p>`).trustSignals.includes("awards"));
+  assertEquals(signals(`<h2>"Ship faster with less" Product Tour</h2>`).trustSignals.includes("customer quotes"), false);
 });

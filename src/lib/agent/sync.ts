@@ -4,6 +4,7 @@
  * merged / closed outcomes. Called by POST /api/cron/sync/ on a schedule.
  */
 import type { AgentJobRow, AuditEntryInput, GithubPort } from "./runner";
+import { liveCheckDue, nextLiveCheckState, runLiveCheck, type AppliedFix, type LiveCheckState } from "./live-check";
 
 export interface SyncDbPort {
   /** Open PRs, least recently polled first. */
@@ -78,4 +79,77 @@ export function safeEqual(a: string, b: string): boolean {
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Live re-check of merged fixes ("Verify" — see live-check.ts)
+// ───────────────────────────────────────────────────────────────────────────
+
+
+export interface LiveCheckDbPort {
+  /** Merged fix runs, most recently merged first. */
+  listMergedJobs(limit: number): Promise<AgentJobRow[]>;
+  getAppliedFixes(jobId: string): Promise<AppliedFix[]>;
+  /** Public site the report was made for (report meta.siteUrl). */
+  getSiteUrl(job: AgentJobRow): Promise<string | null>;
+  saveLiveCheck(job: AgentJobRow, state: LiveCheckState): Promise<void>;
+  audit(entry: AuditEntryInput): Promise<void>;
+}
+
+export interface LiveSyncResult {
+  checked: number;
+  allLive: number;
+  regressions: number;
+  errors: number;
+}
+
+export async function syncLiveChecks(
+  db: LiveCheckDbPort,
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response>,
+  opts: { limit?: number; maxChecks?: number; now?: () => Date } = {},
+): Promise<LiveSyncResult> {
+  const now = opts.now ?? (() => new Date());
+  const out: LiveSyncResult = { checked: 0, allLive: 0, regressions: 0, errors: 0 };
+  const jobs = await db.listMergedJobs(opts.limit ?? 50);
+  for (const job of jobs) {
+    if (out.checked >= (opts.maxChecks ?? 8)) break;
+    if (!job.merged_at) continue;
+    const prev = (job.step_outputs?.liveCheck as LiveCheckState | undefined) ?? undefined;
+    if (!liveCheckDue(job.merged_at, prev, now())) continue;
+    out.checked++;
+    try {
+      const siteUrl = await db.getSiteUrl(job);
+      const fixes = await db.getAppliedFixes(job.id);
+      if (!siteUrl || fixes.length === 0) continue;
+      const run = await runLiveCheck(siteUrl, fixes, fetchFn, now());
+      const state = nextLiveCheckState(prev, run, job.merged_at, now());
+      await db.saveLiveCheck(job, state);
+      const allLive = run.total > 0 && run.passed === run.total;
+      if (allLive) out.allLive++;
+      if (state.last?.regressed.length) out.regressions++;
+      await db.audit({
+        agent_job_id: job.id,
+        user_id: job.user_id,
+        actor: "system",
+        action_type: "verify_live",
+        provider: job.provider,
+        result: run.fetchError ? "failure" : allLive ? "success" : "skipped",
+        target: { site: siteUrl, pr: job.pr_number ?? null },
+        detail: {
+          passed: run.passed,
+          total: run.total,
+          regressed: state.last?.regressed ?? [],
+          fetchError: run.fetchError ?? null,
+          reason: run.fetchError
+            ? `Could not reach the live site (${run.fetchError}).`
+            : allLive
+              ? "Every merged fix is live."
+              : `${run.passed} of ${run.total} merged fixes are live so far.`,
+        },
+      });
+    } catch {
+      out.errors++;
+    }
+  }
+  return out;
 }

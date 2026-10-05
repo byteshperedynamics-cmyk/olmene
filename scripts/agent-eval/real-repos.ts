@@ -10,12 +10,19 @@
  *
  * usage (from the repo root):
  *   GITHUB_TOKEN=… bun scripts/agent-eval/real-repos.ts owner/repo [owner/repo…]
+ *
+ * End-to-end mode: `owner/repo=out.json` uses the REAL report produced by
+ * scripts/pipeline-eval/run.ts for that site instead of the all-failing
+ * fixture, and REAL_LLM=1 (+ GEMINI_API_KEY / GLM_API_KEY, MODELS=id,id…)
+ * drafts copy through the production LLM port instead of a canned answer.
  */
 import type { GhBranch, GhContent, GhPull, GhRepo, GhTree, ScopedGithubClient } from "@/lib/agent/github/client";
 import { advanceJob, type AgentDbPort, type AgentJobRow, type PlannedActionRow, type RunnerPorts } from "@/lib/agent/runner";
 import type { LlmPort } from "@/lib/agent/llm";
 import type { ReportData } from "@/lib/report-types";
 import { makeReport } from "@/lib/agent/__tests__/fixtures";
+import { createLlmPort } from "@/lib/agent/llm";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const TOKEN = process.env.GITHUB_TOKEN ?? "";
 const API = "https://api.github.com";
@@ -52,6 +59,7 @@ function realRepoClient(owner: string, repo: string, captured: { tree?: Array<{ 
     async createRef(ref: string, sha: string) { return { ref, object: { sha } }; },
     async createPull(input: { title: string; body: string; head: string; base: string }): Promise<GhPull> {
       captured.pr = { number: 1, html_url: "https://example.invalid/pr/1", state: "open", head: { ref: input.head, sha: "captured-commit" }, base: { ref: input.base }, changed_files: captured.tree?.length ?? 0, title: input.title } as GhPull;
+      Bun.write(`/tmp/agent-eval/${repo}/PR.md`, `# ${input.title}\n\n(${input.head} → ${input.base})\n\n${input.body}`);
       return captured.pr;
     },
   } as unknown as ScopedGithubClient;
@@ -76,7 +84,7 @@ class MemoryDb implements AgentDbPort {
   async insertReceipt() {}
 }
 
-const llm: LlmPort = {
+const cannedLlm: LlmPort = {
   async draftCopy() {
     return {
       metaDescription: "Acme helps small teams ship faster: plain pricing, a free tier and a Pro plan from $19 a month. Try it free today.",
@@ -85,6 +93,24 @@ const llm: LlmPort = {
     };
   },
 };
+
+/** Production LLM port over an in-memory llm_models table (budget always allows). */
+function realLlm(): LlmPort {
+  const ids = (process.env.MODELS ?? "google/gemini-3.6-flash,google/gemini-3.5-flash-lite,google/gemini-3.5-flash,glm-4.7-flash").split(",");
+  const models = ids.map((id, i) => ({ id, priority: i + 1, supports_json_schema: false, active: true }));
+  const q = { select: () => q, eq: () => q, order: () => q, limit: () => Promise.resolve({ data: models, error: null }) };
+  const db = { rpc: async () => ({ data: true, error: null }), from: () => q } as unknown as SupabaseClient;
+  const port = createLlmPort(db);
+  return {
+    async draftCopy(system, user, max) {
+      const t0 = Date.now();
+      const out = await port.draftCopy(system, user, max);
+      console.log(`  [llm] copy drafted in ${((Date.now() - t0) / 1000).toFixed(1)}s: ${JSON.stringify(out).slice(0, 600)}`);
+      return out;
+    },
+  };
+}
+const llm: LlmPort = process.env.REAL_LLM === "1" ? realLlm() : cannedLlm;
 
 /** Report where every fixable check fails, so all fixers get exercised. */
 function allFailingReport(siteUrl: string): ReportData {
@@ -117,12 +143,18 @@ function htmlChecks(path: string, before: string | null, after: string): string[
   return issues;
 }
 
-async function evaluate(full: string) {
+async function evaluate(arg: string) {
+  const [full, reportFile] = arg.split("=");
   const [owner, repo] = full.split("/");
   const captured: { tree?: Array<{ path: string; content: string }>; pr?: GhPull } = {};
   const meta = await gh<{ homepage?: string; default_branch: string }>(`/repos/${owner}/${repo}`);
   const siteUrl = meta.homepage && /^https?:\/\//.test(meta.homepage) ? meta.homepage : `https://${repo}.example`;
-  const db = new MemoryDb(allFailingReport(siteUrl));
+  const real = reportFile ? (JSON.parse(await Bun.file(reportFile).text()) as { report: ReportData }).report : null;
+  const db = new MemoryDb(real ?? allFailingReport(siteUrl));
+  if (real) {
+    console.log(`\n=== ${full} ← real report for ${real.meta.siteUrl}`);
+    for (const c of real.audit.seo.checklist) if (c.status !== "pass") console.log(`  report: [${c.status}] ${c.check} — ${String(c.detail ?? "").slice(0, 110)}`);
+  }
   const ports: RunnerPorts = { db, gh: { client: async () => realRepoClient(owner, repo, captured) }, llm };
   const jobId = `eval-${repo}`;
   db.jobs.set(jobId, { id: jobId, user_id: "u", report_id: "r", connection_id: "c", provider: "github", status: "queued", current_step: null, input: { targetRepo: full }, step_outputs: {}, error: null, wait_reason: null, locked_until: null, attempts: 0, completed_at: null } as AgentJobRow);
@@ -132,7 +164,7 @@ async function evaluate(full: string) {
   if (status === "previewing") status = await advanceJob(jobId, ports, "u"); // preview
   const job = db.jobs.get(jobId)!;
   const actions = await db.getPlannedActions(jobId);
-  const out: string[] = [`\n### ${full}  (${meta.default_branch}, site ${siteUrl}) → ${status}${job.error ? `  ERROR: ${job.error}` : ""}`];
+  const out: string[] = [`\n### ${full}  (${meta.default_branch}, site ${real?.meta.siteUrl ?? siteUrl}) → ${status}${job.error ? `  ERROR: ${job.error}` : ""}`];
   const target = (job.step_outputs as Record<string, unknown>)?.plan as Record<string, unknown> | undefined;
   if (target) out.push(`  target: ${JSON.stringify((target as { target?: unknown }).target ?? {}).slice(0, 200)}`);
   for (const a of actions) {

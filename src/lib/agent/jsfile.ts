@@ -245,13 +245,25 @@ export function setMetadataString(src: string, key: string, value: string): JsEd
 }
 
 /** Add `alternates: { canonical: url }` only when `alternates` is absent. */
-export function addMetadataCanonical(src: string, url: string): JsEdit {
+/**
+ * Per-page canonical from the root layout. A literal URL here would be
+ * inherited by every route and point them all at the homepage, so this uses
+ * `canonical: "./"`, which Next resolves against each route's own pathname,
+ * and adds `metadataBase` from the site URL when the layout has none.
+ */
+export function addMetadataCanonical(src: string, siteUrl: string): JsEdit {
   const obj = findMetadataObject(src);
   if ("reason" in obj) return { ok: false, reason: obj.reason };
   if (obj.props.some((p) => p.key === "alternates")) {
     return { ok: false, reason: "`alternates` is already defined — not editing nested metadata." };
   }
-  return verified(insertProp(src, obj, `alternates: { canonical: ${str(url)} }`), "alternates");
+  let next = insertProp(src, obj, `alternates: { canonical: "./" }`);
+  if (!obj.props.some((p) => p.key === "metadataBase")) {
+    const again = findMetadataObject(next);
+    if ("reason" in again) return { ok: false, reason: `Edit could not be verified: ${again.reason}` };
+    next = insertProp(next, again, `metadataBase: new URL(${str(siteUrl)})`);
+  }
+  return verified(next, "alternates");
 }
 
 /**

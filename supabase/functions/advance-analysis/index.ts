@@ -123,7 +123,16 @@ function getEnv() {
     ENV: Deno.env.get("ENV") ?? "dev",
     GLM_API_KEY: Deno.env.get("GLM_API_KEY") ?? "",
     GEMINI_API_KEY: Deno.env.get("GEMINI_API_KEY") ?? "",
-    GLM_DAILY_CAP: Deno.env.get("GLM_DAILY_CAP") ?? "500",
+    GROQ_API_KEY: Deno.env.get("GROQ_API_KEY") ?? "",
+    CEREBRAS_API_KEY: Deno.env.get("CEREBRAS_API_KEY") ?? "",
+    MISTRAL_API_KEY: Deno.env.get("MISTRAL_API_KEY") ?? "",
+    OPENROUTER_API_KEY: Deno.env.get("OPENROUTER_API_KEY") ?? "",
+    VERTEX_API_KEY: Deno.env.get("VERTEX_API_KEY") ?? "",
+    VERTEX_PROJECT: Deno.env.get("VERTEX_PROJECT") ?? "",
+    VERTEX_LOCATION: Deno.env.get("VERTEX_LOCATION") ?? "global",
+    EXA_API_KEY: Deno.env.get("EXA_API_KEY") ?? "",
+    EXA_MONTHLY_CAP: Deno.env.get("EXA_MONTHLY_CAP") ?? "1000",
+    GLM_DAILY_CAP: Deno.env.get("GLM_DAILY_CAP") ?? "1500",
     TAVILY_API_KEY: Deno.env.get("TAVILY_API_KEY") ?? "",
     TAVILY_MONTHLY_CAP: Deno.env.get("TAVILY_MONTHLY_CAP") ?? "950",
     POLAR_ACCESS_TOKEN: Deno.env.get("POLAR_ACCESS_TOKEN") ?? "",
@@ -835,8 +844,11 @@ async function fetchPage(rawUrl, opts = {}) {
       const { done, value } = await reader.read();
       if (done) break;
       if (value) {
-        received += value.byteLength;
-        if (received > maxBytes) {
+        if (received + value.byteLength > maxBytes) {
+          // keep what fits (a single huge chunk used to leave an EMPTY page)
+          const room = maxBytes - received;
+          if (room > 0) chunks.push(value.slice(0, room));
+          received = maxBytes;
           // Large pages (JS-heavy marketing sites ship > 1 MB of inline
           // markup) used to fail the whole crawl here. Instead: keep what we
           // have. The <head> (title/meta/og/canonical/jsonld — every SEO
@@ -847,6 +859,7 @@ async function fetchPage(rawUrl, opts = {}) {
           truncated = true;
           break;
         }
+        received += value.byteLength;
         chunks.push(value);
       }
     }
@@ -920,6 +933,12 @@ async function discoverCrawlFiles(origin) {
 const GLM_API = "https://api.z.ai/api/paas/v4/chat/completions";
 const GEMINI_API = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 const GEMINI_PREFIX = "google/";
+// Gemini on Vertex AI (paid by Google Cloud credits): ids are "vertex/google/<model>".
+const VERTEX_PREFIX = "vertex/";
+/** Model family id without the Vertex routing prefix ("vertex/google/x" → "google/x"). */
+function familyId(modelId) {
+  return modelId.startsWith(VERTEX_PREFIX) ? modelId.slice(VERTEX_PREFIX.length) : modelId;
+}
 const CALL_TIMEOUT_MS = 75_000;
 const MAX_ATTEMPTS = 5;
 const RPM_CAP = 30; // generous for GLM free tier + Gemini multi-model spread
@@ -956,17 +975,44 @@ function sleep(ms) {
  * fallback list. Budgets are consumed before EVERY attempt. Throws
  * BudgetExhaustedError when the daily cap is hit (caller must queue the job).
  */ async function callJson(supabase, env, opts) {
-  const models = await getModels(supabase);
-  if (models.length === 0) throw new LlmCallError("no active llm_models configured", false);
+  const all = await getModels(supabase);
+  if (all.length === 0) throw new LlmCallError("no active llm_models configured", false);
   const dailyCap = Number(env.GLM_DAILY_CAP);
+  // Free tiers with a small per-request token window (Groq TPM, Cerebras
+  // context) only get requests that fit: prompt estimate + answer budget.
+  const promptTokens = Math.ceil(((opts.system?.length ?? 0) + (opts.user?.length ?? 0)) / 3.2);
+  const configured = all.filter((m)=>{
+    const p = providerOf(m.id);
+    if (!p || !env[p.keyEnv] || (p.requiresEnv ?? []).some((k)=>!env[k])) return false; // provider not configured — skip silently
+    return promptTokens + outputBudget(m.id, opts.step) <= p.maxRequestTokens;
+  });
+  if (configured.length === 0) throw new LlmCallError(`no configured model can take a ${opts.step} request`, false);
   let lastError = new LlmCallError("no attempt made", true);
+  const tried = new Set();
   for(let attempt = 0; attempt < MAX_ATTEMPTS; attempt++){
-    const model = models[attempt % models.length];
-    // Long backoff only when the next attempt retries the SAME model; when it
-    // fails over to a different model/provider, switch almost immediately
-    // (a 503 on one Gemini model said nothing about GLM or flash-lite).
-    const nextModel = models[(attempt + 1) % models.length];
-    const pause = ()=>nextModel.id === model.id ? backoff(attempt) : sleep(800 + Math.floor(Math.random() * 700));
+    // Healthy candidates only: a model whose free quota is used up is benched
+    // until it resets (shared across isolates), instead of costing a failed
+    // call in every step of every report.
+    const benched = await benchedModels(supabase);
+    const usable = configured.filter((m)=>{
+      const until = benched.get(m.id);
+      return !(until && new Date(until).getTime() > Date.now());
+    });
+    if (usable.length === 0) {
+      // Everything is resting. Wait briefly if one comes back soon, else
+      // queue the job until then (it resumes on its own).
+      const soonest = Math.min(...configured.map((m)=>new Date(benched.get(m.id) ?? 0).getTime()).filter((t)=>t > Date.now()));
+      if (Number.isFinite(soonest) && soonest - Date.now() <= 45_000) {
+        await sleep(soonest - Date.now() + 500);
+        continue;
+      }
+      throw new BudgetExhaustedError("llm_busy", new Date(Number.isFinite(soonest) ? soonest + 30_000 : Date.now() + 15 * 60_000));
+    }
+    // Prefer models not yet tried in this call, in priority order.
+    const model = usable.find((m)=>!tried.has(m.id)) ?? usable[attempt % usable.length];
+    tried.add(model.id);
+    const provider = providerOf(model.id);
+    if (!provider) continue;
     // ── budget guards (before EVERY attempt) ──
     const dailyOk = await consume(supabase, llmDailyKey(), 1, dailyCap);
     if (!dailyOk) throw new BudgetExhaustedError("llm_daily");
@@ -979,15 +1025,15 @@ function sleep(ms) {
     }
     // ── request ──
     // Gemini 3.x flash models "think" before answering; hidden reasoning tokens
-    // count against max_tokens, so with the step budget alone they returned
-    // EMPTY content (finish_reason "length") and every step silently fell back
-    // to flash-lite. Low reasoning + headroom for them; flash-lite's request is
-    // left as it always was (it rejects reasoning_effort "none" with a 400).
-    const thinking = model.id.startsWith(GEMINI_PREFIX) && !model.id.includes("lite");
+    // count against max_tokens, so they get low reasoning + headroom. Lite and
+    // other providers keep the plain request.
+    // gpt-oss models (Groq/Cerebras) reason too; "low" keeps them inside
+    // the small free-tier windows.
+    const thinking = familyId(model.id).startsWith(GEMINI_PREFIX) && !model.id.includes("lite") || model.id.includes("gpt-oss");
     const body = {
-      model: model.id,
-      temperature: 0.3,
-      max_tokens: (STEP_MAX_TOKENS[opts.step] ?? 4000) + (thinking ? 6000 : 0),
+      model: model.id.slice(provider.prefix.length),
+      temperature: STEP_TEMPERATURE[opts.step] ?? 0.3,
+      max_tokens: outputBudget(model.id, opts.step),
       ...thinking ? { reasoning_effort: "low" } : {},
       response_format: model.supports_json_schema ? {
         type: "json_schema",
@@ -1008,55 +1054,44 @@ function sleep(ms) {
           role: "user",
           content: attempt > 0 && opts.repairHint ? `${opts.user}\n\n${opts.repairHint}` : opts.user
         }
-      ]
+      ],
+      ...provider.name === "glm" ? { thinking: { type: "disabled" } } : {}
     };
     const controller = new AbortController();
-    const timer = setTimeout(()=>controller.abort(), CALL_TIMEOUT_MS);
+    const timer = setTimeout(()=>controller.abort(), provider.timeoutMs);
     let res;
-    const isGemini = model.id.startsWith(GEMINI_PREFIX);
-    const endpoint = isGemini ? GEMINI_API : GLM_API;
-    const requestModel = isGemini ? model.id.slice(GEMINI_PREFIX.length) : model.id;
     try {
-      res = await fetch(endpoint, {
+      res = await fetch(typeof provider.url === "function" ? provider.url(env) : provider.url, {
         method: "POST",
-        headers: isGemini ? {
-          Authorization: `Bearer ${env.GEMINI_API_KEY}`,
-          "Content-Type": "application/json"
-        } : {
-          Authorization: `Bearer ${env.GLM_API_KEY}`,
-          "Content-Type": "application/json"
+        headers: {
+          ...provider.authHeader ? { [provider.authHeader]: env[provider.keyEnv] } : { Authorization: `Bearer ${env[provider.keyEnv]}` },
+          "Content-Type": "application/json",
+          ...provider.name === "openrouter" ? { "HTTP-Referer": env.APP_URL || "https://olmene.com", "X-Title": env.APP_NAME || "Olmene" } : {}
         },
-        body: JSON.stringify(isGemini ? { ...body, model: requestModel } : { ...body, model: requestModel, thinking: { type: "disabled" } }),
+        body: JSON.stringify(body),
         signal: controller.signal
       });
     } catch (e) {
       clearTimeout(timer);
       lastError = new LlmCallError(`timeout/network: ${e.message}`, true);
-      await pause();
+      // A model that cannot answer in time is rested for 10 minutes.
+      await benchModel(supabase, model.id, Date.now() + 10 * 60_000, "timeout");
       continue;
     }
     clearTimeout(timer);
-    if (res.status === 429 || res.status >= 500) {
-      const retryAfter = Number(res.headers.get("retry-after"));
-      lastError = new LlmCallError(`upstream ${res.status}`, true);
-      if (Number.isFinite(retryAfter) && retryAfter > 0 && retryAfter <= 30) {
-        await sleep(retryAfter * 1000);
-      } else {
-        await pause();
-      }
-      continue;
-    }
     if (!res.ok) {
-      // 4xx (other than 429): model may be unavailable — try the next one.
+      const errText = await res.text().catch(()=>"");
+      const bench = benchFor(model.id, res.status, errText, res.headers.get("retry-after"));
+      if (bench) await benchModel(supabase, model.id, bench.until, bench.reason);
       lastError = new LlmCallError(`upstream ${res.status}`, true);
-      await pause();
+      await sleep(400 + Math.floor(Math.random() * 400));
       continue;
     }
     const payload = await res.json().catch(()=>null);
     const content = payload?.choices?.[0]?.message?.content ?? "";
     if (!content.trim()) {
       lastError = new LlmCallError("empty content", true);
-      await pause();
+      await sleep(400);
       continue;
     }
     // ── parse + validate ──
@@ -1066,14 +1101,12 @@ function sleep(ms) {
     } catch (e) {
       lastError = new LlmCallError(`invalid JSON: ${e.message}`, true);
       opts.repairHint = `Your previous reply was not valid JSON (${e.message}). Return ONLY one corrected JSON object, no prose, no markdown fences.`;
-      await pause();
       continue;
     }
     const check = opts.schema.safeParse(parsed);
     if (!check.success) {
       lastError = new LlmCallError(`schema validation failed: ${zodErrorSummary(check.error)}`, true);
       opts.repairHint = `Your previous JSON did not match the schema. Fix these issues:\n${zodErrorSummary(check.error)}\nReturn ONLY the corrected JSON object.`;
-      await pause();
       continue;
     }
     return {
@@ -1082,6 +1115,112 @@ function sleep(ms) {
     };
   }
   throw lastError;
+}
+// ── Providers (all OpenAI-compatible chat completions) ──────────────────
+// A model id's prefix picks the provider; a provider without an API key is
+// skipped. Free tiers with small token windows only take smaller prompts.
+const PROVIDERS = [
+  // Vertex AI's OpenAI-compatible endpoint. VERTEX_API_KEY is an authorization
+  // key (bound to a service account with Agent Platform User), sent as
+  // x-goog-api-key; Vertex rejects it as a Bearer token.
+  { name: "vertex", prefix: VERTEX_PREFIX, url: (env)=>`https://aiplatform.googleapis.com/v1/projects/${env.VERTEX_PROJECT}/locations/${env.VERTEX_LOCATION || "global"}/endpoints/openapi/chat/completions`, keyEnv: "VERTEX_API_KEY", authHeader: "x-goog-api-key", requiresEnv: ["VERTEX_PROJECT"], maxRequestTokens: Infinity, timeoutMs: CALL_TIMEOUT_MS },
+  { name: "google", prefix: GEMINI_PREFIX, url: GEMINI_API, keyEnv: "GEMINI_API_KEY", maxRequestTokens: Infinity, timeoutMs: CALL_TIMEOUT_MS },
+  // Groq free tier: tokens-per-minute is checked per request (prompt + max_tokens).
+  { name: "groq", prefix: "groq/", url: "https://api.groq.com/openai/v1/chat/completions", keyEnv: "GROQ_API_KEY", maxRequestTokens: 8_000, timeoutMs: 45_000 },
+  // Cerebras free tier: 8k-token context.
+  { name: "cerebras", prefix: "cerebras/", url: "https://api.cerebras.ai/v1/chat/completions", keyEnv: "CEREBRAS_API_KEY", maxRequestTokens: 8_000, timeoutMs: 45_000 },
+  { name: "mistral", prefix: "mistral/", url: "https://api.mistral.ai/v1/chat/completions", keyEnv: "MISTRAL_API_KEY", maxRequestTokens: Infinity, timeoutMs: CALL_TIMEOUT_MS },
+  { name: "openrouter", prefix: "openrouter/", url: "https://openrouter.ai/api/v1/chat/completions", keyEnv: "OPENROUTER_API_KEY", maxRequestTokens: Infinity, timeoutMs: CALL_TIMEOUT_MS },
+  { name: "glm", prefix: "", url: GLM_API, keyEnv: "GLM_API_KEY", maxRequestTokens: Infinity, timeoutMs: CALL_TIMEOUT_MS }
+];
+/** Answer budget for one call: step budget + room for hidden reasoning. */
+function outputBudget(modelId, step) {
+  const base = STEP_MAX_TOKENS[step] ?? 4000;
+  if (familyId(modelId).startsWith(GEMINI_PREFIX) && !modelId.includes("lite")) return base + 6000;
+  if (modelId.includes("gpt-oss")) return base + 1500;
+  return base;
+}
+function providerOf(modelId) {
+  return PROVIDERS.find((p)=>p.prefix && modelId.startsWith(p.prefix)) ?? (/^glm-/.test(modelId) ? PROVIDERS[PROVIDERS.length - 1] : null);
+}
+/** Lower temperature where answers must be stable run to run. */
+const STEP_TEMPERATURE = {
+  profile: 0.2,
+  competitors_pick: 0.1,
+  competitors_analyze: 0.2,
+  audit: 0.2,
+  market: 0.1,
+  strategy: 0.3,
+  gitdiff: 0.3
+};
+// ── Model health (free-tier circuit breaker) ───────────────────────────
+let healthCache = { at: 0, map: new Map() };
+async function benchedModels(supabase) {
+  if (Date.now() - healthCache.at < 15_000) return healthCache.map;
+  try {
+    const { data, error } = await supabase.from("llm_model_health").select("model_id, blocked_until").gt("blocked_until", new Date().toISOString());
+    if (!error) healthCache = { at: Date.now(), map: new Map((data ?? []).map((r)=>[r.model_id, r.blocked_until])) };
+    else healthCache.at = Date.now();
+  } catch {
+    healthCache.at = Date.now();
+  }
+  return healthCache.map;
+}
+async function benchModel(supabase, modelId, untilMs, reason) {
+  const until = new Date(untilMs).toISOString();
+  healthCache.map.set(modelId, until);
+  console.warn(JSON.stringify({ level: "warn", msg: "llm model benched", model: modelId, until, reason }));
+  try {
+    await supabase.from("llm_model_health").upsert({ model_id: modelId, blocked_until: until, reason: String(reason).slice(0, 200), updated_at: new Date().toISOString() }, { onConflict: "model_id" });
+  } catch {
+    /* table missing: the in-isolate cache still helps */
+  }
+}
+/** How long to rest a model after an error response (null = do not rest it). */
+function benchFor(modelId, status, bodyText, retryAfter) {
+  // Only the provider's own error fields — never echoed model output
+  // (Groq's json_validate_failed carries the failed generation).
+  let t = "";
+  try {
+    const j = JSON.parse(bodyText);
+    const e = Array.isArray(j) ? j[0]?.error : j?.error ?? j;
+    t = [e?.message, e?.code, e?.status, e?.type, JSON.stringify(e?.details ?? "")].filter(Boolean).join(" ").toLowerCase();
+  } catch {
+    t = String(bodyText ?? "").slice(0, 600).toLowerCase();
+  }
+  if (status === 429) {
+    const wait = waitHintSeconds(t, retryAfter);
+    if (/perday|per day|per_day|\brpd\b|\btpd\b|daily/.test(t)) {
+      // Google resets at midnight Pacific; others say when (or retry hourly).
+      const until = modelId.startsWith(GEMINI_PREFIX) ? nextPacificMidnight() : Date.now() + (wait ? Math.max(wait, 60) * 1000 : 60 * 60_000);
+      return { until, reason: "daily quota used up" };
+    }
+    return { until: Date.now() + Math.min(Math.max(wait ?? 60, 10), 600) * 1000, reason: "rate limited" };
+  }
+  if (status === 503 || status === 529 || status === 502) return { until: Date.now() + 30_000, reason: `overloaded (${status})` };
+  if (status === 401 || status === 403) return { until: Date.now() + 60 * 60_000, reason: `key rejected (${status})` };
+  if (status === 404 || /model_not_found|decommissioned|does not exist|not a valid model|unknown model|invalid model|no endpoints found/.test(t)) {
+    return { until: Date.now() + 6 * 60 * 60_000, reason: `model unavailable (${status})` };
+  }
+  if (status === 413) return { until: Date.now() + 60_000, reason: "request too large for this tier" };
+  return null;
+}
+/** Seconds from Retry-After, Google's retryDelay or Groq's "try again in 1m26.4s". */
+function waitHintSeconds(t, retryAfter) {
+  const ra = Number(retryAfter);
+  if (Number.isFinite(ra) && ra > 0) return ra;
+  const delay = t.match(/retrydelay\W+(\d+(?:\.\d+)?)s/);
+  if (delay) return Number(delay[1]);
+  const m = t.match(/try again in\s+(?:(\d+)h)?(?:(\d+)m(?!s))?(?:(\d+(?:\.\d+)?)s)?(?:(\d+)ms)?/);
+  if (m && (m[1] || m[2] || m[3] || m[4])) return Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0) + Number(m[4] ?? 0) / 1000;
+  return null;
+}
+/** Gemini free-tier daily quotas reset at midnight Pacific time. */
+function nextPacificMidnight(now = new Date()) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(now).map((p)=>[p.type, p.value]));
+  const h = Number(parts.hour) % 24, m = Number(parts.minute), sec = Number(parts.second);
+  const msLeft = ((23 - h) * 3600 + (59 - m) * 60 + (60 - sec)) * 1000;
+  return now.getTime() + msLeft + 60_000;
 }
 function jsonSchemaOf(schema) {
   return z.toJSONSchema(schema, {
@@ -1128,7 +1267,10 @@ const CTA_PATTERN = new RegExp("(?<![\\p{L}\\p{N}])(" + [
   "s[’']abonner", "s[’']inscrire", "essayer", "commencer", "acheter", "commander", "réserver", "nous contacter", "créer un compte",
   "comprar", "empezar", "empieza", "prueba(?:lo)? gratis", "regístrate", "suscríbete", "reservar", "contactar",
   "começar", "experimente", "assine", "inscreva-se", "acquista", "inizia", "prova gratis", "iscriviti", "abbonati",
-  "εγγραφή", "αγορά", "ξεκινήστε", "δοκιμάστε",
+  "εγγραφή", "αγορά", "ξεκινήστε", "δοκιμάστε", "κάντε κράτηση",
+  "book now", "book (?:an |a )?(?:appointment|table|consultation)", "prendre rendez-vous", "termin (?:buchen|vereinbaren)", "pedir cita", "reservar cita", "prenota(?: ora)?",
+  "probeer (?:het )?gratis", "aanmelden", "bestel(?:len)?", "kopen", "zarejestruj(?: się)?", "wypróbuj", "kup(?: teraz)?", "ücretsiz dene", "kaydol", "satın al",
+  "essai gratuit", "empieza gratis", "comienza gratis", "agendar", "teste grátis",
 ].join("|") + ")(?![\\p{L}\\p{N}])", "iu");
 const TRUST_PATTERNS = [
   ["testimonials", /\btestimonials?\b/],
@@ -1148,17 +1290,28 @@ const TRUST_PATTERNS = [
   ["customer count", /\b\d[\d,.]*\s?(?:k|m|million|thousand)?\+?\s(?:teams|companies|customers|users|businesses|creators|developers|organi[sz]ations|brands|merchants|writers|entrepreneurs|clients|members|subscribers)\b/],
   ["review sites", /\b(?:g2|capterra|trustpilot|product hunt|app store rating)\b/],
   ["easy returns", /\bfree (?:returns|shipping|delivery)\b|\b\d+[- ]day (?:returns|money[- ]back|free trial)\b/],
+  ["test winner", /\btest winner\b|\bbest (?:rated|reviewed)\b|\baward[- ]winning\b/],
+  ["awards", /\beditor['’]s choice\b|\bapp of the (?:year|day)\b|\bdesign awards?\b|\bwinner of\b/],
+  ["reviews", /(?<![\p{L}\p{N}])(?:kundenstimmen|bewertungen|erfahrungsberichte|opiniones|reseñas|valoraciones|testimonios|avis clients|témoignages|recensioni|testimonianze|depoimentos|avaliações|beoordelingen|klantervaringen|opinie klientów|κριτικές|μαρτυρίες|yorumlar|отзывы)(?![\p{L}\p{N}])/u],
+  ["test winner", /(?<![\p{L}\p{N}])(?:testsieger|stiftung warentest|ganador de la prueba)(?![\p{L}\p{N}])/u],
+  ["trusted by", /(?<![\p{L}\p{N}])(?:kunden vertrauen|vertrauen uns|confían en|ils nous font confiance|font confiance à|si fidano di|confiam (?:na|em)|vertrouwen ons|μας εμπιστεύονται)(?![\p{L}\p{N}])/u],
+  ["case studies", /(?<![\p{L}\p{N}])(?:fallstudien|referenzen|casos de éxito|études de cas|casi di successo|casos de sucesso|klantverhalen)(?![\p{L}\p{N}])/u],
+  ["guarantee", /(?<![\p{L}\p{N}])(?:geld-zurück-garantie|garantía|satisfait ou remboursé|garanzia|garantia|εγγύηση)(?![\p{L}\p{N}])/u],
+  ["customer count", /\b\d[\d.,]*\s?(?:k|mil|tsd\.?|millionen|millones|millions?)?\+?\s(?:kunden|unternehmen|clientes|empresas|clients|entreprises|clienti|aziende|klanten|πελάτες)(?![\p{L}\p{N}])/u],
 ];
+// Pricing links in the languages Olmene serves (href or link text).
+const PRICING_HREF = /pric|plans?\b|preis|tarif|precio|prezz|pre[cç]o|prijs|priser|hinnat|cennik|cenik|fiyat|τιμ|цен|тариф|料金|価格|价格|定价|요금|harga|qiymet/;
+const PRICING_TEXT = /(?<![\p{L}\p{N}])(?:pricing|prices|plans(?: (?:&|and) pricing)?|preise|tarife|tarifs|prix|precios|tarifas|planes|prezzi|piani|preços|planos|prijzen|priser|hinnat|cennik|ceny|fiyatlar|fiyatlandırma|τιμές|τιμολόγηση|цены|тарифы|料金|価格|价格|定价|요금제|harga)(?![\p{L}\p{N}])/u;
 const NEGATION = /\b(?:no|without|zero|lacks?|lack of|missing|not yet any|none)\b/;
 function findTrustSignals(lowText) {
   const found = [];
   for (const [label, re] of TRUST_PATTERNS) {
-    const g = new RegExp(re.source, "g");
+    const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
     let m;
     while ((m = g.exec(lowText))) {
       const ctx = lowText.slice(Math.max(0, m.index - 80), m.index);
       const sentence = ctx.slice(Math.max(ctx.lastIndexOf(". "), ctx.lastIndexOf("! "), ctx.lastIndexOf("? ")) + 1);
-      if (!NEGATION.test(sentence)) { found.push(label); break; }
+      if (!NEGATION.test(sentence)) { if (!found.includes(label)) found.push(label); break; }
     }
   }
   return found;
@@ -1205,8 +1358,10 @@ function spacedText($, el) {
   // LLM-facing text: drop boilerplate, fall back to full text when thin.
   const stripped = body.clone();
   stripped.find(BOILERPLATE_SELECTORS).remove();
-  let text = stripped.text().replace(/\s+/g, " ").trim();
-  if (text.length < 300) text = body.text().replace(/\s+/g, " ").trim();
+  // Text nodes are joined WITH spaces: .text() glued neighbouring elements
+  // ("Email" + "for developers" → "Email fordevelopers").
+  let text = spacedText($, stripped.get(0));
+  if (text.length < 300) text = spacedText($, body.get(0));
   text = text.slice(0, maxText);
   return {
     url,
@@ -1440,6 +1595,9 @@ function heroFieldFromEl($, el) {
   }
   ctaCandidates.sort((a, b)=>b.score - a.score || a.i - b.i);
   if (ctaCandidates.length > 0 && ctaCandidates[0].score >= 3) out.cta = heroFieldFromEl($, ctaCandidates[0].el);
+  // A "subheadline" that repeats the H1 (same text in two elements) is no subheadline.
+  const sameText = (a, b)=>a && b && a.text.replace(/\s+/g, " ").trim().toLowerCase() === b.text.replace(/\s+/g, " ").trim().toLowerCase();
+  if (sameText(out.sub, out.h1)) out.sub = null;
   return out;
 }
 // ───────────── end hero extraction ─────────────
@@ -1502,7 +1660,13 @@ function status(present, warnCondition = false) {
       jsonLdTypes.push("(invalid JSON-LD)");
     }
   });
-  const quoteBlocks = $("blockquote, [class*=testimonial], [class*=Testimonial]").length;
+  const quoteBlocks = $("blockquote, q").length +
+    $("[class*=testimonial], [class*=Testimonial], [class*=review-card], [class*=ReviewCard], [class*=quote], [class*=Quote], [class*=kudos]")
+      .not("blockquote, q")
+      .filter((_, el)=>!$(el).find("blockquote, q").length && $(el).text().replace(/\s+/g, " ").trim().length >= 40).length;
+  // Online-store markers: stores show prices on products, so "no pricing page" is no finding for them.
+  const rawLow = html.slice(0, 2_000_000).toLowerCase();
+  const storePlatform = /cdn\.shopify\.com|window\.shopify|shopify\.theme|woocommerce|wc-add-to-cart|bigcommerce|magento|prestashop|shopware|ecwid|squarespace-commerce/.test(rawLow);
   const logoImages = $("img").filter((_, el)=>/\blogo\b/i.test($(el).attr("alt") ?? "")).length;
   $("script, style, noscript, svg, iframe, template").remove();
   const titleText = ($("title").first().text() || "").trim();
@@ -1546,9 +1710,14 @@ function status(present, warnCondition = false) {
   })();
   let internalLinks = 0;
   let externalLinks = 0;
+  let productLinks = 0;
+  let pricingLinkSeen = false;
   $("a[href]").each((_, el)=>{
     const href = $(el).attr("href");
     if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
+    const low = href.toLowerCase();
+    if (PRICING_HREF.test(low) || PRICING_TEXT.test(spacedText($, el).toLowerCase())) pricingLinkSeen = true;
+    if (/\/(?:products?|collections|shop|store|p)\/[^/?#]+/.test(low)) productLinks++;
     try {
       const u = new URL(href, pageUrl);
       if (u.origin === pageOrigin) internalLinks++;
@@ -1578,13 +1747,24 @@ function status(present, warnCondition = false) {
     if (CTA_PATTERN.test(t)) addCta(t);
   });
   const lowText = text.toLowerCase();
+  const priceMatches = lowText.match(/(?:[$€£¥₹]\s?\d{1,5}(?:[.,]\d{2})?|\d{1,5}(?:[.,]\d{2})?\s?(?:€|£|zł|kr|usd|eur|gbp)\b|\b(?:usd|eur|gbp)\s?\d{1,5})/g) ?? [];
+  const pricePerPeriod = /(?:[$€£]\s?\d[\d.,]*|\d[\d.,]*\s?(?:€|£|usd|eur))\s?(?:\/|per|a|pro|al|par|por|al mese|\/ ?mo)\s?(?:month|mo|year|yr|monat|jahr|mes|año|mois|an|mese|anno|mês|ano|user|seat)\b/.test(lowText);
+  const cartLike = /add to (?:cart|bag)|in den warenkorb|añadir al carrito|ajouter au panier|aggiungi al carrello|adicionar ao carrinho|in winkelwagen/.test(lowText);
+  const productSchema = jsonLdTypes.some((t)=>/^(?:Product|Offer|AggregateOffer|OnlineStore|Store|ProductGroup)$/i.test(t));
+  const isStore = storePlatform || productSchema || priceMatches.length >= 4 && (cartLike || productLinks >= 3) || priceMatches.length >= 10;
+  if (ctaButtons.length === 0 && isStore && productLinks >= 3) addCta("Product links");
   const trustSignals = findTrustSignals(lowText);
-  if (quoteBlocks >= 2) trustSignals.push("customer quotes");
+  const attributedQuotes = (text.match(/["“„«]([^"“”„«»]{30,400})["”“»]\s*[—–-]?\s*\p{Lu}[\p{Ll}'’]+(?:[ -]\p{Lu}[\p{Ll}'’]+){1,3}/gu) ?? [])
+    .filter((q)=>q.split(/\s+/).length >= 8).length;
+  if ((quoteBlocks >= 2 || attributedQuotes >= 2) && !trustSignals.includes("customer quotes")) trustSignals.push("customer quotes");
   if (logoImages >= 5) trustSignals.push("customer logos");
   const robotsMeta = $('meta[name="robots"]').attr("content")?.trim() || null;
   const robotsTxtOk = extras.robotsTxtOk ?? null;
   const sitemapXmlOk = extras.sitemapXmlOk ?? null;
-  const hasPricingPage = extras.hasPricingPage ?? rankInternalLinksFromHtml($, pageUrl);
+  const linkedPricing = extras.hasPricingPage ?? (pricingLinkSeen || rankInternalLinksFromHtml($, pageUrl));
+  // How pricing is visible: a pricing link, prices on the homepage, or a store's product prices.
+  const pricingEvidence = linkedPricing ? "link" : isStore && priceMatches.length > 0 ? "store" : pricePerPeriod ? "homepage" : null;
+  const hasPricingPage = pricingEvidence !== null;
   const signals = {
     pageUrl,
     titleLength,
@@ -1609,6 +1789,8 @@ function status(present, warnCondition = false) {
     externalLinks,
     wordCount,
     hasPricingPage,
+    pricingEvidence,
+    isStore,
     ctaButtons,
     trustSignals,
     robotsMeta,
@@ -1619,6 +1801,17 @@ function status(present, warnCondition = false) {
   signals.checklist = buildChecklist(signals);
   return signals;
 }
+/** Signals for a homepage the crawler was not allowed to read (bot protection). */
+function blockedSignals(pageUrl, status) {
+  return {
+    pageUrl, blocked: status, titleLength: null, titleText: "", metaDescription: null, metaDescriptionLength: null,
+    h1Count: 0, h1Texts: [], headingOutline: [], canonical: null, lang: null, viewport: false, openGraph: false,
+    ogImage: false, favicon: false, https: pageUrl.startsWith("https://"), twitterCard: false, jsonLdTypes: [],
+    imagesWithoutAlt: 0, imagesTotal: 0, internalLinks: 0, externalLinks: 0, wordCount: 0, hasPricingPage: false,
+    pricingEvidence: null, isStore: false, ctaButtons: [], trustSignals: [], robotsMeta: null, robotsTxtOk: null,
+    sitemapXmlOk: null, checklist: []
+  };
+}
 function rankInternalLinksFromHtml($, pageUrl) {
   const links = [];
   $("a[href]").each((_, el)=>{
@@ -1628,7 +1821,7 @@ function rankInternalLinksFromHtml($, pageUrl) {
       text: $(el).text()
     });
   });
-  return rankInternalLinks(links, pageUrl, 20).some((u)=>/pricing|plans/i.test(u));
+  return rankInternalLinks(links, pageUrl, 20).some((u)=>PRICING_HREF.test(u.toLowerCase()));
 }
 function buildChecklist(s) {
   const c = [];
@@ -1653,7 +1846,10 @@ function buildChecklist(s) {
   push("Structured data (JSON-LD)", s.jsonLdTypes.length ? "pass" : "warn", s.jsonLdTypes.length ? `@type: ${s.jsonLdTypes.join(", ")}` : "No JSON-LD found");
   push("Image alt coverage", s.imagesTotal === 0 ? "warn" : s.imagesWithoutAlt / s.imagesTotal <= 0.1 ? "pass" : s.imagesWithoutAlt / s.imagesTotal <= 0.5 ? "warn" : "fail", s.imagesTotal === 0 ? "No images found on the homepage" : `${s.imagesWithoutAlt} of ${s.imagesTotal} images missing alt text`, "structure");
   push("Content depth", s.wordCount >= 300 ? "pass" : s.wordCount >= 100 ? "warn" : "fail", `~${s.wordCount} words of body text (aim for 300+)`, "clarity");
-  push("Pricing page", s.hasPricingPage ? "pass" : "warn", s.hasPricingPage ? "Pricing page linked from the homepage" : "No pricing link found on the homepage", "value-prop");
+  push("Pricing page", s.hasPricingPage ? "pass" : "warn",
+    s.pricingEvidence === "store" ? "Online store: prices are shown on the products"
+      : s.pricingEvidence === "homepage" ? "Prices are shown on the homepage"
+      : s.hasPricingPage ? "Pricing page linked from the homepage" : "No pricing link or prices found on the homepage", "value-prop");
   push("Call-to-action", s.ctaButtons.length ? "pass" : "fail", s.ctaButtons.length ? `Found: ${s.ctaButtons.slice(0, 4).join(" | ")}` : "No clear CTA button/link detected", "cta");
   push("Trust signals", s.trustSignals.length >= 2 ? "pass" : s.trustSignals.length === 1 ? "warn" : "fail", s.trustSignals.length ? `Found: ${s.trustSignals.slice(0, 4).join(", ")}` : "No testimonials/reviews/guarantees detected", "trust");
   const noindex = !!s.robotsMeta && /noindex/i.test(s.robotsMeta);
@@ -2180,6 +2376,12 @@ const Report = z.object({
   sources: z.array(Source).default([]),
   conversionDiff: z.lazy(()=>ConversionDiff).nullable().default(null)
 });
+/** Models write "None" / "N/A" for "no dependency"; drop those so the UI shows nothing. */
+function cleanRoadmap(roadmap) {
+  const empty = /^(?:none|n\/?a|null|-|—|nothing|no dependenc(?:y|ies)|not applicable)\.?$/i;
+  const clean = (items)=>(items ?? []).map((it)=>it?.dependsOn && empty.test(String(it.dependsOn).trim()) ? { ...it, dependsOn: undefined } : it);
+  return { quickWins: clean(roadmap?.quickWins), days30: clean(roadmap?.days30), days60: clean(roadmap?.days60), days90: clean(roadmap?.days90) };
+}
 function clampScore(n) {
   return Math.max(0, Math.min(100, Math.round(Number.isFinite(n) ? n : 0)));
 }
@@ -2355,7 +2557,20 @@ quote or reference the exact page, headline, CTA, or element it talks about,
 say what to change and why. Severity reflects revenue impact for a small team.
 Include 1-3 findings per area, the most important ones.
 
-DETERMINISTIC SEO SIGNALS (computed by code — facts, use them, do not re-derive):
+HOW TO USE THE SIGNALS BELOW:
+- Technical tag facts (title, meta description, H1, canonical, JSON-LD, alt
+  text, robots, sitemap) are exact: use them as facts.
+- The pricing, CTA and trust lines come from keyword heuristics. When one says
+  NOT DETECTED, read the website content first: if it shows prices, buttons or
+  links that lead to a purchase or signup, testimonials, ratings, customer
+  logos or awards, do NOT report them as missing. Never rate a finding
+  critical or high only because a heuristic did not detect something.
+- If the site is an online store, judge it as a store: prices on products and
+  product / add-to-cart links are the conversion path — never ask a store for
+  a "pricing page".
+- Quote the website content as evidence, not these signal lines.
+
+SIGNALS (computed by code):
 ${wrapUntrusted(renderSeoSignals(seoSignals))}
 
 PRODUCT CONTEXT:
@@ -2372,7 +2587,11 @@ ${sourcesBlock(sources)}
 Return the JSON object now: { "messaging": [ Finding … ], "conversion": [ Finding … ], "seo": [ Finding … ], "trust": [ Finding … ], "pricingPresentation": [ Finding … ] }.`;
 }
 function renderSeoSignals(s) {
+  if (s.blocked) {
+    return `The site blocked Olmene's crawler (HTTP ${s.blocked}); the content below came from a text extractor. Technical tag facts are UNAVAILABLE: do not report the title, meta description, H1, canonical, structured data or images as missing. Base every finding on the website content.`;
+  }
   const lines = [
+    ...s.renderedByJs ? ["NOTE: the homepage HTML is a JavaScript shell; the website content below came from a text extractor. H1, headings, CTAs, trust and word-count facts describe the shell, not what visitors see — rely on the website content for those."] : [],
     `Page audited: ${s.pageUrl}`,
     `<title> length: ${s.titleLength ?? "missing"} ("${clip(s.titleText, 120)}")`,
     `meta description: ${s.metaDescription === null ? "MISSING" : `${s.metaDescriptionLength} chars`}`,
@@ -2387,9 +2606,10 @@ function renderSeoSignals(s) {
     `images missing alt: ${s.imagesWithoutAlt} of ${s.imagesTotal}`,
     `links: ${s.internalLinks} internal / ${s.externalLinks} external`,
     `word count (main content): ${s.wordCount}`,
-    `pricing page found on site: ${s.hasPricingPage ? "yes" : "no"}`,
-    `visible CTAs: ${clip(s.ctaButtons.join(" | "), 200) || "none found"}`,
-    `trust signals found: ${clip(s.trustSignals.join(" | "), 200) || "none found"}`,
+    `pricing: ${s.pricingEvidence === "link" ? "a pricing link is on the homepage" : s.pricingEvidence === "store" ? "online store — prices are shown on the products" : s.pricingEvidence === "homepage" ? "prices are shown on the homepage" : "NOT DETECTED by a keyword heuristic (it can miss non-standard links) — confirm in the website content before calling pricing hidden"}`,
+    `site type: ${s.isStore ? "online store (product listings with prices)" : "not detected as an online store"}`,
+    `CTAs (keyword heuristic): ${clip(s.ctaButtons.join(" | "), 200) || "NONE DETECTED — the heuristic can miss product tiles, search boxes and image buttons; confirm in the website content"}`,
+    `trust signals (keyword heuristic): ${clip(s.trustSignals.join(" | "), 200) || "NONE DETECTED — the heuristic can miss quotes, logos and badges without text; confirm in the website content"}`,
     `robots meta: ${s.robotsMeta ?? "none"}`,
     `/robots.txt: ${s.robotsTxtOk === null ? "not checked" : s.robotsTxtOk ? "200 OK" : "missing"}`,
     `/sitemap.xml: ${s.sitemapXmlOk === null ? "not checked" : s.sitemapXmlOk ? "200 OK" : "missing"}`
@@ -2859,7 +3079,7 @@ function assembleReport(parts) {
       pricingPresentation: parts.audit.pricingPresentation
     },
     strategy: parts.strategy.strategy,
-    roadmap: parts.strategy.roadmap,
+    roadmap: cleanRoadmap(parts.strategy.roadmap),
     risks: parts.strategy.risks,
     assumptions: parts.strategy.assumptions,
     sources: parts.sources,
@@ -2903,7 +3123,30 @@ async function runCrawl(job, supabase, env) {
   const input = safeInput(job);
   const startUrl = normalizeSiteUrl(input.siteUrl);
   if (!startUrl) throw new StepFailure("Invalid site URL.");
-  const home = await fetchPage(startUrl.toString());
+  let home;
+  try {
+    home = await fetchPage(startUrl.toString());
+  } catch (e) {
+    const status = Number(String(e?.message ?? "").match(/HTTP (\d{3})/)?.[1] ?? 0);
+    if (![401, 403, 429, 503].includes(status)) throw e;
+    // Bot protection (Personio, Bombas…): read the page through the research
+    // provider's extractor instead of failing the whole report.
+    const extracted = await tavilyExtract(supabase, env, [startUrl.toString()]).catch(()=>[]);
+    const raw = (extracted[0]?.rawContent ?? "").replace(/\s+/g, " ").trim();
+    if (raw.length < 200) {
+      throw new StepFailure(`This site blocks automated visitors (it answered HTTP ${status}), so Olmene couldn't read it. Failed analyses don't count against your plan — try another page of your site, or allow OlmeneBot.`);
+    }
+    return {
+      output: {
+        pages: [{ url: startUrl.toString(), title: "", text: raw.slice(0, 12000) }],
+        seoSignals: blockedSignals(startUrl.toString(), status),
+        usedFallbackExtract: true,
+        blockedStatus: status,
+        hero: { h1Issue: null, h1: null, sub: null, cta: null, skippedReason: `the site blocked our crawler (HTTP ${status})` }
+      },
+      models: []
+    };
+  }
   const summary = extractPageSummary(home.html, home.url, 12000);
   let pages = [
     {
@@ -2959,6 +3202,9 @@ async function runCrawl(job, supabase, env) {
     // Social proof sits below the fold; read the whole page text.
     maxText: 300000
   });
+  // A JavaScript shell: content facts (H1, CTAs, trust, words) describe the
+  // shell, not what visitors see — the audit prompt says so.
+  if (usedFallbackExtract) seoSignals.renderedByJs = true;
   // Conversion Git Diff §1: extract hero elements while raw HTML is in hand.
   // On JS-rendered sites (Tavily fallback) the markup is not real DOM — flag it.
   const hero = extractHero(home.html);
@@ -3194,7 +3440,7 @@ async function runProfile(job, supabase, env, crawl) {
   const input = safeInput(job);
   const models = [];
   const data = await llm(supabase, env, "profile", ProductProfile, profilePrompt(input, crawl.pages), input.language, models);
-  return data;
+  return { profile: data, models };
 }
 async function runCompetitorsAnalyze(job, supabase, env, profile, pages, research) {
   const input = safeInput(job);
@@ -3376,6 +3622,15 @@ async function executeOneUnit(supabase, env, job) {
     GLM_API_KEY: env.GLM_API_KEY,
     GLM_DAILY_CAP: env.GLM_DAILY_CAP,
     GEMINI_API_KEY: env.GEMINI_API_KEY,
+    GROQ_API_KEY: env.GROQ_API_KEY,
+    CEREBRAS_API_KEY: env.CEREBRAS_API_KEY,
+    MISTRAL_API_KEY: env.MISTRAL_API_KEY,
+    OPENROUTER_API_KEY: env.OPENROUTER_API_KEY,
+    VERTEX_API_KEY: env.VERTEX_API_KEY,
+    VERTEX_PROJECT: env.VERTEX_PROJECT,
+    VERTEX_LOCATION: env.VERTEX_LOCATION,
+    EXA_API_KEY: env.EXA_API_KEY,
+    EXA_MONTHLY_CAP: env.EXA_MONTHLY_CAP,
     TAVILY_API_KEY: env.TAVILY_API_KEY,
     TAVILY_MONTHLY_CAP: env.TAVILY_MONTHLY_CAP,
     APP_URL: env.APP_URL,
@@ -3459,10 +3714,10 @@ async function runStep(supabase, stepEnv, job, step) {
     case "profile":
       {
         const crawl = o.crawl;
-        const profile = await runProfile(job, supabase, stepEnv, crawl);
+        const { profile, models } = await runProfile(job, supabase, stepEnv, crawl);
         return {
           output: profile,
-          models: []
+          models
         };
       }
     case "research":
@@ -3576,6 +3831,22 @@ async function handleStepError(supabase, job, step, stepLog, err) {
       status: "queued",
       currentStep: step,
       waitReason: "llm_daily_budget"
+    };
+  }
+  if (err instanceof BudgetExhaustedError && err.kind === "llm_busy") {
+    // Every configured model is resting (free-tier quotas): resume at the
+    // first reset instead of failing the report.
+    const retryAt = err.retryAt instanceof Date ? err.retryAt : new Date(Date.now() + 15 * 60_000);
+    await supabase.from("analysis_jobs").update({
+      status: "queued",
+      wait_reason: "llm_busy",
+      locked_until: retryAt.toISOString(),
+      step_log: stepLog
+    }).eq("id", job.id);
+    return {
+      status: "queued",
+      currentStep: step,
+      waitReason: "llm_busy"
     };
   }
   if (err instanceof BudgetExhaustedError && err.kind === "tavily_monthly") {

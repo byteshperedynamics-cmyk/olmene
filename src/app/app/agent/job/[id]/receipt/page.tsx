@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, Copy, Printer } from "lucide-react";
@@ -30,13 +31,13 @@ export default function ReceiptPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 print:max-w-none">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Button asChild variant="ghost" size="sm">
           <Link href={`/app/agent/job/${id}`}>
             <ArrowLeft className="mr-1 size-4" aria-hidden /> Back to job
           </Link>
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -69,7 +70,28 @@ export default function ReceiptPage({ params }: { params: Promise<{ id: string }
             <CardTitle className="text-base">Receipt</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">{content}</pre>
+            <div className="receipt-md break-words text-sm leading-relaxed">
+              {/* Markdown is rendered, never raw HTML (react-markdown ignores HTML by default). */}
+              <ReactMarkdown
+                components={{
+                  h1: ({ children }) => <h1 className="mb-3 font-display text-xl font-semibold">{children}</h1>,
+                  h2: ({ children }) => <h2 className="mb-2 mt-6 text-base font-semibold">{children}</h2>,
+                  h3: ({ children }) => <h3 className="mb-1 mt-4 font-mono text-[13px] font-semibold">{children}</h3>,
+                  p: ({ children }) => <p className="my-2">{children}</p>,
+                  ul: ({ children }) => <ul className="my-2 list-disc space-y-1 ps-5">{children}</ul>,
+                  ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 ps-5">{children}</ol>,
+                  a: ({ children, href }) => (
+                    <a href={href} target="_blank" rel="noreferrer" className="font-medium underline underline-offset-2">
+                      {children}
+                    </a>
+                  ),
+                  code: ({ children }) => <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">{children}</code>,
+                  em: ({ children }) => <em className="text-muted-foreground">{children}</em>,
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            </div>
           </CardContent>
         </Card>
       )}

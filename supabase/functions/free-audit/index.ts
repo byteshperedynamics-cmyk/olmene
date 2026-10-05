@@ -55,7 +55,7 @@ function ipv4BadReason(parts: number[]): string | null {
 function hostnameUnsafeReason(hostname: string): string | null {
   const host = hostname.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
   if (!host) return "empty hostname";
-  if (host.includes(":")) return null; // IPv6 literal — rare; DNS check still applies
+  if (host.includes(":")) return "IPv6 literal addresses are not scanned";
   const labels = host.split(".");
   if (labels.length < 2) return `dotless hostname '${host}'`;
   for (const label of labels) {
@@ -89,19 +89,77 @@ function normalizeSiteUrl(raw: string): URL | null {
   url.search = "";
   return url;
 }
+function ipv6BadReason(ip: string): string | null {
+  const a = ip.toLowerCase();
+  if (a === "::" || a === "::1") return "loopback/unspecified";
+  if (/^f[cd][0-9a-f]{2}:/.test(a)) return "unique-local range";
+  if (/^fe[89ab][0-9a-f]:/.test(a)) return "link-local range";
+  const mapped = a.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (mapped) {
+    const v4 = parseIPv4(mapped[1]);
+    if (v4 && ipv4BadReason(v4)) return "IPv4-mapped private address";
+  }
+  return null;
+}
+
+/** Thrown when a URL may not be fetched (private/local/odd target). */
+class TargetRejected extends Error {}
+
 async function assertDnsSafe(hostname: string): Promise<void> {
   const resolveDns = (globalThis as { Deno?: { resolveDns?: (n: string, t: string) => Promise<string[]> } }).Deno?.resolveDns;
   if (typeof resolveDns !== "function") return;
   const isV6 = hostname.includes(":");
   const answers = await resolveDns(hostname, isV6 ? "AAAA" : "A").catch(() => [] as string[]);
   const both = answers.length ? answers : await resolveDns(hostname, isV6 ? "A" : "AAAA").catch(() => [] as string[]);
+  // Fail closed: a name that does not resolve is never fetched.
+  if (both.length === 0) throw new TargetRejected(`could not resolve ${hostname}`);
   for (const raw of both) {
     const ip = raw.replace(/^\[|\]$/g, "");
     const v4 = parseIPv4(ip);
-    if (v4) {
-      const reason = ipv4BadReason(v4);
-      if (reason) throw new Error(`resolved to private address ${ip}`);
+    const reason = v4 ? ipv4BadReason(v4) : ip.includes(":") ? ipv6BadReason(ip) : null;
+    if (reason) throw new TargetRejected(`resolved to a ${reason} address`);
+  }
+}
+
+/** Every outbound URL — the page, robots.txt, sitemaps, favicon, each redirect hop. */
+async function assertSafeTarget(url: URL): Promise<void> {
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new TargetRejected("only http(s) URLs are scanned");
+  if (url.username || url.password) throw new TargetRejected("URLs with credentials are not scanned");
+  const reason = hostnameUnsafeReason(url.hostname);
+  if (reason) throw new TargetRejected(reason);
+  if (url.port && !ALLOWED_PORTS.has(Number(url.port))) throw new TargetRejected(`port ${url.port} is not scanned`);
+  await assertDnsSafe(url.hostname);
+}
+
+/** fetch with manual, validated redirects (max 3 hops). */
+async function safeFetch(start: URL, init: RequestInit, timeoutMs: number): Promise<{ res: Response; url: URL }> {
+  let current = start;
+  for (let hop = 0; hop <= 3; hop++) {
+    await assertSafeTarget(current);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let res: Response;
+    try {
+      res = await fetch(current.toString(), { ...init, redirect: "manual", signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
     }
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      await res.body?.cancel().catch(() => {});
+      if (!location) throw new ScanError("unreachable", "redirect without a location");
+      current = new URL(location, current);
+      continue;
+    }
+    return { res, url: current };
+  }
+  throw new ScanError("too_many_redirects", "too many redirects (max 3)");
+}
+
+/** Typed scan failures — the handler turns them into honest, user-facing messages. */
+class ScanError extends Error {
+  constructor(public code: "blocked" | "not_found" | "http_error" | "unreachable" | "timeout" | "not_html" | "too_many_redirects", message: string, public status?: number) {
+    super(message);
   }
 }
 
@@ -115,80 +173,69 @@ const USER_AGENT = "Mozilla/5.0 (compatible; OlmeneBot/1.0; +https://olmene.com)
 const MAX_BYTES = 4 * 1024 * 1024;
 
 async function fetchPage(rawUrl: URL, timeoutMs = 10_000): Promise<{ url: string; html: string }> {
-  let current = rawUrl;
-  await assertDnsSafe(current.hostname);
-  for (let hop = 0; hop <= 3; hop++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    let res: Response;
-    try {
-      res = await fetch(current.toString(), {
-        redirect: "manual",
-        signal: controller.signal,
-        cache: "no-store", // an audit must read the page as it is right now — never a cached copy
-        headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml", "Accept-Language": "en" },
-      });
-    } catch (e) {
-      clearTimeout(timer);
-      throw new Error(`fetch failed: ${(e as Error).message}`);
+  let fetched: { res: Response; url: URL };
+  try {
+    fetched = await safeFetch(rawUrl, {
+      cache: "no-store", // an audit must read the page as it is right now — never a cached copy
+      headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml", "Accept-Language": "en" },
+    }, timeoutMs);
+  } catch (e) {
+    if (e instanceof TargetRejected || e instanceof ScanError) throw e;
+    const name = (e as Error)?.name ?? "";
+    if (name === "AbortError" || /abort|timed? ?out/i.test(String((e as Error)?.message))) throw new ScanError("timeout", "timed out");
+    throw new ScanError("unreachable", "connection failed");
+  }
+  const { res, url } = fetched;
+  if (!res.ok) {
+    await res.body?.cancel().catch(() => {});
+    if (res.status === 401 || res.status === 403 || res.status === 429 || res.status === 503) {
+      throw new ScanError("blocked", `HTTP ${res.status}`, res.status);
     }
-    clearTimeout(timer);
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get("location");
-      if (!location) throw new Error("redirect without location");
-      if (hop === 3) throw new Error("too many redirects (max 3)");
-      const next = new URL(location, current);
-      const reason = hostnameUnsafeReason(next.hostname);
-      if (reason) throw new Error(`redirect target rejected: ${reason}`);
-      if (next.port && !ALLOWED_PORTS.has(Number(next.port))) throw new Error("redirect to bad port");
-      await assertDnsSafe(next.hostname);
-      current = next;
-      continue;
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const contentType = res.headers.get("content-type") ?? "";
-    if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
-      throw new Error(`content-type '${contentType}' is not HTML`);
-    }
-    const reader = res.body?.getReader();
-    if (!reader) throw new Error("empty body");
-    const chunks: Uint8Array[] = [];
-    let received = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        chunks.push(value);
-        received += value.byteLength;
-        if (received >= MAX_BYTES) {
-          await reader.cancel().catch(() => {});
-          break; // truncate: the audit reads head + the first MAX_BYTES of the page
-        }
+    if (res.status === 404 || res.status === 410) throw new ScanError("not_found", `HTTP ${res.status}`, res.status);
+    throw new ScanError("http_error", `HTTP ${res.status}`, res.status);
+  }
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
+    await res.body?.cancel().catch(() => {});
+    throw new ScanError("not_html", contentType.split(";")[0] || "unknown type");
+  }
+  const reader = res.body?.getReader();
+  if (!reader) throw new ScanError("unreachable", "empty body");
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      const room = MAX_BYTES - received;
+      const part = value.byteLength > room ? value.slice(0, room) : value; // keep what fits, even from one huge chunk
+      chunks.push(part);
+      received += part.byteLength;
+      if (received >= MAX_BYTES) {
+        await reader.cancel().catch(() => {});
+        break; // truncate: the audit reads head + the first MAX_BYTES of the page
       }
     }
-    const total = chunks.reduce((n, c) => n + c.byteLength, 0);
-    const out = new Uint8Array(total);
-    let offset = 0;
-    for (const c of chunks) {
-      out.set(c, offset);
-      offset += c.byteLength;
-    }
-    return { url: current.toString(), html: new TextDecoder("utf-8", { fatal: false }).decode(out) };
   }
-  throw new Error("unreachable");
+  const out = new Uint8Array(received);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return { url: url.toString(), html: new TextDecoder("utf-8", { fatal: false }).decode(out) };
 }
 
 async function fetchText(url: string, timeoutMs = 5000): Promise<string | null> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { method: "GET", signal: controller.signal, cache: "no-store", headers: { "User-Agent": USER_AGENT } });
-    if (!res.ok) return null;
+    const { res } = await safeFetch(new URL(url), { method: "GET", cache: "no-store", headers: { "User-Agent": USER_AGENT } }, timeoutMs);
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return null;
+    }
     return (await res.text()).slice(0, 200_000);
   } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -212,15 +259,13 @@ async function discoverCrawlFiles(origin: string): Promise<{ robotsTxtOk: boolea
 }
 
 async function probeOk(url: string, timeoutMs = 5000): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { method: "GET", signal: controller.signal, cache: "no-store", headers: { "User-Agent": USER_AGENT } });
+    // Sitemap URLs come from robots.txt and can point anywhere: same guard as the page.
+    const { res } = await safeFetch(new URL(url), { method: "GET", cache: "no-store", headers: { "User-Agent": USER_AGENT } }, timeoutMs);
+    await res.body?.cancel().catch(() => {});
     return res.ok;
   } catch {
     return false;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -241,7 +286,12 @@ const CTA_PATTERN = new RegExp(
     "s[’']abonner", "s[’']inscrire", "essayer", "commencer", "acheter", "commander", "réserver", "nous contacter", "créer un compte",
     "comprar", "empezar", "empieza", "prueba(?:lo)? gratis", "regístrate", "suscríbete", "reservar", "contactar",
     "começar", "experimente", "assine", "inscreva-se", "acquista", "inizia", "prova gratis", "iscriviti", "abbonati",
-    "εγγραφή", "αγορά", "ξεκινήστε", "δοκιμάστε",
+    "εγγραφή", "αγορά", "ξεκινήστε", "δοκιμάστε", "κάντε κράτηση",
+    // Booking intents (local services, marketplaces)
+    "book now", "book (?:an |a )?(?:appointment|table|consultation)", "prendre rendez-vous", "termin (?:buchen|vereinbaren)", "pedir cita", "reservar cita", "prenota(?: ora)?",
+    // Dutch, Polish, Turkish
+    "probeer (?:het )?gratis", "aanmelden", "bestel(?:len)?", "kopen", "zarejestruj(?: się)?", "wypróbuj", "kup(?: teraz)?", "ücretsiz dene", "kaydol", "satın al",
+    "essai gratuit", "empieza gratis", "comienza gratis", "agendar", "teste grátis",
   ].join("|") + ")(?![\\p{L}\\p{N}])",
   "iu",
 );
@@ -267,6 +317,15 @@ const TRUST_PATTERNS: Array<[string, RegExp]> = [
   ["customer count", /\b\d[\d,.]*\s?(?:k|m|million|thousand)?\+?\s(?:teams|companies|customers|users|businesses|creators|developers|organi[sz]ations|brands|merchants|writers|entrepreneurs|clients|members|subscribers)\b/],
   ["review sites", /\b(?:g2|capterra|trustpilot|product hunt|app store rating)\b/],
   ["easy returns", /\bfree (?:returns|shipping|delivery)\b|\b\d+[- ]day (?:returns|money[- ]back|free trial)\b/],
+  ["test winner", /\btest winner\b|\bbest (?:rated|reviewed)\b|\baward[- ]winning\b/],
+  ["awards", /\beditor['’]s choice\b|\bapp of the (?:year|day)\b|\bdesign awards?\b|\bwinner of\b/],
+  // Non-English proof (word-bounded on letters in any script)
+  ["reviews", /(?<![\p{L}\p{N}])(?:kundenstimmen|bewertungen|erfahrungsberichte|opiniones|reseñas|valoraciones|testimonios|avis clients|témoignages|recensioni|testimonianze|depoimentos|avaliações|beoordelingen|klantervaringen|opinie klientów|κριτικές|μαρτυρίες|yorumlar|отзывы)(?![\p{L}\p{N}])/u],
+  ["test winner", /(?<![\p{L}\p{N}])(?:testsieger|stiftung warentest|ganador de la prueba)(?![\p{L}\p{N}])/u],
+  ["trusted by", /(?<![\p{L}\p{N}])(?:kunden vertrauen|vertrauen uns|confían en|ils nous font confiance|font confiance à|si fidano di|confiam (?:na|em)|vertrouwen ons|μας εμπιστεύονται)(?![\p{L}\p{N}])/u],
+  ["case studies", /(?<![\p{L}\p{N}])(?:fallstudien|referenzen|casos de éxito|études de cas|casi di successo|casos de sucesso|klantverhalen)(?![\p{L}\p{N}])/u],
+  ["guarantee", /(?<![\p{L}\p{N}])(?:geld-zurück-garantie|garantía|satisfait ou remboursé|garanzia|garantia|εγγύηση)(?![\p{L}\p{N}])/u],
+  ["customer count", /\b\d[\d.,]*\s?(?:k|mil|tsd\.?|millionen|millones|millions?)?\+?\s(?:kunden|unternehmen|clientes|empresas|clients|entreprises|clienti|aziende|klanten|πελάτες)(?![\p{L}\p{N}])/u],
 ];
 // Negation anywhere earlier in the same sentence ("no visible testimonials,
 // logos, or case studies" negates all three).
@@ -275,12 +334,12 @@ const NEGATION = /\b(?:no|without|zero|lacks?|lack of|missing|not yet any|none)\
 function findTrustSignals(lowText: string): string[] {
   const found: string[] = [];
   for (const [label, re] of TRUST_PATTERNS) {
-    const g = new RegExp(re.source, "g");
+    const g = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
     let m: RegExpExecArray | null;
     while ((m = g.exec(lowText))) {
       const ctx = lowText.slice(Math.max(0, m.index - 80), m.index);
       const sentence = ctx.slice(Math.max(ctx.lastIndexOf(". "), ctx.lastIndexOf("! "), ctx.lastIndexOf("? ")) + 1);
-      if (!NEGATION.test(sentence)) { found.push(label); break; }
+      if (!NEGATION.test(sentence)) { if (!found.includes(label)) found.push(label); break; }
     }
   }
   return found;
@@ -307,8 +366,14 @@ interface Signals {
   twitterCard: boolean; jsonLdTypes: string[];
   imagesWithoutAlt: number; imagesTotal: number; internalLinks: number; externalLinks: number;
   wordCount: number; hasPricingPage: boolean; ctaButtons: string[]; trustSignals: string[];
+  /** How pricing was found: a pricing link, prices on the homepage, or an online store's product prices. */
+  pricingEvidence: "link" | "homepage" | "store" | null; isStore: boolean;
   robotsMeta: string | null; robotsTxtOk: boolean; sitemapXmlOk: boolean; sitemapUrl: string | null; checklist: Check[];
 }
+
+// Pricing links in the languages Olmene serves (href or link text).
+const PRICING_HREF = /pric|plans?\b|preis|tarif|precio|prezz|pre[cç]o|prijs|priser|hinnat|cennik|cenik|fiyat|τιμ|цен|тариф|料金|価格|价格|定价|요금|harga|qiymet/;
+const PRICING_TEXT = /(?<![\p{L}\p{N}])(?:pricing|prices|plans(?: (?:&|and) pricing)?|preise|tarife|tarifs|prix|precios|tarifas|planes|prezzi|piani|preços|planos|prijzen|priser|hinnat|cennik|ceny|fiyatlar|fiyatlandırma|τιμές|τιμολόγηση|цены|тарифы|料金|価格|价格|定价|요금제|harga)(?![\p{L}\p{N}])/u;
 
 function computeSeoSignals(
   html: string,
@@ -335,7 +400,16 @@ function computeSeoSignals(
     }
   });
   // Structural social proof, counted before stripping: quote blocks and logo walls.
-  const quoteBlocks = $("blockquote, [class*=testimonial], [class*=Testimonial]").length;
+  // Quote markup always counts; class-name matches ("quote", "review-card"…)
+  // need real text so a "quote-button" or empty widget shell does not.
+  const quoteBlocks = $("blockquote, q").length +
+    $("[class*=testimonial], [class*=Testimonial], [class*=review-card], [class*=ReviewCard], [class*=quote], [class*=Quote], [class*=kudos]")
+      .not("blockquote, q")
+      .filter((_, el) => !$(el).find("blockquote, q").length && $(el).text().replace(/\s+/g, " ").trim().length >= 40).length;
+  // Online-store markers (platform code + product structured data). Stores show
+  // prices on products, so "no pricing page" is not a finding for them.
+  const rawLow = html.slice(0, 2_000_000).toLowerCase();
+  const storePlatform = /cdn\.shopify\.com|window\.shopify|shopify\.theme|woocommerce|wc-add-to-cart|bigcommerce|magento|prestashop|shopware|ecwid|squarespace-commerce/.test(rawLow);
   const logoImages = $("img").filter((_, el) => /\blogo\b/i.test($(el).attr("alt") ?? "")).length;
   $("script, style, noscript, svg, iframe, template").remove();
   const titleText = ($("title").first().text() || "").trim();
@@ -373,12 +447,13 @@ function computeSeoSignals(
   });
   let pageOrigin = "";
   try { pageOrigin = new URL(pageUrl).origin; } catch { /* ignore */ }
-  let internalLinks = 0, externalLinks = 0, hasPricingPage = false;
+  let internalLinks = 0, externalLinks = 0, hasPricingPage = false, productLinks = 0;
   $("a[href]").each((_, el) => {
     const href = $(el).attr("href");
     if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) return;
     const low = href.toLowerCase();
-    if (/pricing|plans|preis|tarif|tarife|cennik|preços|precos/.test(low) || /pricing|plans/.test($(el).text().toLowerCase())) hasPricingPage = true;
+    if (PRICING_HREF.test(low) || PRICING_TEXT.test(spacedText($, el).toLowerCase())) hasPricingPage = true;
+    if (/\/(?:products?|collections|shop|store|p)\/[^/?#]+/.test(low)) productLinks++;
     try {
       const u = new URL(href, pageUrl);
       if (u.origin === pageOrigin) internalLinks++;
@@ -410,8 +485,21 @@ function computeSeoSignals(
     if (CTA_PATTERN.test(t)) addCta(t);
   });
   const lowText = text.toLowerCase();
+  // Prices in the page text: "$20.00", "€49 / month", "12,90 €", "USD 15".
+  const priceMatches = lowText.match(/(?:[$€£¥₹]\s?\d{1,5}(?:[.,]\d{2})?|\d{1,5}(?:[.,]\d{2})?\s?(?:€|£|zł|kr|usd|eur|gbp)\b|\b(?:usd|eur|gbp)\s?\d{1,5})/g) ?? [];
+  const pricePerPeriod = /(?:[$€£]\s?\d[\d.,]*|\d[\d.,]*\s?(?:€|£|usd|eur))\s?(?:\/|per|a|pro|al|par|por|al mese|\/ ?mo)\s?(?:month|mo|year|yr|monat|jahr|mes|año|mois|an|mese|anno|mês|ano|user|seat)\b/.test(lowText);
+  const cartLike = /add to (?:cart|bag)|in den warenkorb|añadir al carrito|ajouter au panier|aggiungi al carrello|adicionar ao carrinho|in winkelwagen/.test(lowText);
+  const productSchema = jsonLdTypes.some((t) => /^(?:Product|Offer|AggregateOffer|OnlineStore|Store|ProductGroup)$/i.test(t));
+  const isStore = storePlatform || productSchema || (priceMatches.length >= 4 && (cartLike || productLinks >= 3)) || priceMatches.length >= 10;
+  const pricingEvidence: "link" | "homepage" | "store" | null = hasPricingPage ? "link" : isStore && priceMatches.length > 0 ? "store" : pricePerPeriod ? "homepage" : null;
+  if (pricingEvidence) hasPricingPage = true;
+  if (ctaButtons.length === 0 && isStore && productLinks >= 3) addCta("Product links");
   const trustSignals = findTrustSignals(lowText);
-  if (quoteBlocks >= 2) trustSignals.push("customer quotes");
+  // Testimonials without quote markup: a quoted sentence right before a person's
+  // name ("…shift to Buttondown." Jeremy Singer-Vine). Two or more count.
+  const attributedQuotes = (text.match(/["“„«]([^"“”„«»]{30,400})["”“»]\s*[—–-]?\s*\p{Lu}[\p{Ll}'’]+(?:[ -]\p{Lu}[\p{Ll}'’]+){1,3}/gu) ?? [])
+    .filter((q) => q.split(/\s+/).length >= 8).length;
+  if ((quoteBlocks >= 2 || attributedQuotes >= 2) && !trustSignals.includes("customer quotes")) trustSignals.push("customer quotes");
   if (logoImages >= 5) trustSignals.push("customer logos");
   const robotsMeta = $('meta[name="robots"]').attr("content")?.trim() || null;
 
@@ -421,7 +509,7 @@ function computeSeoSignals(
     h1Count: h1s.length, h1Texts: h1s.slice(0, 5), headingOutline,
     canonical, lang, viewport, openGraph, ogImage, favicon, https, twitterCard, jsonLdTypes,
     imagesWithoutAlt, imagesTotal, internalLinks, externalLinks, wordCount,
-    hasPricingPage, ctaButtons, trustSignals, robotsMeta,
+    hasPricingPage, pricingEvidence, isStore, ctaButtons, trustSignals, robotsMeta,
     robotsTxtOk: extras.robotsTxtOk, sitemapXmlOk: extras.sitemapXmlOk, sitemapUrl: extras.sitemapUrl ?? null,
     checklist: [] as Check[],
   };
@@ -451,7 +539,10 @@ function buildChecklist(s: Omit<Signals, "checklist">): Check[] {
   push("Image alt coverage", s.imagesTotal === 0 ? "warn" : s.imagesWithoutAlt / s.imagesTotal <= 0.1 ? "pass" : s.imagesWithoutAlt / s.imagesTotal <= 0.5 ? "warn" : "fail",
     s.imagesTotal === 0 ? "No images found on the homepage" : `${s.imagesWithoutAlt} of ${s.imagesTotal} images have no alt attribute (alt="" for decorative images is fine)`);
   push("Content depth", s.wordCount >= 300 ? "pass" : s.wordCount >= 100 ? "warn" : "fail", `~${s.wordCount} words of body text (aim for 300+)`);
-  push("Pricing page", s.hasPricingPage ? "pass" : "warn", s.hasPricingPage ? "Pricing page linked from the homepage" : "No pricing link found on the homepage");
+  push("Pricing page", s.hasPricingPage ? "pass" : "warn",
+    s.pricingEvidence === "store" ? "Online store: prices are shown on the products"
+      : s.pricingEvidence === "homepage" ? "Prices are shown on the homepage"
+      : s.hasPricingPage ? "Pricing page linked from the homepage" : "No pricing link or prices found on the homepage");
   push("Call-to-action", s.ctaButtons.length ? "pass" : "fail", s.ctaButtons.length ? `Found: ${s.ctaButtons.slice(0, 4).join(" | ")}` : "No clear CTA button/link detected");
   push("Trust signals", s.trustSignals.length >= 2 ? "pass" : s.trustSignals.length === 1 ? "warn" : "fail",
     s.trustSignals.length ? `Found: ${s.trustSignals.slice(0, 4).join(", ")}` : "No testimonials/reviews/guarantees detected");
@@ -485,7 +576,7 @@ function buildFindings(s: Signals): Finding[] {
   if (s.h1Count === 0) f.push({ title: "Your homepage has no H1 headline", severity: "high", evidence: "No <h1> element found in your homepage HTML.", whatToChange: "Add one clear H1 that states what you sell and for whom \u2014 search engines and visitors read it first." });
   else if (s.h1Texts[0] && s.h1Texts[0].length < 12 && s.wordCount > 50) f.push({ title: "Your H1 headline is too vague", severity: "medium", evidence: `Your H1 reads \u201c${s.h1Texts[0]}\u201d \u2014 it names the object, not the buyer or the outcome.`, whatToChange: "Rewrite the H1 around the customer outcome (\u201cwhat changes for me if I buy\u201d), not the product category." });
   if (s.ctaButtons.length === 0) f.push({ title: "No clear call-to-action on the homepage", severity: "critical", evidence: "No button or link with a purchase/start intent was detected in your HTML.", whatToChange: "Add one primary CTA above the fold \u2014 a single, specific next step for the visitor." });
-  if (!s.hasPricingPage) f.push({ title: "Pricing is hidden from the homepage", severity: "high", evidence: "No link containing \u201cpricing\u201d/\u201cplans\u201d was found on your homepage.", whatToChange: "Link your pricing page from the header or hero \u2014 hidden pricing is one of the top reasons qualified visitors leave." });
+  if (!s.hasPricingPage) f.push({ title: "Pricing is hidden from the homepage", severity: "high", evidence: "No pricing link and no prices were found on your homepage.", whatToChange: "Link your pricing page from the header or hero \u2014 hidden pricing is one of the top reasons qualified visitors leave." });
   if (s.trustSignals.length === 0) f.push({ title: "No visible trust signals", severity: "high", evidence: "No testimonials, reviews, guarantees or customer references were detected on the homepage.", whatToChange: "Add a short proof strip under the hero: 2\u20133 customer quotes, a rating, or recognizable logos." });
   else if (s.trustSignals.length === 1) f.push({ title: "Thin trust signals", severity: "medium", evidence: `Only one trust signal found (${s.trustSignals[0]}).`, whatToChange: "Combine reviews, a guarantee and named customers \u2014 one signal alone rarely convinces." });
   if (s.metaDescription === null) f.push({ title: "Missing meta description", severity: "medium", evidence: "Your homepage has no meta description \u2014 search engines improvise your snippet.", whatToChange: "Write a 120\u2013160 character description with your value proposition and a reason to click." });
@@ -538,6 +629,36 @@ function subScores(s: Signals) {
   return { overall, seo, messaging, conversion };
 }
 
+// ─── Failure messages (stable codes for the UI; never internal details) ──
+function scanFailure(e: unknown): { code: string; message: string; status?: number } {
+  if (e instanceof TargetRejected) {
+    return { code: "forbidden_target", message: "That address can't be scanned. Olmene only reads public websites." };
+  }
+  if (e instanceof ScanError) {
+    switch (e.code) {
+      case "blocked":
+        return {
+          code: "site_blocked",
+          status: e.status,
+          message: `This site blocks automated visitors (it answered HTTP ${e.status}), so Olmene couldn't read it. Your URL is fine; the site's bot protection stopped the scan.`,
+        };
+      case "not_found":
+        return { code: "site_not_found", status: e.status, message: `That page doesn't exist (HTTP ${e.status}). Check the URL.` };
+      case "http_error":
+        return { code: "site_error", status: e.status, message: `The site answered with an error (HTTP ${e.status}). Try again in a moment.` };
+      case "timeout":
+        return { code: "timeout", message: "The site took longer than 10 seconds to respond. Try again in a moment." };
+      case "not_html":
+        return { code: "not_html", message: `That URL isn't a web page (it returned ${e.message}). Enter your homepage address.` };
+      case "too_many_redirects":
+        return { code: "too_many_redirects", message: "That URL redirects too many times. Enter the final address of your homepage." };
+      default:
+        return { code: "unreachable", message: "We couldn't reach that site. Check the URL and that the site is online." };
+    }
+  }
+  return { code: "fetch_failed", message: "We couldn't read that site. Check the URL and try again." };
+}
+
 // ─── Main ────────────────────────────────────────────────────────────────
 const RATE_LIMIT = 8; // per IP per hour
 const supabase = () =>
@@ -579,7 +700,7 @@ Deno.serve(async (req) => {
   try {
     home = await fetchPage(url);
   } catch (e) {
-    return json({ error: { code: "fetch_failed", message: `We couldn't read that site (${(e as Error).message}). Check the URL and try again.` } }, 422, cors);
+    return json({ error: scanFailure(e) }, 422, cors);
   }
 
   const origin = new URL(home.url).origin;

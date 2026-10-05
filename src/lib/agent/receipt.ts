@@ -67,7 +67,7 @@ export async function buildReceipt(
     `## How to undo`,
     ``,
     `1. **Before merging:** close pull request #${ctx.prNumber}. Nothing else needed — your default branch was never touched.`,
-    `2. **After merging:** run \`git revert\` on the merge/revert via GitHub's *Revert* button on the PR, which creates an inverse pull request.`,
+    `2. **After merging:** click *Revert* on the pull request in GitHub (it opens an inverse pull request), or run \`git revert\` on the merge commit.`,
     ``,
     `## What Olmene could and could not do`,
     ``,

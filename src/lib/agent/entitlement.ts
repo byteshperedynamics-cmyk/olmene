@@ -42,7 +42,7 @@ export async function checkApplyEntitlement(db: SupabaseClient, userId: string):
     return {
       allowed: false,
       code: "plan_required",
-      message: "Applying fixes requires a subscription (Starter or Pro). Your plan and previews are free.",
+      message: "Applying fixes requires a paid plan that includes fixes. Plans and previews stay free.",
       limit: 0,
       used: 0,
       remaining: 0,
@@ -61,7 +61,7 @@ export async function checkApplyEntitlement(db: SupabaseClient, userId: string):
     return {
       allowed: false,
       code: "plan_required",
-      message: "Your current plan includes reports but not fix applications. Upgrade to Starter or Pro to apply.",
+      message: "Your current plan includes reports but not fixes. Switch to a plan that includes fixes to apply them.",
       planName: plan?.name ?? null,
       limit: 0,
       used: 0,

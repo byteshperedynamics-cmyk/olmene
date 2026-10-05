@@ -78,7 +78,7 @@ async function step(name: string, fn: () => Promise<{ output: unknown; models?: 
 const t0 = Date.now();
 try {
   await step("crawl", () => E.runCrawl(job, supabase, env));
-  await step("profile", async () => ({ output: await E.runProfile(job, supabase, env, o.crawl), models: [] }));
+  await step("profile", async () => { const r = await E.runProfile(job, supabase, env, o.crawl); return { output: r.profile, models: r.models }; });
   await step("research", () => E.runResearch(job, supabase, env, o.profile));
   await step("competitors_pick", async () => (await E.runCompetitorsPick(job, supabase, env, o.profile, o.research)).outcome);
   await step("competitors_extract", () => E.runCompetitorsExtract(job, supabase, env, o.competitors_pick));

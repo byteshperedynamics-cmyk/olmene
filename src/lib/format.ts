@@ -187,7 +187,7 @@ export function reportToMarkdown(r: ReportData): string {
       L.push(`${i + 1}. **${a.title}**`);
       L.push(`   - Why: ${a.why}`);
       L.push(`   - How: ${a.how}`);
-      L.push(`   - Effort: ${a.effort} · Impact: ${a.impact} · KPI: ${a.kpi}${a.dependsOn ? ` · Depends on: ${a.dependsOn}` : ""}`);
+      L.push(`   - Effort: ${a.effort} · Impact: ${a.impact} · KPI: ${a.kpi}${realDependency(a.dependsOn) ? ` · Depends on: ${a.dependsOn}` : ""}`);
     });
     L.push("");
   };
@@ -221,7 +221,7 @@ export function buildActionPlan(r: ReportData): string {
   const section = (title: string, items: ReportData["roadmap"]["quickWins"]) => {
     L.push(`${title.toUpperCase()}`);
     items.forEach((a, i) =>
-      L.push(`${i + 1}. [${a.effort} effort / ${a.impact} impact] ${a.title} — KPI: ${a.kpi}${a.dependsOn ? ` (after: ${a.dependsOn})` : ""}`),
+      L.push(`${i + 1}. [${a.effort} effort / ${a.impact} impact] ${a.title} — KPI: ${a.kpi}${realDependency(a.dependsOn) ? ` (after: ${a.dependsOn})` : ""}`),
     );
     L.push("");
   };
@@ -230,4 +230,9 @@ export function buildActionPlan(r: ReportData): string {
   section("60 days", r.roadmap.days60 ?? []);
   section("90 days", r.roadmap.days90 ?? []);
   return L.join("\n").trim();
+}
+
+/** "None", "N/A" and friends are what models write for "no dependency". */
+export function realDependency(v: string | null | undefined): boolean {
+  return !!v && !/^(?:none|n\/?a|null|-|—|nothing|no dependenc(?:y|ies)|not applicable)\.?$/i.test(v.trim());
 }

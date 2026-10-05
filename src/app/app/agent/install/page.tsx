@@ -15,6 +15,7 @@ function InstallPageInner() {
   const [busy, setBusy] = useState(false);
   const [installations, setInstallations] = useState<Array<{ id: number; login: string; type: string }>>([]);
   const [loaded, setLoaded] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -22,7 +23,11 @@ function InstallPageInner() {
       try {
         const { fetchGithubInstallations } = await import("@/lib/agent-client");
         const res = await fetchGithubInstallations(state);
-        if (alive) setInstallations(res.installations);
+        if (alive) {
+          setInstallations(res.installations);
+          // One installation (the usual case): nothing to choose, pre-select it.
+          if (res.installations.length === 1) setPicked(res.installations[0].id);
+        }
       } catch {
         /* the card below explains the empty case */
       } finally {
@@ -37,13 +42,16 @@ function InstallPageInner() {
   async function link() {
     if (picked == null) return;
     setBusy(true);
+    setLinkError(null);
     try {
       const { linkGithubInstallation } = await import("@/lib/agent-client");
       const res = await linkGithubInstallation(state, picked);
       toast.success(`Connected to ${res.account} (${res.repos.length} repos).`);
       window.location.href = "/app/agent/?connected=1";
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not link that installation.");
+      const msg = e instanceof Error ? e.message : "Could not link that installation.";
+      toast.error(msg);
+      setLinkError(msg); // stays visible next to the button (a toast is easy to miss)
       setBusy(false);
     }
   }
@@ -98,6 +106,11 @@ function InstallPageInner() {
               <Link href="/app/agent/">Cancel</Link>
             </Button>
           </div>
+          {linkError && (
+            <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+              {linkError} Try again, or start over from the Fix runs page.
+            </p>
+          )}
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <HardDriveDownload className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             The app gets Contents + Pull requests (write) permission on the repositories you select during install —

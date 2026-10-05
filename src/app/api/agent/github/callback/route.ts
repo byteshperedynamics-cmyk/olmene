@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
-import { agentEnabled, appUrl, githubWebBase } from "@/lib/agent/env";
+import { agentEnabled, appUrl, githubApiBase, githubWebBase } from "@/lib/agent/env";
 import { ERR } from "@/lib/agent/http";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
 import { agentLog } from "@/lib/agent/redact";
@@ -64,7 +64,7 @@ export async function GET(req: Request) {
     const userToken = tokenBody.access_token;
 
     // 2. Which installations does THIS GitHub user actually have?
-    const instRes = await fetch("https://api.github.com/user/installations", {
+    const instRes = await fetch(`${githubApiBase()}/user/installations`, {
       headers: {
         Authorization: `Bearer ${userToken}`,
         Accept: "application/vnd.github+json",

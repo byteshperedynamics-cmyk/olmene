@@ -158,12 +158,92 @@ export function insertMetaDescription(html: string, description: string): string
 
 /** Insert <link rel="canonical"> into <head>. */
 export function insertCanonical(html: string, canonicalUrl: string): string | null {
+  return insertCanonicalTag(html, `<link rel="canonical" href="${escapeHtmlAttr(canonicalUrl)}">`);
+}
+
+/**
+ * Canonical for a shared Astro layout: built from each page's own path, so
+ * the layout never points every page at the homepage.
+ */
+export function insertAstroCanonical(html: string, siteUrl: string): string | null {
+  return insertCanonicalTag(html, `<link rel="canonical" href={new URL(Astro.url.pathname, ${JSON.stringify(siteUrl)})} />`);
+}
+
+function insertCanonicalTag(html: string, tag: string): string | null {
   if (/<link\s+[^>]*rel=["']canonical["']/i.test(html)) return null; // already present → skip
   const headOpen = html.search(/<head[^>]*>/i);
   if (headOpen < 0) return null;
   const insertAt = headOpen + html.slice(headOpen).search(/>/) + 1;
   const indent = headChildIndent(html);
-  return `${html.slice(0, insertAt)}\n${indent}<link rel="canonical" href="${escapeHtmlAttr(canonicalUrl)}">${html.slice(insertAt)}`;
+  return `${html.slice(0, insertAt)}\n${indent}${tag}${html.slice(insertAt)}`;
+}
+
+const VIEWPORT_CONTENT = "width=device-width, initial-scale=1";
+
+/**
+ * Insert <meta name="viewport"> right after <meta charset> (or first in <head>).
+ * Returns null when a viewport tag already exists or there is no <head>.
+ */
+export function insertViewport(html: string, selfClosing = false): string | null {
+  if (/<meta\s+[^>]*name=["']viewport["']/i.test(html)) return null;
+  const tag = `<meta name="viewport" content="${VIEWPORT_CONTENT}"${selfClosing ? " /" : ""}>`;
+  const charset = html.match(/<meta\s+[^>]*charset\s*=[^>]*>/i);
+  let insertAt: number;
+  if (charset && charset.index !== undefined) {
+    insertAt = charset.index + charset[0].length;
+  } else {
+    const headOpen = html.search(/<head[^>]*>/i);
+    if (headOpen < 0) return null;
+    insertAt = headOpen + html.slice(headOpen).search(/>/) + 1;
+  }
+  return `${html.slice(0, insertAt)}\n${headChildIndent(html)}${tag}${html.slice(insertAt)}`;
+}
+
+/** Decode the few entities that appear in titles/attributes, so values are not escaped twice. */
+export function decodeBasicEntities(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*39;|&#x0*27;|&apos;/gi, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+export interface MetaTagSpec {
+  attr: "property" | "name";
+  key: string;
+  content: string;
+}
+
+/**
+ * Insert the <meta property|name="key"> tags that are not already in <head>,
+ * just before </head>. Existing tags are never changed. Returns null when
+ * there is no </head>.
+ */
+export function insertMetaTags(
+  html: string,
+  specs: MetaTagSpec[],
+  selfClosing = false,
+): { html: string; added: string[] } | null {
+  const headClose = html.search(/<\/head>/i);
+  if (headClose < 0) return null;
+  const head = html.slice(0, headClose);
+  const missing = specs.filter((s) => {
+    const key = s.key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return !new RegExp(`<meta\\s+[^>]*(?:property|name)=["']${key}["']`, "i").test(head);
+  });
+  if (missing.length === 0) return { html, added: [] };
+  const indent = headChildIndent(html);
+  // Insert at the start of the </head> line so its own indentation survives.
+  const lineStart = html.lastIndexOf("\n", headClose) + 1;
+  const insertAt = /^[ \t]*$/.test(html.slice(lineStart, headClose)) ? lineStart : headClose;
+  const block = missing
+    .map((s) => `${indent}<meta ${s.attr}="${s.key}" content="${escapeHtmlAttr(s.content)}"${selfClosing ? " /" : ""}>\n`)
+    .join("");
+  return {
+    html: `${html.slice(0, insertAt)}${insertAt === headClose ? "\n" : ""}${block}${html.slice(insertAt)}`,
+    added: missing.map((s) => s.key),
+  };
 }
 
 /** Append an Org + WebApplication JSON-LD script before </head>. */

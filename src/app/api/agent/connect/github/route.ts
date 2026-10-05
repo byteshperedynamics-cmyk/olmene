@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
-import { agentEnabled } from "@/lib/agent/env";
+import { agentEnabled, appUrl, githubWebBase } from "@/lib/agent/env";
 import { ERR, randomState, requireUser } from "@/lib/agent/http";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
 
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: { code: "internal", message: "Could not start the connect flow." } }, { status: 500 });
   }
 
-  const redirectUri = `${process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "https://olmene.com"}/api/agent/github/callback/`;
-  const url = `https://github.com/login/oauth/authorize?client_id=${encodeURIComponent(app.clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+  const redirectUri = `${appUrl()}/api/agent/github/callback/`;
+  const url = `${githubWebBase()}/login/oauth/authorize?client_id=${encodeURIComponent(app.clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
   return NextResponse.json({ url });
 }

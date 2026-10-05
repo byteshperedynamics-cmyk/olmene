@@ -5,6 +5,17 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowRight, ExternalLink, ShieldCheck, ShieldX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { AgentApiError, featureAgentEnabled, type AgentJob } from "@/lib/agent-client";
 import { fmtDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -126,9 +137,26 @@ export default function AgentPage() {
                 </p>
               </div>
             </div>
-            <Button variant="hairline" onClick={hub.onDisconnect} disabled={busy !== null}>
-              {busy === "disconnect" ? "Disconnecting…" : "Disconnect and verify"}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="hairline" disabled={busy !== null}>
+                  {busy === "disconnect" ? "Disconnecting…" : "Disconnect and verify"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Disconnect GitHub?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Olmene deletes this connection and checks with GitHub that it can no longer reach your
+                    repositories. Open pull requests stay on GitHub. You can connect again any time.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep connected</AlertDialogCancel>
+                  <AlertDialogAction onClick={hub.onDisconnect}>Disconnect</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </section>
 
           <section className="grid gap-4 rounded-2xl border bg-card p-6">
@@ -248,7 +276,11 @@ function DisconnectNotice({ result }: { result: DisconnectResult }) {
           </>
         )}
       </p>
-      <p className="text-muted-foreground">{String(result.evidence.outcome ?? "Verification recorded.")}</p>
+      <p className="text-muted-foreground">
+        {result.verified
+          ? "GitHub confirmed that Olmene can no longer reach your repositories."
+          : "Olmene deleted its connection, but the Olmene GitHub app is still installed on your GitHub account, so GitHub would still let it create access tokens. Uninstall the app to remove access completely."}
+      </p>
       {!result.verified && result.manualSteps.length > 0 && (
         <ol className="list-decimal space-y-1 ps-5 text-muted-foreground">
           {result.manualSteps.map((s) => (

@@ -28,6 +28,9 @@ class FakeGithub {
   nextSha = 0;
   commits: Array<{ message: string; tree: Array<{ path: string; content: string }> }> = [];
   createdBranches: string[] = [];
+  commitTrees = new Map<string, string>([["sha-main-0001", "tree-main-0001"]]);
+  commitParents = new Map<string, string[]>();
+  treeBases: string[] = [];
   mintCount = 0;
 
   client(): ScopedGithubClient {
@@ -54,7 +57,7 @@ class FakeGithub {
       async getBranch(branch: string): Promise<GhBranch> {
         const sha = self.branches.get(branch);
         if (!sha) throw Object.assign(new Error("branch not found"), { status: 404 });
-        return { name: branch, commit: { sha }, protected: false };
+        return { name: branch, commit: { sha, commit: { tree: { sha: self.commitTrees.get(sha) ?? `tree-of-${sha}` } } }, protected: false };
       },
       async getTree(): Promise<GhTree> {
         return {
@@ -86,12 +89,15 @@ class FakeGithub {
       async createBlob(): Promise<{ sha: string; url: string }> {
         return { sha: `sha-blob-${self.nextSha++}`, url: "https://github.com/blob" };
       },
-      async createTree(_base: string, tree: Array<{ path: string; content: string }>): Promise<{ sha: string }> {
+      async createTree(base: string, tree: Array<{ path: string; content: string }>): Promise<{ sha: string }> {
         self.lastTree = tree;
+        self.treeBases.push(base);
         return { sha: `sha-tree-${self.nextSha++}` };
       },
       async createCommit(message: string, treeSha: string, parents: string[]): Promise<{ sha: string }> {
         const sha = `sha-commit-${self.nextSha++}`;
+        self.commitTrees.set(sha, treeSha);
+        self.commitParents.set(sha, parents);
         // Attach the tree contents to the LAST createTree call for assertions
         // (the runner sends contents via the tree, not blobs)
         self.commits.push({ message, tree: self.lastTree ?? [] });
@@ -105,11 +111,18 @@ class FakeGithub {
         return { ref, object: { sha } };
       },
       async createPull(input: { title: string; body: string; head: string; base: string }): Promise<GhPull> {
+        // Like GitHub: the PR head is wherever the branch points, and a branch
+        // with no commits beyond the base is refused (422).
+        const headSha = self.branches.get(input.head);
+        if (!headSha) throw Object.assign(new Error("head branch not found"), { status: 422 });
+        if (headSha === self.branches.get(input.base)) {
+          throw Object.assign(new Error(`No commits between ${input.base} and ${input.head}`), { status: 422 });
+        }
         const pr: GhPull = {
           number: self.nextPr++,
           html_url: `https://github.com/octocat/site/pull/${self.nextPr - 1}`,
           state: "open",
-          head: { ref: input.head, sha: `sha-commit-${self.nextSha - 1}` },
+          head: { ref: input.head, sha: headSha },
           base: { ref: input.base },
           changed_files: self.filesTouched ?? 1,
           title: input.title,
@@ -423,7 +436,8 @@ describe("agent runner E2E (fake GitHub)", () => {
     const layout = commit.tree.find((t) => t.path === "app/layout.tsx")!.content;
     // all three edits composed into the one layout file
     expect(layout).toContain('description: "Acme builds fine widgets for teams that ship fast');
-    expect(layout).toContain('alternates: { canonical: "https://acme.test/" },');
+    expect(layout).toContain('alternates: { canonical: "./" },');
+    expect(layout).toContain('metadataBase: new URL("https://acme.test/"),');
     expect(layout).toContain('import { OlmeneJsonLd } from "../components/olmene-jsonld";');
     expect(layout).toContain("<body>\n        <OlmeneJsonLd />{children}</body>");
     expect(layout).toContain('title: "Acme",');
@@ -473,7 +487,8 @@ describe("agent runner E2E (fake GitHub)", () => {
     const commit = gh.commits[gh.commits.length - 1];
     const layout = commit.tree.find((t) => t.path === "src/layouts/Layout.astro")!.content;
     expect(layout).toContain('<meta name="description"');
-    expect(layout).toContain('rel="canonical"');
+    // shared layout → canonical built from each page's own path
+    expect(layout).toContain('<link rel="canonical" href={new URL(Astro.url.pathname, "https://acme.test/")} />');
     expect(layout).toContain('<script type="application/ld+json" is:inline set:html={JSON.stringify(');
     expect(layout).toContain("const { title } = Astro.props;"); // frontmatter untouched
     const index = commit.tree.find((t) => t.path === "src/pages/index.astro")!.content;

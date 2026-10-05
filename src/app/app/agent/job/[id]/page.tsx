@@ -54,7 +54,13 @@ export default function AgentJobPage() {
     const tick = async () => {
       if (!alive) return;
       const st = statusRef.current;
-      if (!st || st === "awaiting_approval" || !ACTIVE_JOB_STATUSES.includes(st)) return;
+      // The job usually loads AFTER the first tick (300 ms); without a status
+      // yet, wait for it instead of ending the loop (runs stayed "Queued").
+      if (!st) {
+        if (alive) timer = setTimeout(tick, 500);
+        return;
+      }
+      if (st === "awaiting_approval" || !ACTIVE_JOB_STATUSES.includes(st)) return;
       try {
         await advanceAgentJob(id);
         backoff = 1000;

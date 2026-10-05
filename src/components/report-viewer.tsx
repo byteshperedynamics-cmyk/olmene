@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScoreBar, ScoreRing } from "@/components/score-ring";
-import { severityClass, statusIconClass, reportToMarkdown, buildActionPlan } from "@/lib/format";
+import { severityClass, statusIconClass, reportToMarkdown, buildActionPlan, realDependency } from "@/lib/format";
 import type { ReportData, AuditFinding, SeoCheck, RoadmapAction } from "@/lib/report-types";
 import { PrintReport } from "@/components/print-report";
 import { useI18n } from "@/i18n/provider";
@@ -405,7 +405,7 @@ export function RoadmapSection({ r }: { r: ReportData }) {
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground"><span className="font-medium text-foreground">{t("rv.how")}</span>{a.how}</p>
                 <div className="mt-1.5 flex flex-wrap gap-2">
                   <span className="font-mono rounded bg-muted px-1.5 py-0.5 text-xs">{t("rv.kpi", { v: a.kpi })}</span>
-                  {a.dependsOn ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{t("rv.dependsOn", { v: a.dependsOn })}</span> : null}
+                  {realDependency(a.dependsOn) ? <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{t("rv.dependsOn", { v: a.dependsOn ?? "" })}</span> : null}
                 </div>
               </div>
             ))}
