@@ -21,9 +21,14 @@ end $$;
 --    with the SAME Vault cron_secret the sweeper already uses; the Worker
 --    verifies it against Vault through the service role, so no extra secret
 --    has to be copied to Cloudflare by hand.
-insert into vault.secrets (secret, name)
-select 'https://olmene.com', 'app_base_url'
-where not exists (select 1 from vault.secrets where name = 'app_base_url');
+-- vault.create_secret(): supabase_vault 0.3 no longer lets the migration role
+-- insert into vault.secrets directly (that INSERT failed `supabase db push`).
+do $$
+begin
+  if not exists (select 1 from vault.secrets where name = 'app_base_url') then
+    perform vault.create_secret('https://olmene.com', 'app_base_url');
+  end if;
+end $$;
 
 do $$
 begin
