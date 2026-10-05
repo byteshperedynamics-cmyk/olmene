@@ -18,6 +18,8 @@ import { Enter } from "@/components/motion";
 import { startAnalysis, ApiRequestError } from "@/lib/api";
 import { getEntitlement } from "@/lib/data";
 import { GOALS, GOAL_LABELS, LANGUAGES } from "@/lib/steps";
+import { useI18n } from "@/i18n/provider";
+import { LANG_MAP } from "@/i18n/languages";
 
 const formSchema = z.object({
   siteUrl: z
@@ -49,6 +51,8 @@ export default function NewAnalysisPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const { data: ent } = useQuery({ queryKey: ["entitlement"], queryFn: getEntitlement });
+  // Reports default to the language the visitor reads the site in.
+  const { lang } = useI18n();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -58,7 +62,7 @@ export default function NewAnalysisPage() {
       targetMarket: "",
       knownCompetitors: [],
       goal: "first_customers",
-      language: "English",
+      language: LANG_MAP[lang]?.english ?? "English",
     },
   });
   // RHF's eager ArrayPath types exclude strictly-typed primitive arrays

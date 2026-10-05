@@ -55,7 +55,7 @@ export async function buildPlan(
 
   // 2. Copy drafting — only for fixers that actually made the cut
   const needsCopy = selected.some((c) =>
-    ["meta-description", "image-alt", "h1-rewrite"].includes(c.fixerId),
+    ["title-tag", "meta-description", "image-alt", "h1-rewrite"].includes(c.fixerId),
   );
   if (!needsCopy) {
     return { candidates: selected, copy: {}, llmStatus: "not_needed", notes };
@@ -74,6 +74,9 @@ export async function buildPlan(
     ...(opts.homepageHtml
       ? [
           "",
+          "Current <title> text:",
+          (opts.homepageHtml.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "(none)").replace(/<[^>]+>/g, "").trim().slice(0, 200),
+          "",
           "Current H1 text:",
           (opts.homepageHtml.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? "(none)").replace(/<[^>]+>/g, "").trim().slice(0, 200),
           "",
@@ -85,7 +88,8 @@ export async function buildPlan(
       : []),
     "",
     "Return JSON with this exact shape:",
-    '{"metaDescription": "50-160 chars, active voice, includes product name",',
+    '{"title": "page title, 15-60 chars: product name plus what it does and for whom, no quotes",',
+    ' "metaDescription": "50-160 chars, active voice, includes product name",',
     ' "altTexts": {"<exact img src>": "concise descriptive alt, 3-160 chars"},',
     ' "h1": "improved headline, max 160 chars, or omit if current is already strong"}',
     "",
@@ -100,6 +104,9 @@ export async function buildPlan(
     )) as Partial<CopyDrafts> & { altTexts?: Record<string, string> };
 
     const copy: CopyDrafts = {};
+    if (typeof out.title === "string" && out.title.trim().length >= 10) {
+      copy.title = redactString(out.title.trim().replace(/\s+/g, " ")).slice(0, 80);
+    }
     if (typeof out.metaDescription === "string" && out.metaDescription.length > 0) {
       copy.metaDescription = out.metaDescription.slice(0, 300);
     }

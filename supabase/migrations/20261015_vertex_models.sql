@@ -25,7 +25,10 @@ on conflict (id) do update
 -- prompts may be used to improve Google's products.
 update public.llm_models set active = false where id like 'google/%';
 
--- Z.ai GLM free models stay as the last resort (slow, but free and keyless
--- for Google outages or when the credits run out).
-update public.llm_models set priority = 10 where id = 'glm-4.5-flash';
-update public.llm_models set priority = 11 where id = 'glm-4.7-flash';
+-- Z.ai GLM free models are switched off: the privacy policy promises that the
+-- AI provider writing reports does not train on customer data, and business
+-- customers reject processing in China. Two Vertex models give redundancy.
+-- To trade that promise for an extra fallback:
+--   update public.llm_models set active = true where id like 'glm-%';
+update public.llm_models set priority = 10, active = false where id = 'glm-4.5-flash';
+update public.llm_models set priority = 11, active = false where id = 'glm-4.7-flash';

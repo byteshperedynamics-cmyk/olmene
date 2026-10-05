@@ -53,7 +53,7 @@ export function CookieConsent() {
       aria-modal="false"
       aria-labelledby="cookie-consent-title"
       aria-describedby="cookie-consent-desc"
-      className="fixed inset-x-0 bottom-0 z-50 p-3 sm:end-auto sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-300"
+      className="fixed inset-x-0 bottom-0 z-50 p-3 sm:start-auto sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-4 duration-300"
     >
       <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-background/95 p-4 shadow-xl backdrop-blur supports-[backdrop-filter]:bg-background/90 sm:mx-0 sm:max-w-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:gap-4">

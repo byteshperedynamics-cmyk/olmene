@@ -1,5 +1,7 @@
 /** The 10 pipeline steps shown live while an analysis runs. */
 
+import { LANGUAGES as SITE_LANGUAGES } from "@/i18n/languages";
+
 export interface StepDef {
   id: string;
   label: string;
@@ -43,9 +45,14 @@ export const GOAL_LABELS: Record<string, string> = {
   beat_competitor: "Beat a competitor",
 };
 
+/**
+ * Report languages: the 15 site languages first (src/i18n/languages.ts, in
+ * the selector's order), then more European languages the models write well.
+ * The pipeline accepts any language name.
+ */
 export const LANGUAGES = [
-  "English", "German", "French", "Spanish", "Portuguese", "Italian",
-  "Dutch", "Polish", "Swedish", "Danish", "Norwegian", "Finnish",
+  ...SITE_LANGUAGES.map((l) => l.english),
+  "Italian", "Dutch", "Polish", "Swedish", "Danish", "Norwegian", "Finnish",
 ];
 
 /** Human explanation for wait_reason values shown while a job is paused. */

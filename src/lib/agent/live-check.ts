@@ -56,6 +56,7 @@ const LABELS: Record<string, string> = {
   "image-alt": "Image alt text",
   "pricing-link": "Pricing link",
   "h1-rewrite": "Homepage headline (H1)",
+  "title-tag": "Page title",
   "viewport-meta": "Mobile viewport",
   "social-meta": "Social preview tags",
 };
@@ -247,6 +248,16 @@ async function checkFix(fix: AppliedFix, html: string, origin: string, fetchFn: 
         return res(false, `The live headline is not the merged one yet (live: “${norm(h1s[0] ?? "").slice(0, 80)}”).`);
       }
       return res(true, `Live headline: “${norm(h1s[0] ?? "").slice(0, 90)}”.`);
+    }
+    case "title-tag": {
+      const live = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+      if (!live) return res(false, "No <title> on the live homepage yet.");
+      const expected = addedValue(fix.preview, [/<title\b[^>]*>([^<]+)<\/title>/i, /\btitle:\s*"((?:[^"\\]|\\.)+)"/]);
+      if (expected && norm(live) !== norm(expected)) {
+        return res(false, `The live title is not the merged one yet (live: “${norm(live).slice(0, 80)}”).`);
+      }
+      const len = decodeEntities(live).trim().length;
+      return res(len >= 10 && len <= 60, `Live title: “${decodeEntities(live).trim().slice(0, 80)}” (${len} characters).`);
     }
     case "viewport-meta": {
       const live = metaContent(html, "viewport");

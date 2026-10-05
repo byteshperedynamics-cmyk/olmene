@@ -59,7 +59,9 @@ export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
     const fixes = p.actions_per_period ?? 0;
     if (p.features_key) {
       const keys = ["f1", "f2", "f3", "f4"].map((f) => `${p.features_key}.${f}`);
-      return keys.map((k) => t(k, { n: fixes, sites: p.sites_limit ?? 1 }));
+      // The full cited reports each plan includes are what the fixes are planned from.
+      const reports = p.reports_per_period ? [t("pc.feature.reports", { n: p.reports_per_period })] : [];
+      return [...reports, ...keys.map((k) => t(k, { n: fixes, sites: p.sites_limit ?? 1 }))];
     }
     // Current report-based plans (Starter / Pro)
     const isPro = p === subs[subs.length - 1] && subs.length > 1;

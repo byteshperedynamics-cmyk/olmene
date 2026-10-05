@@ -1355,6 +1355,32 @@ function spacedText($, el) {
       text: $(el).text().replace(/\s+/g, " ").trim()
     });
   });
+  // Form fields and images have no text nodes: without a marker the model
+  // reads a visible URL box or a logo wall as missing (2026-10-06: a report
+  // told olmene.com its hero "lacks an input field" right next to the field).
+  const esc = (s)=>s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  body.find("input, textarea, select").each((_, el)=>{
+    const type = ($(el).attr("type") || "").toLowerCase();
+    if ([
+      "hidden",
+      "checkbox",
+      "radio"
+    ].includes(type)) return;
+    const label = ($(el).attr("placeholder") || $(el).attr("aria-label") || $(el).attr("name") || type || el.tagName).replace(/\s+/g, " ").trim().slice(0, 60);
+    if (type === "submit" || type === "button") {
+      const value = ($(el).attr("value") || label).replace(/\s+/g, " ").trim().slice(0, 60);
+      $(el).replaceWith(` [button: ${esc(value)}] `);
+      return;
+    }
+    $(el).replaceWith(` [${el.tagName === "input" ? "input field" : el.tagName}: ${esc(label)}] `);
+  });
+  let labelledImages = 0;
+  body.find("img[alt]").each((_, el)=>{
+    const alt = ($(el).attr("alt") || "").replace(/\s+/g, " ").trim();
+    if (!alt || labelledImages >= 40) return;
+    labelledImages++;
+    $(el).replaceWith(` [image: ${esc(alt.slice(0, 80))}] `);
+  });
   // LLM-facing text: drop boilerplate, fall back to full text when thin.
   const stripped = body.clone();
   stripped.find(BOILERPLATE_SELECTORS).remove();
@@ -2569,6 +2595,10 @@ HOW TO USE THE SIGNALS BELOW:
   product / add-to-cart links are the conversion path — never ask a store for
   a "pricing page".
 - Quote the website content as evidence, not these signal lines.
+- In the website content, [input field: …], [textarea: …], [select: …] and
+  [button: …] mark form controls, and [image: …] marks an image by its alt
+  text. Before saying an element is missing (a form, a URL box, a button,
+  logos), check these markers: never report something absent that they show.
 
 SIGNALS (computed by code):
 ${wrapUntrusted(renderSeoSignals(seoSignals))}

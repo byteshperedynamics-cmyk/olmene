@@ -45,7 +45,7 @@ const BASE: JobState = {
     completed_at: null,
   },
   actions: [
-    action("a1", "next-metadata", 0),
+    action("a1", "title-tag", 0),
     action("a2", "next-jsonld", 1),
     {
       ...action("a3", "jsx-image-alt", 0),

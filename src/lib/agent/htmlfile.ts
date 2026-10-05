@@ -178,6 +178,34 @@ function insertCanonicalTag(html: string, tag: string): string | null {
   return `${html.slice(0, insertAt)}\n${indent}${tag}${html.slice(insertAt)}`;
 }
 
+/**
+ * Set the page <title> text: replaces a plain-text <title>, or inserts one
+ * near the top of <head> when there is none. Returns null when the current
+ * title holds markup or a template expression, or appears more than once.
+ */
+export function setTitleText(html: string, title: string): string | null {
+  const text = title.trim().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  if (!text) return null;
+  const all = html.match(/<title\b[^>]*>[\s\S]*?<\/title>/gi) ?? [];
+  if (all.length > 1) return null;
+  const m = html.match(/<title\b([^>]*)>([\s\S]*?)<\/title>/i);
+  if (m && m.index !== undefined) {
+    if (/[<{}]/.test(m[2])) return null;
+    return `${html.slice(0, m.index)}<title${m[1]}>${text}</title>${html.slice(m.index + m[0].length)}`;
+  }
+  const anchor = html.match(/<meta\s+[^>]*(?:charset\s*=|name=["']viewport["'])[^>]*>/gi);
+  let insertAt: number;
+  if (anchor?.length) {
+    const last = anchor[anchor.length - 1];
+    insertAt = html.indexOf(last) + last.length;
+  } else {
+    const headOpen = html.search(/<head[^>]*>/i);
+    if (headOpen < 0) return null;
+    insertAt = headOpen + html.slice(headOpen).search(/>/) + 1;
+  }
+  return `${html.slice(0, insertAt)}\n${headChildIndent(html)}<title>${text}</title>${html.slice(insertAt)}`;
+}
+
 const VIEWPORT_CONTENT = "width=device-width, initial-scale=1";
 
 /**

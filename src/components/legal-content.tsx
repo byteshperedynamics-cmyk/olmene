@@ -33,6 +33,7 @@ export const LT_SECTIONS: LegalSection[] = [
   { h: "lt.s5.h", p: ["lt.s5.p"] },
   { h: "lt.s6.h", p: ["lt.s6.p"] },
   { h: "lt.s7.h", p: ["lt.s7.p"] },
+  { h: "lt.s8.h", p: ["lt.s8.p"] },
 ];
 
 export function LegalContent({ variant, sections }: { variant: "privacy" | "terms"; sections: LegalSection[] }) {

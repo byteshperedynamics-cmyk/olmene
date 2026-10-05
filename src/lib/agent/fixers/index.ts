@@ -24,9 +24,10 @@ import {
   insertViewport,
   normalizeSiteUrl,
   replaceH1Text,
+  setTitleText,
   type MetaTagSpec,
 } from "../htmlfile";
-import { addBodyComponent, addMetadataCanonical, setMetadataString } from "../jsfile";
+import { addBodyComponent, addMetadataCanonical, findMetadataObject, setMetadataString } from "../jsfile";
 
 // ───────────────────────────────────────────────────────────────────────────
 // Types
@@ -47,6 +48,7 @@ export interface FixerBuildResult {
 }
 
 export interface CopyDrafts {
+  title?: string;
   metaDescription?: string;
   altTexts?: Record<string, string>;
   h1?: string;
@@ -486,7 +488,76 @@ const h1Fixer: Fixer = {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
-// 8. viewport-meta
+// 8. title-tag (copy rewrite, same 10–60 character rule as the audit)
+// ───────────────────────────────────────────────────────────────────────────
+
+const titleFixer: Fixer = {
+  id: "title-tag",
+  title: "Page title",
+  detect: (report) => triggeredBy(check(report, "Title tag")),
+  build: (ctx) => {
+    const draft = ctx.copy.title?.trim();
+    if (!draft) return { skip: "No page title could be drafted from the report with confidence." };
+    if (draft.length < 15 || draft.length > 60) {
+      return { skip: `Drafted title is ${draft.length} characters (need 15–60) — not shipping a weak title.` };
+    }
+    const detail = check(ctx.report, "Title tag")?.detail ?? "no <title> found";
+    const evidence = `Report check "Title tag" flagged: ${detail}.`;
+    const expectedScoreChange = "SEO checklist: Title tag → pass (10–60 characters)";
+    const fw = ctx.framework;
+    if (fw) {
+      let after: string | null;
+      if (fw.kind === "nextjs-app") {
+        // A page can override the layout's title. Only edit the layout when its
+        // title is the one the report measured live (same length) or is absent.
+        const obj = findMetadataObject(fw.headContent);
+        if ("reason" in obj) return { skip: obj.reason };
+        const prop = obj.props.find((p) => p.key === "title");
+        const liveLength = Number(detail.match(/^(\d+) characters/)?.[1] ?? NaN);
+        if (prop?.stringLiteral && Number.isFinite(liveLength)) {
+          const layoutTitle = fw.headContent.slice(prop.valueStart + 1, prop.valueEnd - 1);
+          if (Math.abs(layoutTitle.length - liveLength) > 2) {
+            return { skip: "The live homepage title does not come from the root layout (a page sets its own) — not changing the layout." };
+          }
+        }
+        const r = setMetadataString(fw.headContent, "title", draft);
+        if (!r.ok) return { skip: r.reason };
+        after = r.content;
+      } else {
+        if (SEO_COMPONENT.test(fw.headContent)) return { skip: SEO_COMPONENT_SKIP };
+        // A shared layout's <title> would become every page's title.
+        if (fw.headPath !== fw.pagePath) {
+          return { skip: "The <title> lives in a layout shared by every page — set each page's title through its props instead." };
+        }
+        after = setTitleText(fw.headContent, draft);
+        if (after === null) return { skip: "The <title> is built from an expression — not rewriting it." };
+      }
+      return {
+        edits: [{ path: fw.headPath, before: fw.headContent, after }],
+        explanation:
+          fw.kind === "nextjs-app"
+            ? `Sets the title in the root layout's metadata export to “${draft}” (${draft.length} characters).`
+            : `Rewrites the homepage <title> to “${draft}” (${draft.length} characters).`,
+        evidence,
+        expectedScoreChange,
+        revertSteps: ["Close the PR without merging", "Or restore the previous title from the PR diff"],
+      };
+    }
+    if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
+    const after = setTitleText(ctx.homepageHtml, draft);
+    if (after === null) return { skip: "The homepage <title> contains markup or appears more than once — not rewriting it." };
+    return {
+      edits: [{ path: ctx.homepagePath, before: ctx.homepageHtml, after }],
+      explanation: `Rewrites the homepage <title> to “${draft}” (${draft.length} characters): what search results and browser tabs show.`,
+      evidence,
+      expectedScoreChange,
+      revertSteps: ["Close the PR (nothing merged)", "Or restore the previous <title> text from the PR diff"],
+    };
+  },
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// 9. viewport-meta
 // ───────────────────────────────────────────────────────────────────────────
 
 const viewportFixer: Fixer = {
@@ -528,7 +599,7 @@ const viewportFixer: Fixer = {
 };
 
 // ───────────────────────────────────────────────────────────────────────────
-// 9. social-meta (Open Graph + Twitter card)
+// 10. social-meta (Open Graph + Twitter card)
 // ───────────────────────────────────────────────────────────────────────────
 
 const socialMetaFixer: Fixer = {
@@ -705,6 +776,7 @@ function buildFrameworkSitemapRobots(ctx: FixerContext): BuildOutcome {
 // ───────────────────────────────────────────────────────────────────────────
 
 export const FIXERS: Fixer[] = [
+  titleFixer,
   metaDescriptionFixer,
   canonicalFixer,
   jsonLdFixer,
@@ -724,6 +796,7 @@ export function getFixer(id: string): Fixer | undefined {
 
 /** Ordering priority: fails first, then warns; sitemap/robots after head tags. */
 export const FIXER_ORDER: Record<string, number> = {
+  "title-tag": 5,
   "meta-description": 10,
   "viewport-meta": 15,
   "canonical-url": 20,
@@ -740,6 +813,7 @@ export const MAX_ACTIONS_PER_JOB = 10;
 
 /** Report checklist labels each fixer resolves (for the PR's "still on your list"). */
 export const FIXER_CHECKS: Record<string, string[]> = {
+  "title-tag": ["Title tag"],
   "meta-description": ["Meta description"],
   "viewport-meta": ["Mobile viewport"],
   "canonical-url": ["Canonical URL"],
