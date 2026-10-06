@@ -11,5 +11,12 @@
   },
   "observability": {
     "enabled": true
+  },
+  // Runs before every `wrangler deploy` (and `wrangler dev`): copies the
+  // prerendered pages into the static assets, where open-next.config.ts's
+  // static-assets cache reads them. Same copy as OpenNext's populateCache;
+  // without it the Worker falls back to rendering every page per request.
+  "build": {
+    "command": "[ ! -d .open-next/cache ] || (mkdir -p .open-next/assets/cdn-cgi/_next_cache && cp -R .open-next/cache/. .open-next/assets/cdn-cgi/_next_cache/)"
   }
 }

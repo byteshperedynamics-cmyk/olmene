@@ -434,7 +434,7 @@
   "pc.free.f3": "根拠付きの上位3つの問題",
   "pc.free.cta": "サイトをスキャン",
   "pc.feature.fixes": "毎月最大{n}件の修正プルリクエスト",
-  "pc.mostFounders": "多くの創業者が選ぶプラン",
+  "pc.recommended": "おすすめ",
   "pc.current": "現在のプラン",
   "pc.manage": "請求を管理",
   "pc.cta.fix": "修正を始める",

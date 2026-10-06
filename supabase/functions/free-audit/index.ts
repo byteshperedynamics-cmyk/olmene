@@ -111,8 +111,9 @@ async function assertDnsSafe(hostname: string): Promise<void> {
   const isV6 = hostname.includes(":");
   const answers = await resolveDns(hostname, isV6 ? "AAAA" : "A").catch(() => [] as string[]);
   const both = answers.length ? answers : await resolveDns(hostname, isV6 ? "A" : "AAAA").catch(() => [] as string[]);
-  // Fail closed: a name that does not resolve is never fetched.
-  if (both.length === 0) throw new TargetRejected(`could not resolve ${hostname}`);
+  // Fail closed: a name that does not resolve is never fetched. Usually a
+  // typo, so it gets its own message rather than "can't be scanned".
+  if (both.length === 0) throw new ScanError("no_such_domain", `could not resolve ${hostname}`);
   for (const raw of both) {
     const ip = raw.replace(/^\[|\]$/g, "");
     const v4 = parseIPv4(ip);
@@ -158,7 +159,7 @@ async function safeFetch(start: URL, init: RequestInit, timeoutMs: number): Prom
 
 /** Typed scan failures — the handler turns them into honest, user-facing messages. */
 class ScanError extends Error {
-  constructor(public code: "blocked" | "not_found" | "http_error" | "unreachable" | "timeout" | "not_html" | "too_many_redirects", message: string, public status?: number) {
+  constructor(public code: "blocked" | "not_found" | "no_such_domain" | "http_error" | "unreachable" | "timeout" | "not_html" | "too_many_redirects", message: string, public status?: number) {
     super(message);
   }
 }
@@ -644,6 +645,8 @@ function scanFailure(e: unknown): { code: string; message: string; status?: numb
         };
       case "not_found":
         return { code: "site_not_found", status: e.status, message: `That page doesn't exist (HTTP ${e.status}). Check the URL.` };
+      case "no_such_domain":
+        return { code: "domain_not_found", message: "We couldn't find that domain. Check the spelling and try again." };
       case "http_error":
         return { code: "site_error", status: e.status, message: `The site answered with an error (HTTP ${e.status}). Try again in a moment.` };
       case "timeout":

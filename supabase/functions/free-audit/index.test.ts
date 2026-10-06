@@ -144,6 +144,26 @@ Deno.test("errors: bot-blocked sites get an honest message, never internal detai
   assert(!/10\.33/.test(generic.message));
 });
 
+Deno.test("errors: a domain that does not exist reads as a typo, not as a forbidden target", async () => {
+  // Stub DNS (NXDOMAIN) so the test is fast and offline.
+  const original = Deno.resolveDns;
+  Object.defineProperty(Deno, "resolveDns", { value: () => Promise.reject(new Error("no record")), configurable: true, writable: true });
+  let err: unknown = null;
+  try {
+    await mod.assertSafeTarget(new URL("https://olmene-qa-no-such-domain-7f3a91.com/"));
+  } catch (e) {
+    err = e;
+  } finally {
+    Object.defineProperty(Deno, "resolveDns", { value: original, configurable: true, writable: true });
+  }
+  assert(err instanceof mod.ScanError, String(err));
+  const res = mod.scanFailure(err);
+  assertEquals(res.code, "domain_not_found");
+  assert(/couldn't find that domain/.test(res.message) && !/can't be scanned/.test(res.message));
+  // Private targets keep the "can't be scanned" answer.
+  assertEquals(mod.scanFailure(new mod.TargetRejected("private range")).code, "forbidden_target");
+});
+
 Deno.test("trust: unmarked testimonials (quoted sentence + name) and app awards count", () => {
   const s = signals(`<div>"Three years later, I'm still happy with the choice to shift to this platform."<a>Jeremy Singer-Vine</a></div>
     <div>"I didn't want to sign on with a place that was going to pursue that metastatic overgrowth."<a>Clive Thompson</a></div>`);

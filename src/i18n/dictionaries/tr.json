@@ -434,7 +434,7 @@
   "pc.free.f3": "En büyük 3 sorununuz, kanıtıyla",
   "pc.free.cta": "Sitemi tara",
   "pc.feature.fixes": "Ayda en fazla {n} düzeltme pull request'i",
-  "pc.mostFounders": "Kurucuların çoğu bunu seçiyor",
+  "pc.recommended": "Önerilen",
   "pc.current": "Mevcut plan",
   "pc.manage": "Faturalandırmayı yönet",
   "pc.cta.fix": "Düzeltmeye başla",

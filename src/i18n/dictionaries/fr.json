@@ -434,7 +434,7 @@
   "pc.free.f3": "Vos 3 principaux problèmes, preuves à l'appui",
   "pc.free.cta": "Analyser mon site",
   "pc.feature.fixes": "Jusqu'à {n} pull requests de correctifs par mois",
-  "pc.mostFounders": "Le choix de la plupart des fondateurs",
+  "pc.recommended": "Recommandé",
   "pc.current": "Formule actuelle",
   "pc.manage": "Gérer la facturation",
   "pc.cta.fix": "Commencer les correctifs",

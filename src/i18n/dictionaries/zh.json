@@ -434,7 +434,7 @@
   "pc.free.f3": "你最重要的 3 个问题，附证据",
   "pc.free.cta": "扫描我的网站",
   "pc.feature.fixes": "每月最多 {n} 个修复拉取请求",
-  "pc.mostFounders": "大多数创始人的选择",
+  "pc.recommended": "推荐",
   "pc.current": "当前方案",
   "pc.manage": "管理账单",
   "pc.cta.fix": "开始修复",

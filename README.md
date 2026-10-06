@@ -42,7 +42,9 @@ browser ─▶ olmene.com + www.olmene.com
 
 - **Deploys**: every push to `main` → Cloudflare Workers Builds → Worker
   `olmene` (owns both custom domains). Build: `npx opennextjs-cloudflare
-  build`, deploy: `npx wrangler deploy` (root `wrangler.jsonc`).
+  build`, deploy: `npx wrangler deploy` (root `wrangler.jsonc`). Its
+  `build.command` first copies the prerendered pages into the static assets,
+  so pages are served from files instead of re-rendered per request.
 - **Secrets** (worker): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
   `MW_KMS_MASTER_KEY`, `AGENT_FEATURE_ENABLED` — set once via
   `npx wrangler secret put <NAME>` or the API; they persist across deploys.
@@ -82,7 +84,8 @@ push to main
              npx opennextjs-cloudflare build     (app bundle → .open-next/)
              npx supabase db push                (applies pending SQL migrations,
                                                   no-ops when up to date)
-  └─ deploy: npx wrangler deploy                (Worker "olmene" → olmene.com + www)
+  └─ deploy: npx wrangler deploy                (page cache → assets via build.command,
+                                                  then Worker "olmene" → olmene.com + www)
 ```
 
 ~3–5 minutes end to end. The Supabase access token and project ref live as

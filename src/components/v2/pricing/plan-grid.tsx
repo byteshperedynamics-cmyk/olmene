@@ -136,7 +136,7 @@ export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
                   amount={price.amount}
                   suffix={price.suffix}
                   highlight={isHighlight}
-                  flag={current ? t("pc.current") : isHighlight ? t("pc.mostFounders") : undefined}
+                  flag={current ? t("pc.current") : isHighlight ? t("pc.recommended") : undefined}
                   features={featuresFor(p)}
                   cta={
                     current ? (

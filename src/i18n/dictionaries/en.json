@@ -434,7 +434,7 @@
   "pc.free.f3": "Your top 3 problems, with evidence",
   "pc.free.cta": "Scan my site",
   "pc.feature.fixes": "Up to {n} fix pull requests a month",
-  "pc.mostFounders": "Most founders pick this",
+  "pc.recommended": "Recommended",
   "pc.current": "Current plan",
   "pc.manage": "Manage billing",
   "pc.cta.fix": "Start fixing",
