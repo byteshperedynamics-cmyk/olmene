@@ -3,6 +3,7 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { useI18n, Tx, usePageMeta } from "@/i18n/provider";
+import { SUPPORT_EMAIL } from "@/lib/config";
 
 /**
  * Legal pages (Privacy Policy / Terms of Service).
@@ -62,6 +63,16 @@ export function LegalContent({ variant, sections }: { variant: "privacy" | "term
                 ))}
               </section>
             ))}
+            {SUPPORT_EMAIL && (
+              <section>
+                <h2>{t("footer.contact")}</h2>
+                <p>
+                  <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-foreground underline underline-offset-4">
+                    {SUPPORT_EMAIL}
+                  </a>
+                </p>
+              </section>
+            )}
           </div>
         </div>
       </main>

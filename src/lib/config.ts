@@ -32,5 +32,5 @@ export const STUDIO_NAME = "Bytesphere_Dynamics";
 export const FOUNDER_NAME = "Hermes Lekkas";
 export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/hermes-lekkas-453722441/";
 export const STUDIO_GITHUB = "https://github.com/byteshperedynamics-cmyk";
-/** Support / security contact. null until the address is confirmed: contact links stay hidden. */
-export const SUPPORT_EMAIL: string | null = null;
+/** Support / security contact (the mailbox is spelled "byteshpere"). null hides contact links. */
+export const SUPPORT_EMAIL: string | null = "byteshpere.dynamics@gmail.com";
