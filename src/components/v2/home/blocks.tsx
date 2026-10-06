@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FreeAuditInput } from "@/components/free-audit-form";
 import { PricingTeaser } from "@/components/pricing-cards";
-import { CHECK_COUNT } from "@/lib/config";
+import { CHECK_COUNT, FOUNDER_LINKEDIN, FOUNDER_NAME } from "@/lib/config";
 import { useI18n, Tx } from "@/i18n/provider";
 import { Eyebrow } from "../atoms";
 import { Flower } from "../flower";
@@ -18,7 +18,7 @@ export function CanCannot() {
   const { t } = useI18n();
   return (
     <Section id="can-cannot">
-      <SectionHeader eyebrow={t("cc.label")} title={t("cc.title")} />
+      <SectionHeader eyebrow={t("cc.label")} title={t("cc.title")} lede={t("sec.control")} />
       <div className="mt-10 grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-primary/35 bg-leaf-soft p-6 sm:p-7">
           <p className="o-display text-xl text-primary">{t("cc.canTitle")}</p>
@@ -41,6 +41,40 @@ export function CanCannot() {
               </li>
             ))}
           </ul>
+        </div>
+      </div>
+      <p className="mt-6 text-sm">
+        <Link href="/security/#github" className="font-medium text-primary underline-offset-4 hover:underline">
+          {t("cc.more")}
+        </Link>
+      </p>
+    </Section>
+  );
+}
+
+/* ── Who is behind Olmene (compact: a verifiable operator, no founder profile) ── */
+
+export function AboutStudio() {
+  const { t } = useI18n();
+  return (
+    <Section id="about" className="py-12 md:py-16">
+      <div className="grid gap-6 rounded-2xl border bg-card p-6 sm:p-8 md:grid-cols-[1.3fr_1fr] md:items-end">
+        <div className="grid gap-3">
+          <Eyebrow>{t("about.eyebrow")}</Eyebrow>
+          <h2 className="o-display text-2xl leading-tight sm:text-3xl">{t("about.title")}</h2>
+          <p className="max-w-2xl leading-relaxed text-muted-foreground">{t("about.p1")}</p>
+          <p className="max-w-2xl leading-relaxed text-muted-foreground">{t("about.p2")}</p>
+        </div>
+        <div className="grid gap-2 text-sm md:justify-items-end md:text-end">
+          <p className="text-muted-foreground">
+            {t("about.founder")}: <span className="font-medium text-foreground">{FOUNDER_NAME}</span> ·{" "}
+            <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline-offset-4 hover:underline">
+              LinkedIn →
+            </a>
+          </p>
+          <Link href="/security/" className="font-medium text-primary underline-offset-4 hover:underline">
+            {t("about.security")}
+          </Link>
         </div>
       </div>
     </Section>

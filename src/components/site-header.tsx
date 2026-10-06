@@ -21,6 +21,7 @@ const NAV = [
   { href: "/#teardown", label: "nav.proof" },
   { href: "/pricing/", label: "nav.pricing" },
   { href: "/#faq", label: "nav.faq" },
+  { href: "/security/", label: "nav.security" },
   { href: "/sample-report/", label: "nav.sampleReport" },
 ];
 

@@ -82,6 +82,9 @@ export function ConnectPanel({
         ) : (
           <>
             <h2 className="o-display text-[28px] leading-tight">Connect GitHub to ship fixes</h2>
+            <p className="text-[15px] text-muted-foreground">
+              Olmene finds the problem and prepares the fix. Your team decides what gets merged.
+            </p>
             <ul className="grid gap-2 text-[14px]">
               {[
                 "Reads and edits one repository you choose",
@@ -112,6 +115,9 @@ export function ConnectPanel({
                   {busy === "connect" ? "Opening GitHub…" : "Connect GitHub"}
                 </Button>
               )}
+              <Link href="/security/#github" target="_blank" className="text-[13px] font-medium text-primary underline-offset-4 hover:underline">
+                Review GitHub permissions & security →
+              </Link>
               {(githubConfigured || canRegister) && (
                 <p className="text-[12.5px] text-muted-foreground">
                 {githubConfigured

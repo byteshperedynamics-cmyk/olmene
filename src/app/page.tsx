@@ -8,7 +8,7 @@ import { ProofStrip, type ProofStat } from "@/components/v2/home/proof-strip";
 import { HomeLoop } from "@/components/v2/home/loop";
 import { ReviewShowcase } from "@/components/v2/home/review-showcase";
 import { Teardown } from "@/components/v2/home/teardown";
-import { CanCannot, Comparison, FinalCta, HomeFaq, PricingBand } from "@/components/v2/home/blocks";
+import { AboutStudio, CanCannot, Comparison, FinalCta, HomeFaq, PricingBand } from "@/components/v2/home/blocks";
 import { CHECK_COUNT } from "@/lib/config";
 import { usePageMeta } from "@/i18n/provider";
 import { usePublicStats } from "@/lib/public-stats";
@@ -54,6 +54,7 @@ export default function HomePage() {
           <Comparison />
           <PricingBand />
           <HomeFaq />
+          <AboutStudio />
           <FinalCta />
         </main>
       </FreeAuditProvider>

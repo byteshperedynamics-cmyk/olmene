@@ -25,3 +25,12 @@ export function fnUrl(name: string, params: URLSearchParams = new URLSearchParam
 // Number of deterministic checks the free audit runs (must match the
 // free-audit edge function's buildChecklist — verified 21 as of 2026-10-01).
 export const CHECK_COUNT = 21;
+
+/** The independent studio that builds and operates Olmene (not a registered company). */
+export const STUDIO_NAME = "Bytesphere_Dynamics";
+/** Founder identity, verifiable — linked, never featured. */
+export const FOUNDER_NAME = "Hermes Lekkas";
+export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/hermes-lekkas-453722441/";
+export const STUDIO_GITHUB = "https://github.com/byteshperedynamics-cmyk";
+/** Support / security contact. null until the address is confirmed: contact links stay hidden. */
+export const SUPPORT_EMAIL: string | null = null;
