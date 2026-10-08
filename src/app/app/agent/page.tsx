@@ -89,7 +89,7 @@ export default function AgentPage() {
         </div>
         {ent.allowed ? (
           <LivePill tone="live" pulse={false} className="max-w-full whitespace-normal leading-snug">
-            {ent.planName} · {ent.remaining} of {ent.limit} fixes left this period
+            {ent.planName} · {ent.remaining} of {ent.limit} fixes left this month
           </LivePill>
         ) : (
           <LivePill tone="neutral" className="max-w-full whitespace-normal leading-snug">

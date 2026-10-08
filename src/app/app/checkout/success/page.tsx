@@ -249,7 +249,7 @@ export default function CheckoutSuccessPage() {
                 </div>
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="text-muted-foreground">
-                    {creditOnly ? "Analyses included" : "Analyses this period"}
+                    {creditOnly ? "Analyses included" : "Analyses per month"}
                   </dt>
                   <dd className="font-medium">
                     <span className="font-display text-base font-semibold text-primary">{counted}</span>{" "}

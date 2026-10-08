@@ -11,13 +11,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 function InstallPageInner() {
   const params = useSearchParams();
   const state = params.get("state") ?? "";
+  // GitHub's post-install redirect (the app's Setup URL) carries
+  // ?installation_id&setup_action but no state. The raw id is never trusted:
+  // it only means "re-verify", so restart the OAuth round-trip, which returns
+  // here with a state once GitHub confirms this user's installations.
+  const fromGithubInstall = !state && params.has("installation_id");
+  const [reconnecting, setReconnecting] = useState(fromGithubInstall);
   const [picked, setPicked] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [installations, setInstallations] = useState<Array<{ id: number; login: string; type: string }>>([]);
   const [loaded, setLoaded] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
 
+  async function reconnect() {
+    setReconnecting(true);
+    try {
+      const { connectGithub } = await import("@/lib/agent-client");
+      const { url } = await connectGithub();
+      window.location.href = url;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not reach GitHub. Try again.");
+      setReconnecting(false);
+    }
+  }
+
   useEffect(() => {
+    if (fromGithubInstall) {
+      void reconnect();
+      return;
+    }
     let alive = true;
     (async () => {
       try {
@@ -69,13 +91,20 @@ function InstallPageInner() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!loaded ? (
+          {reconnecting ? (
+            <p className="text-sm text-muted-foreground">Confirming your installation with GitHub…</p>
+          ) : !loaded ? (
             <p className="text-sm text-muted-foreground">Loading your installations…</p>
           ) : installations.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No installations were found for your GitHub login. Go back and connect again after installing the app on
-              your repository.
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                No installations were found for your GitHub login. Install the app on your repository, then connect
+                again.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => void reconnect()}>
+                Connect again
+              </Button>
+            </div>
           ) : (
             <ul className="space-y-2">
               {installations.map((i) => (
