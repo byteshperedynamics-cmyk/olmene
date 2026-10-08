@@ -40,6 +40,7 @@
     "node_modules",
     "archive",
     "scripts",
+    "video",
     "src/lib/agent/__tests__",
     "src/lib/measure/__tests__",
     "src/lib/auth/__tests__",

@@ -20,6 +20,7 @@ links to a source.
 | `tests/` | Test suites (agent unit tests, pipeline tests) |
 | `docs/` | Documentation: `worklog.md`, `architecture-audit.md`, `integrations.md`, `olmene-setup.md` |
 | `workers/` | Auxiliary Cloudflare Workers (`get-redirect/` = 301s from the old workers.dev URL) |
+| `video/` | Promo videos made with Remotion — the TikTok promo, its renders and its synthesized soundtrack (own `package.json`, not part of the app build; see `video/README.md`) |
 | `archive/` | Historical working artifacts — see `archive/README.md` (nothing in `archive/` is needed to build or run the app) |
 
 ## Architecture
