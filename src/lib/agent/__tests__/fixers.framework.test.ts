@@ -53,4 +53,17 @@ describe("framework fixers respect SEO components and sitemap generators", () =>
     const out = fixer("sitemap-robots").build(ctx({ packageJson: '{"devDependencies":{"next-sitemap":"4.2.3"}}' }));
     expect("skip" in out && out.skip).toContain("next-sitemap");
   });
+
+  test("skips sites served under a sub-path (GitHub Pages project sites): robots.txt only counts at the root", () => {
+    for (const siteUrl of ["https://acme.github.io/site/", "https://acme.github.io/site"]) {
+      const out = fixer("sitemap-robots").build(
+        ctx({ siteUrl, framework: null, homepagePath: "index.html", homepageHtml: "<html><head></head><body></body></html>", treePaths: ["index.html"] }),
+      );
+      expect("skip" in out && out.skip).toContain("domain root");
+    }
+    const root = fixer("sitemap-robots").build(
+      ctx({ siteUrl: "https://acme.test/", framework: null, homepagePath: "index.html", homepageHtml: "<html><head></head><body></body></html>", treePaths: ["index.html"] }),
+    );
+    expect("edits" in root && root.edits.map((e) => e.path)).toEqual(["robots.txt", "sitemap.xml"]);
+  });
 });

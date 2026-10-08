@@ -306,6 +306,16 @@ const sitemapRobotsFixer: Fixer = {
     return { triggered: false, ref: {} };
   },
   build: (ctx) => {
+    // robots.txt only counts at the domain root, and the checks read both
+    // files there. A site served under a sub-path (a GitHub Pages project site,
+    // user.github.io/repo/) can't put them at the root from this repository,
+    // so the fix could never go live — skip it rather than open a dead PR.
+    const subPath = new URL(normalizeSiteUrl(ctx.siteUrl)).pathname;
+    if (subPath !== "" && subPath !== "/") {
+      return {
+        skip: `Your site lives under ${subPath}/, but robots.txt and sitemap.xml are read from the domain root, which this repository doesn't serve.`,
+      };
+    }
     // Framework repos: static files go in public/ (served at the site root by
     // Next.js and Astro) — unless a dynamic robots/sitemap route exists.
     if (ctx.framework) return buildFrameworkSitemapRobots(ctx);
