@@ -1,36 +1,67 @@
 # Olmene — TikTok promo (Remotion)
 
-A 26-second vertical motion-graphics promo for Olmene, built as code with
-[Remotion](https://www.remotion.dev) (React → MP4). Everything on screen is
-drawn from the product's own design system (`docs/design/olmene-blueprint.html`,
-`src/app/globals.css`) and its own copy; the soundtrack and sound effects are
-synthesized by a script in this folder, so there is nothing to license.
+A 25.8-second vertical motion-graphics promo for Olmene, cut as a **phonk
+edit** at 130 BPM and built as code with [Remotion](https://www.remotion.dev)
+(React → MP4). Everything on screen is drawn from the product's own design
+system (`docs/design/olmene-blueprint.html`, `src/app/globals.css`) and its own
+copy; the phonk soundtrack and sound effects are synthesized by a script in
+this folder, so there is nothing to license.
 
 | | |
 |---|---|
-| Final video | `renders/olmene-tiktok.mp4` — 1080×1920, 30 fps, H.264 + AAC 320k, −14 LUFS |
-| Without music | `renders/olmene-tiktok-sfx-only.mp4` — same cut, sound effects only, for posting with a sound picked inside TikTok |
+| Final video | `renders/olmene-tiktok.mp4` — 1080×1920, 30 fps, H.264 + AAC 320k, −14 LUFS, original phonk track |
+| For a trending sound | `renders/olmene-tiktok-sfx-only.mp4` — same cut, sound effects only; add the trending sound inside TikTok (see [Using a trending sound](#using-a-trending-sound)) |
 | Cover | `renders/olmene-tiktok-cover.png` — upload as the custom cover |
 
 ## The cut
 
-Every cut lands on a beat of the 120 BPM track (one beat = 15 frames), and every
-scene after the drop starts on a bar line (`src/timeline.ts`).
+The edit sits on a 130 BPM grid defined in `src/beat-map.json`; the soundtrack
+is generated from the same file, so music and picture cannot drift apart. Every
+cut lands on a bar line, every UI event on a beat or eighth note, and every 808
+hit punches the frame (`src/components/BeatFx.tsx`).
 
 | Time | Scene | On screen |
 |---|---|---|
-| 0:00 | Hook | *Your site is* **losing customers.** — lands on an impact; three real findings pop in over a ghost of the site |
-| 0:03 | Scan (the drop) | *Paste your URL.* → the input unfolds into the browser, the scan beam reads the page, the findings surface, readiness **61** |
-| 0:09 | Fix | *Then it writes the fix.* — the diff is typed line by line: title, meta description, JSON-LD for AI search |
-| 0:13 | Review | *You stay in control.* — the cursor approves 2 changes → **PR #14 opened · 3 fixes** → *Nothing merges without you.* |
-| 0:17 | Prove | *Then it proves it worked.* — live re-check; each finding turns green and readiness climbs 61 → 72 → 83 → 94 |
-| 0:21 | End card | the flower blooms, **olmene**, *Find it. Fix it. Prove it.*, **olmene.com →**, *Free scan · 30 seconds · No card* |
+| 0:00 | Hook | *Your site is* **losing customers.** slams in on the first 808; three real findings pop on eighth notes; a snare roll builds, then half a beat of silence |
+| **0:03.7** | Scan — **the drop** | flash, RGB split and the scan beam; *Paste your URL.* → the input unfolds into the browser, the beam reads the page, readiness **61** |
+| 0:09.2 | Fix | *Then it writes the fix.* — the diff types line by line on the beat |
+| 0:12.9 | Review | *You stay in control.* — the approve click lands on beat 3 → **PR #14 opened · 3 fixes** → *Nothing merges without you.* |
+| 0:16.6 | Prove | *Then it proves it worked.* — 61 → 72 → 83 → 94, one step per eighth note |
+| 0:20.3 | End card | the flower blooms, **olmene**, *Find it. Fix it. Prove it.*, **olmene.com →**; final hit at 0:24, then a tape stop |
 
 Honesty rules carried over from the site: the example site is the site's own
 fictional **Acme**, and the illustrative UI (the 61 → 94 score, the PR number)
 carries the same amber **Preview / Example** labels the homepage uses. All
 other claims are copy already live on olmene.com (21 checks, free 30-second
 scan, no card, PR-based fixes, nothing merges without you, live re-check).
+
+## Using a trending sound
+
+A trending sound only helps when it is **added inside TikTok** (the video then
+joins that sound's page, and the music is licensed by TikTok). Audio baked into
+the uploaded file becomes an "original sound" or gets muted. So:
+
+1. Upload `renders/olmene-tiktok-sfx-only.mp4`.
+2. **Add sound** → search the sound → **Adjust clip / trim**: slide it so the
+   song's drop lands at **0:03.7**, the green flash where the scan starts.
+3. **Volume**: added sound 100%, original sound about 40% (keeps the clicks,
+   dings and whooshes under the music).
+
+Picked for this edit (October 2026): **"DUNG DING BREGA" — 3VILCORE & Pheyx**,
+phonk × brega funk with a heavy bass and an explosive drop; Metricool's weekly
+TikTok chart had it at No. 4 for the week of 5 October 2026. Phonk/funk
+alternatives TikTok's own discover pages show as popular: *Luz Roja* (bxkq),
+*Matadora*, *Nervy Funk*, *Montagem Alquimia*. Check TikTok Creative Center →
+Trends → Songs for this week's numbers before posting.
+
+- **Business accounts** cannot use the general music library (most trending
+  phonk lives there). Either search "phonk" in the **Commercial Music Library**
+  and use the same steps, or post `olmene-tiktok.mp4`, whose original phonk
+  track is yours to use.
+- **Tempo**: the edit is cut at 130 BPM, the usual tempo of montagem and
+  brega-phonk edits. If the sound you pick runs at another tempo, set `bpm` in
+  `src/beat-map.json` and run `npm run render:sfx-only`; every cut and punch
+  re-times itself.
 
 ## Commands
 
@@ -51,10 +82,11 @@ Chromium you already have, set `REMOTION_BROWSER_EXECUTABLE=/path/to/chrome`.
 ## Editing
 
 - **Copy** lives in the scene files: `src/scenes/{Hook,Scan,Fix,Review,Prove,EndCard}.tsx`.
-- **Timing**: scene cuts are in `src/timeline.ts`; inside a scene, frame
-  `CUT` (7) is the beat the scene lands on. If you move cuts, update `BARS` /
-  `DROP` / `END` in `scripts/make-audio.mjs` and run `npm run audio` so the music
-  still hits them.
+- **Timing**: `src/beat-map.json` holds the tempo, where each scene starts (in
+  beats), the 808 pattern and the final hit. Inside a scene, `b(n)` from
+  `sceneBeats()` (`src/timeline.ts`) is the frame of the n-th beat after its cut.
+- **Edit effects** (punches, flash, RGB split, the push-in before the drop):
+  `src/components/BeatFx.tsx`.
 - **Brand tokens**: `src/theme.ts` (colours from the blueprint's dark theme, the
   brand ease `cubic-bezier(0.22, 1, 0.36, 1)`, fonts).
 - **Safe zones**: key content stays inside `SAFE` in `src/theme.ts` (clear of
@@ -70,13 +102,10 @@ Suggested caption (edit freely):
 > request you approve, then re-checks your live site to prove it worked. Free
 > scan in 30 seconds at olmene.com
 >
-> #buildinpublic #indiehacker #saas #webdev #seo #nextjs
+> #buildinpublic #indiehacker #saas #webdev #seo #phonk
 
 - Put **olmene.com** in the profile bio; the video's CTA points there.
 - Use the cover from `renders/`, or pick the frame at 0:01 in TikTok.
-- Business accounts can only use TikTok's Commercial Music Library. The
-  soundtrack here is original and royalty-free; to use a sound from the library
-  instead, post the `sfx-only` version and add the sound in TikTok.
 
 ## Licences
 

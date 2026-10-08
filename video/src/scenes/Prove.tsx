@@ -5,15 +5,18 @@ import { Sfx } from "../components/Sfx";
 import { Pill, PulseDot } from "../components/ui";
 import "../fonts";
 import { C, CLAMP, EASE, FONT, POP } from "../theme";
+import { DUR, sceneBeats } from "../timeline";
+
+const b = sceneBeats("prove");
 
 const DIAL = { x: 540, y: 868, r: 196, stroke: 22 };
 const BEFORE = 61;
 const STEP = 11; // each verified fix moves the score: 61 → 72 → 83 → 94
 
 const CHECKS = [
-  { label: "Page title", fixAt: 40, sfx: "ding1" as const },
-  { label: "Meta description", fixAt: 48, sfx: "ding2" as const },
-  { label: "JSON-LD for AI search", fixAt: 56, sfx: "ding3" as const },
+  { label: "Page title", fixAt: b(2), sfx: "ding1" as const },
+  { label: "Meta description", fixAt: b(2.5), sfx: "ding2" as const },
+  { label: "JSON-LD for AI search", fixAt: b(3), sfx: "ding3" as const },
 ];
 
 /**
@@ -25,7 +28,7 @@ export const Prove: React.FC = () => {
   const frame = useCurrentFrame();
   const enter = interpolate(frame, [0, 16], [0, 1], { ...CLAMP, easing: EASE });
   // The ring draws the "before" score, then climbs one step per verified fix.
-  const arc = interpolate(frame, [10, 28], [0, BEFORE], { ...CLAMP, easing: EASE });
+  const arc = interpolate(frame, [b(0), b(1.5)], [0, BEFORE], { ...CLAMP, easing: EASE });
   const climb = CHECKS.reduce(
     (sum, c) => sum + STEP * interpolate(frame, [c.fixAt, c.fixAt + 10], [0, 1], { ...CLAMP, easing: EASE }),
     0,
@@ -39,7 +42,7 @@ export const Prove: React.FC = () => {
   const burst = interpolate(frame, [doneAt, doneAt + 24], [0, 1], { ...CLAMP, easing: EASE });
 
   return (
-    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [0, 134], [1, 1.03])}` }}>
+    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [0, DUR.prove], [1, 1.03])}` }}>
       <Headline segs={[{ text: "Then it proves", br: true }, { text: "it worked.", tone: "leaf", italic: true }]} at={0} top={250} />
 
       {/* status pills */}
@@ -151,7 +154,7 @@ export const Prove: React.FC = () => {
         })}
       </div>
 
-      <Sfx name="riser" at={CHECKS[0].fixAt - 4} volume={0.45} />
+      <Sfx name="riser" at={b(1)} volume={0.4} />
       {CHECKS.map((c) => (
         <Sfx key={c.label} name={c.sfx} at={c.fixAt} volume={0.5} />
       ))}

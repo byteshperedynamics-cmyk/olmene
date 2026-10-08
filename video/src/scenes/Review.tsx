@@ -6,6 +6,7 @@ import { Sfx } from "../components/Sfx";
 import { card, Pill, PulseDot } from "../components/ui";
 import "../fonts";
 import { C, CLAMP, EASE, FONT, POP } from "../theme";
+import { DUR, sceneBeats } from "../timeline";
 
 const CARD = { left: 90, top: 560, width: 860 };
 const HEAD_H = 124;
@@ -15,11 +16,13 @@ const BTN = { top: 88, h: 80, approveW: 340, declineW: 230 };
 // Approve button centre in frame coordinates (card border 2px + footer padding 30px).
 const APPROVE = { x: CARD.left + CARD.width - 32 - BTN.approveW / 2, y: FOOT_TOP + BTN.top + BTN.h / 2 };
 
-const CLICK = 62;
+const b = sceneBeats("review");
+// The approve click lands on beat 3; the trust line on the next bar line.
+const CLICK = b(3);
 
 const CHANGES = [
-  { label: "Descriptive title and meta description", impact: "high impact", tone: "rust" as const, at: 30 },
-  { label: "Organization JSON-LD for AI search", impact: "medium", tone: "neutral" as const, at: 38 },
+  { label: "Descriptive title and meta description", impact: "high impact", tone: "rust" as const, at: b(1) },
+  { label: "Organization JSON-LD for AI search", impact: "medium", tone: "neutral" as const, at: b(1.5) },
 ];
 
 /** 0:13 — "You stay in control.": the review screen, the user approves, the PR opens. */
@@ -33,7 +36,7 @@ export const Review: React.FC = () => {
 
   // Cursor glides in on a slight curve (x and y ease differently), then clicks.
   const move = (from: number, to: number, ease: (t: number) => number) =>
-    interpolate(frame, [26, CLICK - 4], [from, to], { ...CLAMP, easing: ease });
+    interpolate(frame, [b(1), CLICK - 4], [from, to], { ...CLAMP, easing: ease });
   const cx = move(1010, APPROVE.x - 6, Easing.bezier(0.45, 0, 0.2, 1));
   const cy = move(1560, APPROVE.y - 8, Easing.bezier(0.3, 0, 0.1, 1));
   const press = interpolate(frame, [CLICK, CLICK + 3, CLICK + 8], [0, 1, 0], CLAMP);
@@ -41,7 +44,7 @@ export const Review: React.FC = () => {
   const ripple = interpolate(frame, [CLICK, CLICK + 18], [0, 1], { ...CLAMP, easing: EASE });
 
   return (
-    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [0, 134], [1, 1.03])}` }}>
+    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [0, DUR.review], [1, 1.03])}` }}>
       <Headline segs={[{ text: "You stay", br: true }, { text: "in control.", tone: "leaf", italic: true }]} at={0} top={250} />
 
       <div
@@ -228,11 +231,11 @@ export const Review: React.FC = () => {
           opacity: frame >= CLICK ? (1 - ripple) * 0.8 : 0,
         }}
       />
-      <Cursor x={cx} y={cy} press={press} opacity={interpolate(frame, [26, 32, CLICK + 30, CLICK + 40], [0, 1, 1, 0], CLAMP)} />
+      <Cursor x={cx} y={cy} press={press} opacity={interpolate(frame, [b(1), b(1) + 6, CLICK + 30, CLICK + 40], [0, 1, 1, 0], CLAMP)} />
 
       <Headline
         segs={[{ text: "Nothing merges without you.", italic: true }]}
-        at={CLICK + 20}
+        at={b(4)}
         stagger={2}
         size={66}
         top={1198}

@@ -1,0 +1,20 @@
+{
+  "bpm": 130,
+  "fps": 30,
+  "sections": {
+    "hook": 0,
+    "scan": 8,
+    "fix": 20,
+    "review": 28,
+    "prove": 36,
+    "end": 44,
+    "total": 56
+  },
+  "kickSteps": [
+    0,
+    3,
+    6,
+    10
+  ],
+  "finalHit": 52
+}

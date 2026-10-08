@@ -6,8 +6,12 @@ import { Dots, SiteWireframe, UrlText } from "../components/Site";
 import { Pin } from "../components/ui";
 import "../fonts";
 import { C, CLAMP, EASE, FONT } from "../theme";
+import { DUR, sceneBeats } from "../timeline";
 
-const SLAM = 10;
+const b = sceneBeats("hook");
+// "losing customers." lands on beat 1 (the first 808); findings pop on 8th notes.
+const SLAM = b(1);
+const PINS = [b(2), b(2.5), b(3)];
 
 /**
  * 0:00 — the hook. The site's own H1 promise, problem first: the line is
@@ -38,7 +42,7 @@ export const Hook: React.FC = () => {
           background: "rgba(34,35,32,0.7)",
           overflow: "hidden",
           opacity: interpolate(frame, [0, 20], [0.3, 0.55], CLAMP),
-          transform: `perspective(2200px) rotateX(${interpolate(frame, [0, 97], [30, 24])}deg) rotateZ(${interpolate(frame, [0, 97], [-8, -5])}deg) translateY(${interpolate(frame, [0, 97], [30, -20])}px)`,
+          transform: `perspective(2200px) rotateX(${interpolate(frame, [0, DUR.hook], [30, 24])}deg) rotateZ(${interpolate(frame, [0, DUR.hook], [-8, -5])}deg) translateY(${interpolate(frame, [0, DUR.hook], [30, -20])}px)`,
         }}
       >
         <div style={{ height: 90, display: "flex", alignItems: "center", gap: 26, padding: "0 30px", borderBottom: `2px solid ${C.line}` }}>
@@ -70,7 +74,7 @@ export const Hook: React.FC = () => {
       <AbsoluteFill
         style={{
           translate: `${Math.sin(frame * 2.9) * 10 * shake}px ${Math.cos(frame * 3.7) * 6 * shake}px`,
-          scale: `${interpolate(frame, [0, 97], [1, 1.035])}`,
+          scale: `${interpolate(frame, [0, DUR.hook], [1, 1.035])}`,
         }}
       >
         {/* dark scrim keeps the headline crisp over the ghost site */}
@@ -140,15 +144,15 @@ export const Hook: React.FC = () => {
           </span>
         </div>
 
-        <Pin label="No meta description" at={24} size={34} tilt={-4} style={{ left: 120, top: 548 }} />
-        <Pin label="Generic page title" at={33} size={34} tilt={3} style={{ left: 466, top: 1046 }} />
-        <Pin label="Unreadable to AI search" at={42} size={34} tilt={-2} style={{ left: 150, top: 1172 }} />
+        <Pin label="No meta description" at={PINS[0]} size={34} tilt={-4} style={{ left: 120, top: 548 }} />
+        <Pin label="Generic page title" at={PINS[1]} size={34} tilt={3} style={{ left: 466, top: 1046 }} />
+        <Pin label="Unreadable to AI search" at={PINS[2]} size={34} tilt={-2} style={{ left: 150, top: 1172 }} />
       </AbsoluteFill>
 
       <Sfx name="impact" at={SLAM} volume={0.9} />
-      <Sfx name="alert" at={24} volume={0.5} />
-      <Sfx name="alert" at={33} volume={0.5} />
-      <Sfx name="alert" at={42} volume={0.5} />
+      <Sfx name="alert" at={PINS[0]} volume={0.5} />
+      <Sfx name="alert" at={PINS[1]} volume={0.5} />
+      <Sfx name="alert" at={PINS[2]} volume={0.5} />
     </AbsoluteFill>
   );
 };

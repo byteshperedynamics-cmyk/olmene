@@ -6,6 +6,9 @@ import { Sfx } from "../components/Sfx";
 import { card, Pill } from "../components/ui";
 import "../fonts";
 import { C, CLAMP, EASE, FONT } from "../theme";
+import { DUR, sceneBeats } from "../timeline";
+
+const b = sceneBeats("fix");
 
 type Row =
   | { kind: "ctx"; n: number; code: string; at: number }
@@ -20,17 +23,17 @@ type Row =
  * (src/lib/v2/sample-data.ts), shortened to read on a phone.
  */
 const ROWS: Row[] = [
-  { kind: "ctx", n: 12, code: "export const metadata = {", at: 16 },
-  { kind: "del", n: 13, code: '  title: "Acme",', at: 20 },
-  { kind: "add", n: 13, code: '  title: "Acme — Product analytics",', at: 32, to: 43 },
-  { kind: "add", n: 14, code: '  description: "Find where users drop off.",', at: 42, to: 55 },
-  { kind: "ctx", n: 15, code: "};", at: 52 },
-  { kind: "gap", at: 56 },
-  { kind: "ctx", n: 30, code: "      {children}", at: 58 },
-  { kind: "add", n: 31, code: "      <OlmeneJsonLd />", at: 62, to: 70 },
+  { kind: "ctx", n: 12, code: "export const metadata = {", at: b(0.5) },
+  { kind: "del", n: 13, code: '  title: "Acme",', at: b(1) },
+  { kind: "add", n: 13, code: '  title: "Acme — Product analytics",', at: b(1.5), to: b(2.25) },
+  { kind: "add", n: 14, code: '  description: "Find where users drop off.",', at: b(2), to: b(3) },
+  { kind: "ctx", n: 15, code: "};", at: b(2.75) },
+  { kind: "gap", at: b(3) },
+  { kind: "ctx", n: 30, code: "      {children}", at: b(3.25) },
+  { kind: "add", n: 31, code: "      <OlmeneJsonLd />", at: b(3.5), to: b(4) },
 ];
 
-const READY = 78;
+const READY = b(4.5);
 const ROW_H = 50;
 
 const DiffRow: React.FC<{ row: Row }> = ({ row }) => {
@@ -128,7 +131,7 @@ export const Fix: React.FC = () => {
   const ready = interpolate(frame, [READY, READY + 8], [0, 1], { ...CLAMP, easing: EASE });
 
   return (
-    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [0, 134], [1, 1.03])}` }}>
+    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [0, DUR.fix], [1, 1.03])}` }}>
       <Headline segs={[{ text: "Then it writes", br: true }, { text: "the fix.", tone: "leaf", italic: true }]} at={0} top={250} />
 
       <div
@@ -199,7 +202,7 @@ export const Fix: React.FC = () => {
 
       <Headline
         segs={[{ text: "Each change comes with its evidence.", italic: true }]}
-        at={READY + 6}
+        at={b(5)}
         stagger={2}
         size={54}
         top={1214}
@@ -207,10 +210,10 @@ export const Fix: React.FC = () => {
       />
 
       <Sfx name="whoosh" at={6} volume={0.3} />
-      <Sfx name="tick" at={20} volume={0.45} />
-      <Sfx name="tick" at={32} volume={0.55} />
-      <Sfx name="tick" at={42} volume={0.55} />
-      <Sfx name="tick" at={62} volume={0.55} />
+      <Sfx name="tick" at={b(1)} volume={0.45} />
+      <Sfx name="tick" at={b(1.5)} volume={0.55} />
+      <Sfx name="tick" at={b(2)} volume={0.55} />
+      <Sfx name="tick" at={b(3.5)} volume={0.55} />
       <Sfx name="ding1" at={READY} volume={0.55} />
     </AbsoluteFill>
   );

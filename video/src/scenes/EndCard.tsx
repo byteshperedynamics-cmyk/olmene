@@ -5,13 +5,15 @@ import { ArrowIcon } from "../components/Icons";
 import { Sfx } from "../components/Sfx";
 import "../fonts";
 import { C, CLAMP, EASE, FONT, POP } from "../theme";
+import { DUR, sceneBeats } from "../timeline";
 
-const BLOOM = 0;
-const CTA = 80;
+const b = sceneBeats("end");
+const BLOOM = 0; // the mark is already opening as the cut lands
+const CTA = b(5);
 const TAGLINE = [
-  { text: "Find it.", at: 37 },
-  { text: "Fix it.", at: 52 },
-  { text: "Prove it.", at: 67 },
+  { text: "Find it.", at: b(2) },
+  { text: "Fix it.", at: b(3) },
+  { text: "Prove it.", at: b(4) },
 ];
 
 /** 0:21 — the end card: the mark blooms, the loop as a tagline, one clear URL. */
@@ -34,7 +36,7 @@ export const EndCard: React.FC = () => {
           justifyContent: "center",
           alignItems: "center",
           gap: 30,
-          scale: `${interpolate(frame, [0, 157], [0.98, 1.03])}`,
+          scale: `${interpolate(frame, [0, DUR.end], [0.98, 1.03])}`,
         }}
       >
         <div style={{ position: "relative", width: 168, height: 168 }}>
@@ -151,7 +153,7 @@ export const EndCard: React.FC = () => {
 
       <Headline
         segs={[{ text: "Free scan · 30 seconds · No card" }]}
-        at={CTA + 12}
+        at={b(5.5)}
         stagger={2}
         size={34}
         top={1176}

@@ -6,14 +6,16 @@ import { Dots, SiteWireframe, UrlText } from "../components/Site";
 import { card, Pill, Pin, PulseDot } from "../components/ui";
 import "../fonts";
 import { C, CLAMP, EASE, FONT, POP } from "../theme";
+import { DUR, sceneBeats } from "../timeline";
 
 const URL = "acme-analytics.com";
-const TYPE_FROM = 20;
-const TYPE_TO = 48;
-const PRESS = 54;
-const MORPH = 60; // the input becomes the browser chrome
-const SCAN_FROM = 92;
-const SCAN_TO = 142;
+const b = sceneBeats("scan");
+const TYPE_FROM = b(1);
+const TYPE_TO = b(3);
+const PRESS = b(3.5);
+const MORPH = b(4); // bar 2: the input becomes the browser chrome
+const SCAN_FROM = b(6);
+const SCAN_TO = b(9);
 
 const CARD = { left: 90, top: 560, inputTop: 760, width: 860 };
 const BODY_H = 660;
@@ -54,7 +56,7 @@ export const Scan: React.FC = () => {
   const keys: SfxName[] = ["key1", "key2", "key3"];
 
   return (
-    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [MORPH, 194], [1, 1.025], CLAMP)}` }}>
+    <AbsoluteFill style={{ fontFamily: FONT.body, scale: `${interpolate(frame, [MORPH, DUR.scan], [1, 1.025], CLAMP)}` }}>
       <Headline segs={[{ text: "Paste your URL." }]} at={2} exitAt={PRESS} top={560} />
       <Headline segs={[{ text: "Olmene finds" }, { text: "why.", tone: "leaf", italic: true }]} at={MORPH + 6} top={290} />
 
