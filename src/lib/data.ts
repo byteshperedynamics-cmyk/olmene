@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupabase } from "./supabase";
+import { quotaWindow } from "./quota";
 import type { ReportData } from "./report-types";
 
 // ── DB-backed data layer (production mode) ──────────────────────────────
@@ -53,6 +54,8 @@ export interface Entitlement {
   reportCredits: number;
   /** Earliest expiry among available credits (null when none). */
   creditsExpireAt: string | null;
+  /** Ever bought anything (a subscription or a report credit) — has receipts in the Polar portal. */
+  hasPurchases: boolean;
 }
 
 export interface Plan {
@@ -147,6 +150,7 @@ export async function getEntitlement(): Promise<Entitlement> {
     cancelAtPeriodEnd: false,
     reportCredits: 0,
     creditsExpireAt: null,
+    hasPurchases: false,
   };
   if (!supabase) return empty;
   const now = new Date().toISOString();
@@ -188,11 +192,17 @@ export async function getEntitlement(): Promise<Entitlement> {
   );
   const creditsExpireAt =
     (availableCredits[0] as { expires_at?: string } | undefined)?.expires_at ?? null;
+  // Any subscription row or any credit ever granted means Polar holds receipts.
+  let hasPurchases = (subs ?? []).length > 0 || credits.length > 0;
+  if (!hasPurchases) {
+    const { count: creditsEver } = await supabase.from("report_credits").select("id", { count: "exact", head: true });
+    hasPurchases = (creditsEver ?? 0) > 0;
+  }
 
   if (!sub) {
     // Credit-only account: total = credits; used = non-failed jobs since the
     // earliest credit was granted.
-    if (!availableCredits.length) return empty;
+    if (!availableCredits.length) return { ...empty, hasPurchases };
     const since = (availableCredits[0] as { created_at: string }).created_at;
     const { count } = await supabase
       .from("analysis_jobs")
@@ -208,16 +218,21 @@ export async function getEntitlement(): Promise<Entitlement> {
       cancelAtPeriodEnd: false,
       reportCredits: availableCredits.length,
       creditsExpireAt,
+      hasPurchases,
     };
   }
   const { data: plan } = await supabase
     .from("plans")
-    .select("name, reports_per_period")
+    .select("name, reports_per_period, billing_interval")
     .eq("polar_product_id", (sub as { polar_product_id: string }).polar_product_id)
     .maybeSingle();
-  const periodStart =
+  // Quota is per month on every plan; yearly plans count per monthly slice.
+  const periodStart = quotaWindow(
     (sub as { current_period_start: string | null }).current_period_start ??
-    new Date(Date.now() - 30 * 864e5).toISOString();
+      new Date(Date.now() - 30 * 864e5).toISOString(),
+    (sub as { current_period_end: string | null }).current_period_end,
+    (plan as { billing_interval?: string | null } | null)?.billing_interval,
+  ).start;
   const { count } = await supabase
     .from("analysis_jobs")
     .select("id", { count: "exact", head: true })
@@ -233,12 +248,15 @@ export async function getEntitlement(): Promise<Entitlement> {
     cancelAtPeriodEnd: (sub as { cancel_at_period_end: boolean | null }).cancel_at_period_end ?? false,
     reportCredits: availableCredits.length,
     creditsExpireAt,
+    hasPurchases,
   };
 }
 
 export async function getPlans(): Promise<Plan[]> {
   const supabase = getSupabase();
   if (!supabase) return [];
-  const { data } = await supabase.from("plans").select("*").order("sort_order");
+  // Retired plans stay readable (a subscriber on one still needs its quota),
+  // so only offer the active ones here.
+  const { data } = await supabase.from("plans").select("*").eq("active", true).order("sort_order");
   return (data ?? []) as Plan[];
 }

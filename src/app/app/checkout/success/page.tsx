@@ -329,7 +329,7 @@ export default function CheckoutSuccessPage() {
                 {
                   icon: ScanSearch,
                   title: "Watch the audit run",
-                  body: "Live steps, real research — about ten minutes, start to finish.",
+                  body: "Live steps, real research — usually 2–4 minutes, start to finish.",
                 },
                 {
                   icon: FileText,

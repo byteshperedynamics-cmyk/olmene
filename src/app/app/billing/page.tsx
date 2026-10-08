@@ -71,20 +71,22 @@ export default function BillingPage() {
         </p>
       </div>
 
-      {ent && (ent.active || creditOnly) && (
+      {ent && (ent.active || creditOnly || ent.hasPurchases) && (
         <Card>
           <CardHeader>
-            <CardTitle>{creditOnly ? "Report credits" : "Current plan"}</CardTitle>
+            <CardTitle>{ent.active ? "Current plan" : creditOnly ? "Report credits" : "Your purchases"}</CardTitle>
             <CardDescription>
               {creditOnly ? (
                 <>
                   {ent.reportCredits} report {ent.reportCredits === 1 ? "credit" : "credits"} available
                   {ent.creditsExpireAt ? ` · valid until ${fmtDate(ent.creditsExpireAt)}` : ""}
                 </>
+              ) : !ent.active ? (
+                <>No active plan and no unused report credits.</>
               ) : (
                 <>
                   {ent.planName}
-                  {ent.quotaTotal > 0 ? ` · ${ent.quotaUsed} of ${ent.quotaTotal} reports used` : ""}
+                  {ent.quotaTotal > 0 ? ` · ${ent.quotaUsed} of ${ent.quotaTotal} reports used this month` : ""}
                   {ent.reportCredits > 0 ? ` · +${ent.reportCredits} report ${ent.reportCredits === 1 ? "credit" : "credits"}` : ""}
                 </>
               )}
@@ -111,10 +113,16 @@ export default function BillingPage() {
               </Button>
             </CardContent>
           ) : (
-            <CardContent>
+            <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 No subscription — single reports run on credits. Failed analyses never burn a credit.
               </p>
+              {ent.hasPurchases && (
+                <Button variant="outline" size="sm" onClick={manage} disabled={busy === "portal"}>
+                  {busy === "portal" ? <LogoLoader size={16} /> : <ExternalLink className="size-4" aria-hidden />}
+                  Receipts and invoices
+                </Button>
+              )}
             </CardContent>
           )}
         </Card>

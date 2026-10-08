@@ -3,7 +3,9 @@ import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled, appUrl, githubApiBase, githubWebBase } from "@/lib/agent/env";
 import { ERR } from "@/lib/agent/http";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
+import { GITHUB_USER_AGENT, githubHeaders } from "@/lib/agent/github/headers";
 import { agentLog } from "@/lib/agent/redact";
+import { recordOpsEvent } from "@/lib/agent/ops";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +52,7 @@ export async function GET(req: Request) {
     // 1. code → user access token (single use, discarded at the end of this request)
     const tokenRes = await fetch(`${githubWebBase()}/login/oauth/access_token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json", "User-Agent": GITHUB_USER_AGENT },
       body: JSON.stringify({
         client_id: app.clientId,
         client_secret: app.clientSecret,
@@ -65,11 +67,7 @@ export async function GET(req: Request) {
 
     // 2. Which installations does THIS GitHub user actually have?
     const instRes = await fetch(`${githubApiBase()}/user/installations`, {
-      headers: {
-        Authorization: `Bearer ${userToken}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
+      headers: githubHeaders({ Authorization: `Bearer ${userToken}` }),
     });
     if (!instRes.ok) throw new Error(`installation listing failed: ${instRes.status}`);
     const instBody = (await instRes.json()) as { installations?: InstallationLite[] };
@@ -94,7 +92,9 @@ export async function GET(req: Request) {
     }
     return NextResponse.redirect(appUrl() + `/app/agent/install?state=${state}`);
   } catch (e) {
-    agentLog("error", "github callback failed", { detail: e instanceof Error ? e.message.slice(0, 120) : "unknown" });
+    const detail = e instanceof Error ? e.message.slice(0, 120) : "unknown";
+    agentLog("error", "github callback failed", { detail });
+    await recordOpsEvent(db, "github-connect", "GitHub connect callback failed", { detail });
     return NextResponse.redirect(appUrl() + "/app/agent/?connected=0&reason=callback_failed");
   }
 }

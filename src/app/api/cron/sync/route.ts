@@ -6,6 +6,7 @@ import { safeEqual, syncLiveChecks, syncPullStates, type LiveCheckDbPort, type S
 import type { AppliedFix, LiveCheckState } from "@/lib/agent/live-check";
 import type { AgentJobRow } from "@/lib/agent/runner";
 import { agentLog } from "@/lib/agent/redact";
+import { recordOpsEvent } from "@/lib/agent/ops";
 import { decryptSecret, masterKeyFromEnv } from "@/lib/agent/crypto";
 import { googleClient, measureEnabled } from "@/lib/measure/google";
 import { syncMeasure, type MeasureDbPort } from "@/lib/measure/sync";
@@ -82,7 +83,9 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ ok: true, prs, live, measure });
   } catch (e) {
-    agentLog("error", "cron sync failed", { detail: (e instanceof Error ? e.message : String(e)).slice(0, 200) });
+    const detail = (e instanceof Error ? e.message : String(e)).slice(0, 200);
+    agentLog("error", "cron sync failed", { detail });
+    await recordOpsEvent(db, "cron-sync", "cron sync failed", { detail });
     return NextResponse.json({ error: { code: "sync_failed" } }, { status: 500 });
   }
 }

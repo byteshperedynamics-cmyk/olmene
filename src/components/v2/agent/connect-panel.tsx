@@ -23,6 +23,7 @@ export function ConnectPanel({
   busy,
   onRegister,
   onConnect,
+  installUrl = null,
 }: {
   hasScan: boolean;
   /** False when the account has no plan or report credit (the analysis form would refuse). */
@@ -35,6 +36,8 @@ export function ConnectPanel({
   busy: string | null;
   onRegister: () => void;
   onConnect: () => void;
+  /** Set when GitHub reported no installation: the app's install page. */
+  installUrl?: string | null;
 }) {
   const step = !hasScan ? 1 : 2;
   const measure = featureMeasureEnabled();
@@ -110,6 +113,15 @@ export function ConnectPanel({
                 <Button variant="sheen" size="xl" onClick={onRegister} disabled={busy !== null || killSwitch}>
                   {busy === "register" ? "Opening GitHub…" : "Set up the GitHub app"}
                 </Button>
+              ) : installUrl ? (
+                <>
+                  <Button asChild variant="sheen" size="xl">
+                    <a href={installUrl}>Install on GitHub</a>
+                  </Button>
+                  <Button variant="hairline" size="xl" onClick={onConnect} disabled={busy !== null || killSwitch}>
+                    {busy === "connect" ? "Opening GitHub…" : "Installed? Connect"}
+                  </Button>
+                </>
               ) : (
                 <Button variant="sheen" size="xl" onClick={onConnect} disabled={busy !== null || killSwitch}>
                   {busy === "connect" ? "Opening GitHub…" : "Connect GitHub"}
@@ -120,9 +132,11 @@ export function ConnectPanel({
               </Link>
               {(githubConfigured || canRegister) && (
                 <p className="text-[12.5px] text-muted-foreground">
-                {githubConfigured
-                  ? "GitHub asks you to pick the repository in the same step."
-                  : "One-time setup. GitHub shows the exact permissions first."}
+                {installUrl
+                  ? "Install Olmene on your site's repository on GitHub, then come back and connect."
+                  : githubConfigured
+                    ? "GitHub asks you to pick the repository in the same step."
+                    : "One-time setup. GitHub shows the exact permissions first."}
                 </p>
               )}
             </div>

@@ -10,4 +10,7 @@ Deploy:
 
 Tests (Deno):
 
-    deno test --allow-read --allow-write --allow-net --allow-env supabase/functions/free-audit/index.test.ts
+    deno test --node-modules-dir=none --allow-read --allow-write --allow-net --allow-env supabase/functions/free-audit/index.test.ts
+
+`--node-modules-dir=none` matters when run from the repo root: without it, Deno
+2.9+ sees the root package.json and looks for `npm:cheerio` in node_modules.

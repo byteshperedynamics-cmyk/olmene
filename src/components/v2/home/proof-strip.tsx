@@ -4,7 +4,8 @@ import { useI18n } from "@/i18n/provider";
 import { CountUp } from "../count-up";
 
 export interface ProofStat {
-  value: number;
+  /** null until the live number arrives: a dash, never a hardcoded guess. */
+  value: number | null;
   label: string;
 }
 
@@ -21,7 +22,13 @@ export function ProofStrip({ stats }: { stats: ProofStat[] }) {
               i === 2 ? "md:border-s" : ""
             }`}
           >
-            <CountUp value={s.value} className="font-display text-4xl font-medium tracking-tight md:text-5xl" />
+            {s.value === null ? (
+              <span aria-hidden className="font-display text-4xl font-medium tracking-tight text-muted-foreground/60 md:text-5xl">
+                —
+              </span>
+            ) : (
+              <CountUp value={s.value} className="font-display text-4xl font-medium tracking-tight md:text-5xl" />
+            )}
             <p className="max-w-[18ch] text-[13px] leading-snug text-muted-foreground">{t(s.label)}</p>
           </div>
         ))}

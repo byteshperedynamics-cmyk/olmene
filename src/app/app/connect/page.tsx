@@ -63,6 +63,7 @@ export default function ConnectPage() {
         busy={hub.busy}
         onRegister={hub.onRegister}
         onConnect={hub.onConnect}
+        installUrl={hub.installUrl}
       />
     </div>
   );

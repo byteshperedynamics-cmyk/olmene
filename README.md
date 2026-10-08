@@ -98,7 +98,7 @@ What syncs automatically vs. not:
 |---|---|
 | App code, pages, UI, i18n (`src/`, `public/`, configs) | ✅ deploys live |
 | Database schema (`supabase/migrations/*.sql` — add new files, never edit applied ones) | ✅ applied before deploy |
-| Edge functions (`archive/fnsrc/…`, still three drifted generations — G11) | ⚠️ manual: redeploy via `scripts/deploy_fn.py` |
+| Edge functions (`supabase/functions/`, all 8 — see its README) | ⚠️ manual: `npx supabase functions deploy <name>` |
 | Worker secrets (`wrangler secret` / API) and Supabase function secrets | ⚠️ manual by design — secrets never live in git |
 
 Manual deploy fallback: `npm run deploy:cf` (needs `CLOUDFLARE_API_TOKEN` or

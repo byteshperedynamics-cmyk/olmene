@@ -13,11 +13,12 @@ import { CHECK_COUNT } from "@/lib/config";
 import { usePageMeta } from "@/i18n/provider";
 import { usePublicStats } from "@/lib/public-stats";
 
-// Proof strip fallback — real numbers measured 2026-10-01, shown until the live
-// /api/public/stats response arrives (or if it is unavailable). Never inflate.
+// Proof strip before the live /api/public/stats response arrives (or if it is
+// unavailable). Counts that change are left blank rather than baked into the
+// static HTML, where they went stale and could overstate the live numbers.
 const STATS: ProofStat[] = [
-  { value: 73, label: "stats.audits" },
-  { value: 198, label: "stats.sources" },
+  { value: null, label: "stats.audits" },
+  { value: null, label: "stats.sources" },
   { value: CHECK_COUNT, label: "stats.checks" },
   { value: 15, label: "stats.languages" },
 ];

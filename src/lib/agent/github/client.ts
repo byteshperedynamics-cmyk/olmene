@@ -16,6 +16,7 @@ import { decryptSecret, masterKeyFromEnv } from "../crypto";
 import { AgentConfigError, githubApiBase, getEnv } from "../env";
 import { validateGithubRequest, type RepoAllowlist } from "../allowlist";
 import { createAppJwt, githubErrorMessage } from "./jwt";
+import { githubHeaders } from "./headers";
 
 export interface GithubAppConfig {
   appId: string;
@@ -118,12 +119,7 @@ export async function mintInstallationToken(
     `${opts.apiBase ?? githubApiBase()}/app/installations/${installationId}/access_tokens`,
     {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${jwt}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "Content-Type": "application/json",
-      },
+      headers: githubHeaders({ Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" }),
       body: JSON.stringify(opts.repositoryIds ? { repository_ids: opts.repositoryIds } : {}),
     },
   );
@@ -180,12 +176,10 @@ export class ScopedGithubClient {
     }
     const res = await this.fetchFn(`${this.apiBase}${path}`, {
       method,
-      headers: {
+      headers: githubHeaders({
         Authorization: `Bearer ${this.token}`,
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      },
+      }),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {

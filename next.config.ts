@@ -32,6 +32,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   reactStrictMode: false,
+  experimental: {
+    // OpenNext's cache interception (open-next.config.ts) only serves per-segment
+    // prefetch data when inlining is off; with Next 16's default inlining it
+    // answers every segment prefetch with the full page, which the router can't
+    // use, so each open tab re-prefetched its links ~80 times a second.
+    prefetchInlining: false,
+  },
 };
 
 export default nextConfig;

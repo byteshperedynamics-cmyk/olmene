@@ -15,6 +15,15 @@ import {
 import { listJobs } from "@/lib/data";
 import { track } from "@/lib/track";
 
+/** What went wrong on the way back from GitHub (`?connected=0&reason=…`). */
+const CONNECT_FAILURE: Record<string, string> = {
+  not_installed: "You authorized Olmene, but it isn't installed on a repository yet. Install it on your site's repository, then connect again.",
+  bad_state: "That GitHub link expired or was already used. Start again with Connect GitHub.",
+  missing_params: "GitHub didn't send the sign-in details back. Start again with Connect GitHub.",
+  app_not_configured: "GitHub connections aren't set up yet. Please try again later.",
+  callback_failed: "GitHub didn't confirm your installation. Try again in a minute; if it keeps failing, contact support.",
+};
+
 export interface DisconnectResult {
   verified: boolean;
   evidence: Record<string, unknown>;
@@ -26,6 +35,7 @@ export interface DisconnectResult {
 export function useAgentHub() {
   const [busy, setBusy] = useState<string | null>(null);
   const [disconnectResult, setDisconnectResult] = useState<DisconnectResult | null>(null);
+  const [connectFailure, setConnectFailure] = useState<string | null>(null);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
@@ -33,12 +43,9 @@ export function useAgentHub() {
     if (p.get("registered") === "0") toast.error("The GitHub app setup did not finish. Try again.");
     if (p.get("connected") === "1") track("github_connected");
     if (p.get("connected") === "0") {
-      const reason = p.get("reason");
-      toast.error(
-        reason === "not_installed"
-          ? "You authorized Olmene but no installation was found. Install the app on your site's repository, then reconnect."
-          : "Connecting GitHub did not finish. Try again.",
-      );
+      const reason = p.get("reason") ?? "";
+      setConnectFailure(reason);
+      toast.error(CONNECT_FAILURE[reason] ?? "Connecting GitHub did not finish. Try again.");
     }
   }, []);
 
@@ -51,6 +58,11 @@ export function useAgentHub() {
     [config.data],
   );
   const completedReports = (reports.data ?? []).filter((j) => j.status === "completed");
+  // GitHub's authorize screen doesn't always offer installation, so when the
+  // callback found none, send the user straight to the app's install page.
+  const appSlug = config.data?.github.appSlug ?? null;
+  const installUrl =
+    connectFailure === "not_installed" && appSlug ? `https://github.com/apps/${encodeURIComponent(appSlug)}/installations/new` : null;
 
   async function onRegister() {
     setBusy("register");
@@ -104,6 +116,7 @@ export function useAgentHub() {
     activeConnection,
     completedReports,
     disconnectResult,
+    installUrl,
     onRegister,
     onConnect,
     onDisconnect,

@@ -26,8 +26,8 @@ function QuotaCard() {
           <p className="text-sm text-muted-foreground">
             {ent.active
               ? ent.quotaTotal > 0
-                ? `${ent.quotaUsed} of ${ent.quotaTotal} reports used`
-                : "Unlimited"
+                ? `${ent.quotaUsed} of ${ent.quotaTotal} reports used this month`
+                : "Plan active"
               : ent.reportCredits > 0
                 ? `${ent.reportCredits} report ${ent.reportCredits === 1 ? "credit" : "credits"} available`
                 : "Pick a plan or a single report"}

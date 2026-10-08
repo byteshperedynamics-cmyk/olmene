@@ -8,18 +8,19 @@ import { ArrowLeft, Copy, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoLoader } from "@/components/logo-loader";
-import { featureAgentEnabled, getAgentReceipt } from "@/lib/agent-client";
+import { AgentApiError, featureAgentEnabled, getAgentReceipt } from "@/lib/agent-client";
 
 export default function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [content, setContent] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  // "job": no such fix run for this account; "receipt": the run exists but hasn't verified yet.
+  const [notFound, setNotFound] = useState<"job" | "receipt" | null>(null);
 
   useEffect(() => {
     let alive = true;
     getAgentReceipt(id)
       .then((r) => alive && setContent(r.content))
-      .catch(() => alive && setNotFound(true));
+      .catch((e) => alive && setNotFound(e instanceof AgentApiError && e.message.startsWith("job") ? "job" : "receipt"));
     return () => {
       alive = false;
     };
@@ -57,7 +58,9 @@ export default function ReceiptPage({ params }: { params: Promise<{ id: string }
       {notFound ? (
         <Card>
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
-            No receipt yet — it is generated after the verify step finishes.
+            {notFound === "job"
+              ? "This fix run doesn't exist, or it belongs to another account."
+              : "No receipt yet — it is generated after the verify step finishes."}
           </CardContent>
         </Card>
       ) : !content ? (

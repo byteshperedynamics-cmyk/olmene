@@ -43,6 +43,7 @@
     "src/lib/agent/__tests__",
     "src/lib/measure/__tests__",
     "src/lib/auth/__tests__",
+    "src/lib/__tests__",
     "supabase/functions"
   ]
 }

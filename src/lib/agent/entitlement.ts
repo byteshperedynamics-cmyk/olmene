@@ -1,8 +1,9 @@
 /**
  * Apply-entitlement + action quota.
  *
- * User decision 2026-09-29: Starter 10 / Pro 30 actions per billing period,
- * where ONE pull request (any number of fixes inside) = ONE action.
+ * Plans promise their actions per MONTH (Fix 10, Team 30), where ONE pull
+ * request (any number of fixes inside) = ONE action. Yearly plans count per
+ * monthly slice of the year (see lib/quota.ts), not per billing period.
  * Free / one-time-credit users: plan + preview only — the approve endpoint
  * refuses to flip a job into `applying` without an active subscription.
  * Quota usage is counted from the append-only audit log, so it is exactly as
@@ -10,6 +11,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { quotaWindow } from "../quota";
 
 export interface EntitlementCheck {
   allowed: boolean;
@@ -51,11 +53,13 @@ export async function checkApplyEntitlement(db: SupabaseClient, userId: string):
 
   const { data: planRows, error: planErr } = await db
     .from("plans")
-    .select("name, actions_per_period")
+    .select("name, actions_per_period, billing_interval")
     .eq("polar_product_id", active.polar_product_id)
     .limit(1);
   if (planErr) throw new Error(`plan read failed: ${planErr.message}`);
-  const plan = (planRows ?? [])[0] as { name: string; actions_per_period: number } | undefined;
+  const plan = (planRows ?? [])[0] as
+    | { name: string; actions_per_period: number; billing_interval: string | null }
+    | undefined;
   const limit = plan?.actions_per_period ?? 0;
   if (limit <= 0) {
     return {
@@ -69,7 +73,13 @@ export async function checkApplyEntitlement(db: SupabaseClient, userId: string):
     };
   }
 
-  const periodStart = (active as { current_period_start: string }).current_period_start;
+  const window = quotaWindow(
+    (active as { current_period_start: string }).current_period_start,
+    (active as { current_period_end: string | null }).current_period_end,
+    plan?.billing_interval,
+    now,
+  );
+  const periodStart = window.start;
   const { count, error: countErr } = await db
     .from("agent_actions")
     .select("id", { count: "exact", head: true })
@@ -84,7 +94,9 @@ export async function checkApplyEntitlement(db: SupabaseClient, userId: string):
     return {
       allowed: false,
       code: "quota_exceeded",
-      message: `Action quota reached (${used}/${limit} this period). Your quota resets with the next billing period.`,
+      message: `You've opened all ${limit} fix pull requests for this month (${used}/${limit}). ${
+        window.end ? `Your quota resets on ${window.end.slice(0, 10)}.` : "Your quota resets next month."
+      }`,
       planName: plan?.name ?? null,
       limit,
       used,

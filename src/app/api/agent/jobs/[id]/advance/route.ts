@@ -6,6 +6,7 @@ import { makeGithubPort } from "@/lib/agent/github/port";
 import { createLlmPort } from "@/lib/agent/llm";
 import { advanceJob, type AgentJobRow, type RunnerPorts } from "@/lib/agent/runner";
 import { agentLog } from "@/lib/agent/redact";
+import { recordOpsEvent } from "@/lib/agent/ops";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -94,6 +95,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   } catch (e) {
     const msg = e instanceof Error ? e.message : "advance failed";
     agentLog("error", "advance failed", { jobId: id, detail: msg.slice(0, 200) });
+    await recordOpsEvent(db, "agent-advance", "fix job step failed", { jobId: id, detail: msg.slice(0, 200) });
     return NextResponse.json(
       { error: { code: "advance_failed", message: "The step could not run. It will retry automatically." } },
       { status: 500 },

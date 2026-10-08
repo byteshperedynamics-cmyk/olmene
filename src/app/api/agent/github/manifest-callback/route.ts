@@ -4,6 +4,7 @@ import { encryptSecret, masterKeyFromEnv } from "@/lib/agent/crypto";
 import { AgentConfigError, agentEnabled, appUrl, getEnv } from "@/lib/agent/env";
 import { ERR } from "@/lib/agent/http";
 import { agentLog } from "@/lib/agent/redact";
+import { githubHeaders } from "@/lib/agent/github/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
     const masterKey = await masterKeyFromEnv(requireKey());
     const res = await fetch("https://api.github.com/app-manifests/" + encodeURIComponent(code) + "/conversions", {
       method: "POST",
-      headers: { Accept: "application/vnd.github+json" },
+      headers: githubHeaders(),
     });
     if (!res.ok) {
       agentLog("error", "manifest conversion failed", { status: res.status });

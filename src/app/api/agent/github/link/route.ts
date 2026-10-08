@@ -4,6 +4,7 @@ import { agentEnabled, githubApiBase } from "@/lib/agent/env";
 import { ERR, requireUser } from "@/lib/agent/http";
 import { loadGithubAppConfig, mintInstallationToken, GithubApiError } from "@/lib/agent/github/client";
 import { createAppJwt } from "@/lib/agent/github/jwt";
+import { githubHeaders } from "@/lib/agent/github/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
   try {
     const jwt = createAppJwt(app.appId, app.privateKeyPem);
     const res = await fetch(`${githubApiBase()}/app/installations/${instId}`, {
-      headers: { Authorization: `Bearer ${jwt}`, Accept: "application/vnd.github+json" },
+      headers: githubHeaders({ Authorization: `Bearer ${jwt}` }),
     });
     if (!res.ok) throw new GithubApiError(res.status, "installation lookup failed");
     const inst = (await res.json()) as { account: { login: string }; repository_selection: string };
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
   try {
     const { token } = await mintInstallationToken(app, String(instId));
     const reposRes = await fetch(`${githubApiBase()}/installation/repositories?per_page=100`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" },
+      headers: githubHeaders({ Authorization: `Bearer ${token}` }),
     });
     if (reposRes.ok) {
       const reposBody = (await reposRes.json()) as { repositories?: Array<{ full_name: string }> };

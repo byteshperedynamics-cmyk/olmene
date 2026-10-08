@@ -119,6 +119,7 @@ export default function AgentPage() {
           busy={busy}
           onRegister={hub.onRegister}
           onConnect={hub.onConnect}
+          installUrl={hub.installUrl}
         />
       ) : (
         <>
