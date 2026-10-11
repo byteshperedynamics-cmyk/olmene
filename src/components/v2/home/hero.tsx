@@ -1,10 +1,7 @@
 "use client";
 
 import { FreeAuditInput, FreeAuditResult } from "@/components/free-audit-form";
-import { featureAgentEnabled } from "@/lib/agent-client";
-import { usePublicStats } from "@/lib/public-stats";
 import { useI18n, Tx } from "@/i18n/provider";
-import { LivePill } from "../atoms";
 import { InView } from "../in-view";
 import { ScanPreview } from "../scan-preview";
 
@@ -15,9 +12,6 @@ import { ScanPreview } from "../scan-preview";
  */
 export function HomeHero() {
   const { t } = useI18n();
-  const agentOn = featureAgentEnabled();
-  const { data: stats } = usePublicStats();
-  const shipped = stats?.prsMerged ?? 0;
 
   return (
     <>
@@ -30,13 +24,8 @@ export function HomeHero() {
 
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 md:pb-24 md:pt-20 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
           <div className="min-w-0">
-            {agentOn && (
-              <div className="hero-in" style={{ animationDelay: "0.02s" }}>
-                <LivePill tone="live">{shipped >= 50 ? t("hero.pillCount", { n: shipped }) : t("hero.pill")}</LivePill>
-              </div>
-            )}
             <h1
-              className="hero-in o-display mt-5 text-[40px] leading-[1.03] sm:text-[52px] lg:text-[62px]"
+              className="hero-in o-display text-[40px] leading-[1.03] sm:text-[52px] lg:text-[62px]"
               style={{ animationDelay: "0.05s" }}
             >
               <Tx k="hero.title" />
