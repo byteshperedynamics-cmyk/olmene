@@ -94,6 +94,8 @@ export interface LiveCheckDbPort {
   getSiteUrl(job: AgentJobRow): Promise<string | null>;
   saveLiveCheck(job: AgentJobRow, state: LiveCheckState): Promise<void>;
   audit(entry: AuditEntryInput): Promise<void>;
+  /** Queue a customer email (outbox). Optional so tests and older ports keep working. */
+  notify?(userId: string, kind: string, payload: Record<string, unknown>, dedupeKey: string): Promise<void>;
 }
 
 export interface LiveSyncResult {
@@ -110,7 +112,8 @@ export async function syncLiveChecks(
 ): Promise<LiveSyncResult> {
   const now = opts.now ?? (() => new Date());
   const out: LiveSyncResult = { checked: 0, allLive: 0, regressions: 0, errors: 0 };
-  const jobs = await db.listMergedJobs(opts.limit ?? 50);
+  // 200 most recent merges: each needs at most a weekly re-check once settled.
+  const jobs = await db.listMergedJobs(opts.limit ?? 200);
   for (const job of jobs) {
     if (out.checked >= (opts.maxChecks ?? 8)) break;
     if (!job.merged_at) continue;
@@ -127,6 +130,19 @@ export async function syncLiveChecks(
       const allLive = run.total > 0 && run.passed === run.total;
       if (allLive) out.allLive++;
       if (state.last?.regressed.length) out.regressions++;
+      // Tell the customer: the first time every merged fix is live, and when one stops working.
+      let site = siteUrl;
+      try {
+        site = new URL(siteUrl).hostname;
+      } catch { /* keep the URL */ }
+      const wasAllLive = !!prev?.last && prev.last.total > 0 && prev.last.passed === prev.last.total;
+      if (allLive && !wasAllLive && db.notify) {
+        await db.notify(job.user_id, "fixes_live", { jobId: job.id, site, passed: run.passed, total: run.total, prNumber: job.pr_number ?? null }, `fixes_live:${job.id}`).catch(() => {});
+      }
+      if (state.last?.regressed.length && db.notify) {
+        const labels = state.last.results.filter((r) => state.last!.regressed.includes(r.fixer)).map((r) => r.label);
+        await db.notify(job.user_id, "fix_regression", { jobId: job.id, site, regressed: labels }, `fix_regression:${job.id}:${run.checkedAt.slice(0, 10)}`).catch(() => {});
+      }
       await db.audit({
         agent_job_id: job.id,
         user_id: job.user_id,

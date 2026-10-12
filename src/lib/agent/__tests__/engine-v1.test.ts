@@ -181,3 +181,23 @@ describe("atomic lease", () => {
     expect(updates).toBe(0);
   });
 });
+
+describe("GitHub client resilience", () => {
+  test("reads retry transient failures; writes do not", async () => {
+    const { ScopedGithubClient, isTransient, backoffMs } = await import("../github/client");
+    expect(isTransient(502, "")).toBe(true);
+    expect(isTransient(403, "You have exceeded a secondary rate limit")).toBe(true);
+    expect(isTransient(403, "Resource not accessible by integration")).toBe(false);
+    expect(backoffMs(1, new Headers({ "retry-after": "2" }))).toBe(2000);
+    let calls = 0;
+    const flaky = (async () => {
+      calls++;
+      return calls < 2 ? new Response("oops", { status: 502 }) : new Response(JSON.stringify({ full_name: "acme/site", default_branch: "main" }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const allow = { owner: "acme", repo: "site", defaultBranch: "main", installationId: 1, allowedRepos: ["acme/site"] };
+    const gh = new ScopedGithubClient({ token: "ghs_test", allow: allow as never, apiBase: "https://api.test", fetchFn: flaky });
+    const repo = await gh.getRepo();
+    expect(repo.full_name).toBe("acme/site");
+    expect(calls).toBe(2);
+  });
+});

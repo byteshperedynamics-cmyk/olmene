@@ -201,6 +201,10 @@ alter table public.agent_jobs add column if not exists scan_id uuid references p
 create index if not exists agent_jobs_driver_idx on public.agent_jobs (locked_until nulls first)
   where status in ('queued', 'planning', 'previewing', 'applying', 'verifying');
 
+-- Impact: changes measured against the pre-merge trend (see attribution.ts).
+alter table public.fix_outcomes add column if not exists expected_after_mean numeric(12, 2);
+alter table public.fix_outcomes add column if not exists trend_adjusted boolean not null default false;
+
 -- ─────────────────────────────────────────────────────────────────────────
 -- 6. Schedules. Seconds-level pg_cron schedules ("20 seconds") need pg_cron
 --    1.5+; older versions fall back to every minute. Functions named here

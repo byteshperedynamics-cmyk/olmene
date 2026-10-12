@@ -4,6 +4,7 @@ import { getEnv } from "@/lib/agent/env";
 import { makeGithubPort } from "@/lib/agent/github/port";
 import { syncLiveChecks, syncPullStates, type LiveCheckDbPort, type SyncDbPort } from "@/lib/agent/sync";
 import { requireCron } from "@/lib/agent/cron";
+import { enqueueNotification } from "@/lib/notify";
 import type { AppliedFix, LiveCheckState } from "@/lib/agent/live-check";
 import type { AgentJobRow } from "@/lib/agent/runner";
 import { agentLog } from "@/lib/agent/redact";
@@ -132,6 +133,8 @@ function measurePort(db: ReturnType<typeof getServiceDb>): MeasureDbPort {
           confidence: o.confidence,
           before_days: o.beforeDays,
           after_days: o.afterDays,
+          expected_after_mean: o.expectedAfterMean ?? null,
+          trend_adjusted: o.trendAdjusted ?? false,
         })),
       );
       if (error) throw new Error(error.message);
@@ -148,7 +151,7 @@ function liveCheckPort(db: ReturnType<typeof getServiceDb>): LiveCheckDbPort {
     async listMergedJobs(limit) {
       const { data } = await db
         .from("agent_jobs")
-        .select("id, user_id, report_id, connection_id, provider, status, current_step, input, step_outputs, error, wait_reason, locked_until, attempts, pr_number, pr_url, pr_state, merged_at")
+        .select("id, user_id, report_id, scan_id, connection_id, provider, status, current_step, input, step_outputs, error, wait_reason, locked_until, attempts, pr_number, pr_url, pr_state, merged_at")
         .eq("pr_state", "merged")
         .not("merged_at", "is", null)
         .order("merged_at", { ascending: false })
@@ -164,9 +167,15 @@ function liveCheckPort(db: ReturnType<typeof getServiceDb>): LiveCheckDbPort {
       return (data as AppliedFix[] | null) ?? [];
     },
     async getSiteUrl(job) {
-      if (!job.report_id) return null;
-      const { data } = await db.from("reports").select("data").eq("id", job.report_id).maybeSingle();
-      const site = (data?.data as { meta?: { siteUrl?: string } } | undefined)?.meta?.siteUrl;
+      let site: unknown = null;
+      if (job.report_id) {
+        const { data } = await db.from("reports").select("data").eq("id", job.report_id).maybeSingle();
+        site = (data?.data as { meta?: { siteUrl?: string } } | undefined)?.meta?.siteUrl;
+      } else if (job.scan_id) {
+        // Free-preview runs planned from a saved scan.
+        const { data } = await db.from("scans").select("site_url").eq("id", job.scan_id).maybeSingle();
+        site = data?.site_url;
+      }
       return typeof site === "string" && /^https?:\/\//.test(site) ? site : null;
     },
     async saveLiveCheck(job, state: LiveCheckState) {
@@ -178,6 +187,9 @@ function liveCheckPort(db: ReturnType<typeof getServiceDb>): LiveCheckDbPort {
     async audit(entry) {
       const { writeAudit } = await import("@/lib/agent/audit");
       await writeAudit(db, entry);
+    },
+    async notify(userId, kind, payload, dedupeKey) {
+      await enqueueNotification(db, { userId, kind, payload, dedupeKey });
     },
   };
 }
