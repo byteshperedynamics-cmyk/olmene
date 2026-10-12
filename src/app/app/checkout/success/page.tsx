@@ -108,6 +108,14 @@ export default function CheckoutSuccessPage() {
   const counted = useCountUp(remaining, phase === "success");
 
   // The purchase event — the end of the measured funnel. Fired once.
+  // Value is the price the buyer actually paid, read from the plan row
+  // (price_label like "€29 once" or "€1,428 / year") — never hard-coded.
+  const priceFromLabel = (label: string | null | undefined): number | null => {
+    const raw = label?.match(/\d[\d.,]*/)?.[0];
+    if (!raw) return null;
+    const n = Number(raw.replace(/[.,](?=\d{3}\b)/g, "").replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
   const purchaseFired = useRef(false);
   useEffect(() => {
     if (phase === "success" && !purchaseFired.current) {
@@ -115,11 +123,13 @@ export default function CheckoutSuccessPage() {
       track("purchase", {
         plan: creditOnly ? "Single Report" : (ent?.planName ?? "unknown"),
         one_time: creditOnly,
-        ...(creditOnly ? { value: 14, currency: "EUR" } : {}),
+        ...(creditOnly
+          ? { value: priceFromLabel(oneTimePlan?.price_label) ?? 29, currency: "EUR" }
+          : {}),
       });
       document.title = "Welcome aboard — Olmene";
     }
-  }, [phase, creditOnly, ent?.planName, plan]);
+  }, [phase, creditOnly, ent?.planName, oneTimePlan?.price_label]);
 
   return (
     <div className="mx-auto flex min-h-[72vh] max-w-2xl flex-col items-center justify-center py-4 text-center">

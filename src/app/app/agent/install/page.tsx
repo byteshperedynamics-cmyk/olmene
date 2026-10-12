@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, Github, HardDriveDownload } from "lucide-react";
+import { ArrowRight, Github, HardDriveDownload, Hourglass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -16,6 +16,11 @@ function InstallPageInner() {
   // it only means "re-verify", so restart the OAuth round-trip, which returns
   // here with a state once GitHub confirms this user's installations.
   const fromGithubInstall = !state && params.has("installation_id");
+  // setup_action=request (no installation_id): an org member asked to install
+  // the app, and an organization owner still has to approve it. Nothing can
+  // be linked yet — say so instead of showing an empty list.
+  const orgApprovalPending =
+    !state && !params.has("installation_id") && params.get("setup_action") === "request";
   const [reconnecting, setReconnecting] = useState(fromGithubInstall);
   const [picked, setPicked] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,6 +45,9 @@ function InstallPageInner() {
       void reconnect();
       return;
     }
+    // Pending org approval: there is nothing to load yet (retry re-runs the
+    // OAuth round-trip instead).
+    if (orgApprovalPending) return;
     let alive = true;
     (async () => {
       try {
@@ -59,7 +67,7 @@ function InstallPageInner() {
     return () => {
       alive = false;
     };
-  }, [state]);
+  }, [state, fromGithubInstall, orgApprovalPending]);
 
   async function link() {
     if (picked == null) return;
@@ -91,7 +99,32 @@ function InstallPageInner() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {reconnecting ? (
+          {orgApprovalPending ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-lg border border-signal-amber/40 bg-signal-amber/5 p-4">
+                <Hourglass className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-hidden />
+                <div className="space-y-1 text-sm">
+                  <p className="font-medium">Waiting for your organization owner to approve</p>
+                  <p className="text-muted-foreground">
+                    You asked to install the Olmene GitHub App on an organization that requires approval. An
+                    organization owner has to approve the request on GitHub before anything can be linked here.
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Once approved, use “Check again” — it re-verifies with GitHub and your organization appears in the
+                list. Owners can approve under GitHub → your organization → Settings → Installation requests.
+              </p>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={() => void reconnect()} disabled={reconnecting}>
+                  {reconnecting ? "Checking…" : "Check again"}
+                </Button>
+                <Button asChild variant="ghost">
+                  <Link href="/app/agent/">Back to Fix runs</Link>
+                </Button>
+              </div>
+            </div>
+          ) : reconnecting ? (
             <p className="text-sm text-muted-foreground">Confirming your installation with GitHub…</p>
           ) : !loaded ? (
             <p className="text-sm text-muted-foreground">Loading your installations…</p>
