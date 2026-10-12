@@ -1,4 +1,4 @@
-/** TypeScript types for the report data model (schemaVersion 1). */
+/** TypeScript types for the report data model (schemaVersion 1). Mirrors the Report schema in supabase/functions/advance-analysis. */
 
 export interface ScoreSet {
   overall: number;
@@ -51,6 +51,26 @@ export interface Source {
   retrievedAt?: string;
 }
 
+/**
+ * Grounded before/after rewrites of the hero copy (the pipeline's "gitdiff"
+ * step). Present on reports since 2026-10; null when the hero couldn't be read.
+ */
+export interface ConversionDiffField {
+  kind: "h1" | "subheadline" | "cta";
+  before: string;
+  after: string;
+  rationale: string;
+  tag: string;
+  /** Pre-rendered before/after snippet (escaped HTML from the engine). */
+  snippetHtml: string;
+  lengthDelta: number;
+  lengthWarn: boolean;
+}
+
+export interface ConversionDiff {
+  fields: ConversionDiffField[];
+}
+
 export interface ReportData {
   meta: {
     siteUrl: string;
@@ -58,6 +78,12 @@ export interface ReportData {
     language: string;
     modelsUsed: string[];
     schemaVersion: number;
+    /** Lite report built from a free scan for a fix preview (no research sections). */
+    lite?: boolean;
+    /** Lite reports: visible homepage text, server-side only (fix copy drafting). */
+    pageExcerpt?: string;
+    /** Unscored site checks from the free scan (AI search, links…) when the plan came from a scan. */
+    extras?: Array<{ id: string; status: "pass" | "warn" | "fail"; detail: string }>;
   };
   executiveSummary: {
     headline: string;
@@ -106,4 +132,5 @@ export interface ReportData {
   risks: { risk: string; mitigation: string }[];
   assumptions: string[];
   sources: Source[];
+  conversionDiff?: ConversionDiff | null;
 }

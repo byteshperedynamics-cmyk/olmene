@@ -530,6 +530,20 @@ Deno.serve(async (req)=>{
         }, 429, cors);
       }
     }
+    // Start the pipeline on the server right away: advance-analysis claims the
+    // job, runs the crawl in the background and queues each next step itself,
+    // so the report finishes whether or not the browser tab stays open.
+    if (env.CRON_SECRET) {
+      const kick = fetch(`${env.SUPABASE_URL}/functions/v1/advance-analysis`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-cron-secret": env.CRON_SECRET },
+        body: JSON.stringify({ jobId: job.id, background: true }),
+        signal: AbortSignal.timeout(15_000)
+      }).then((r)=>r.body?.cancel()).catch(()=>{});
+      const rt = globalThis.EdgeRuntime;
+      if (rt && typeof rt.waitUntil === "function") rt.waitUntil(kick);
+      else await kick;
+    }
     return json({
       jobId: job.id
     }, 200, cors);
