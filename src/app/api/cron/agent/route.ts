@@ -15,10 +15,10 @@ export const maxDuration = 60;
  * budget runs out; the next tick continues. Runs no longer need an open tab.
  */
 export async function POST(req: Request) {
-  if (!agentEnabled()) return NextResponse.json({ ok: true, skipped: "agent disabled" });
   const db = getServiceDb();
   const denied = await requireCron(req, db);
   if (denied) return denied;
+  if (!agentEnabled()) return NextResponse.json({ ok: true, skipped: "agent disabled" });
 
   const now = new Date().toISOString();
   const { data: jobs, error } = await db

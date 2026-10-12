@@ -270,6 +270,13 @@ export class ScopedGithubClient {
     );
     return list && list.length > 0 ? list[0] : null;
   }
+  /** Deployments GitHub recorded for a commit (Vercel, Netlify, Cloudflare Pages… report previews here). */
+  listDeployments(sha: string): Promise<GhDeployment[]> {
+    return this.request<GhDeployment[]>("GET", `/repos/${this.allow!.owner}/${this.allow!.repo}/deployments?sha=${encodeURIComponent(sha)}&per_page=10`);
+  }
+  listDeploymentStatuses(id: number): Promise<GhDeploymentStatus[]> {
+    return this.request<GhDeploymentStatus[]>("GET", `/repos/${this.allow!.owner}/${this.allow!.repo}/deployments/${id}/statuses?per_page=10`);
+  }
   listInstallationRepos(): Promise<{ total_count: number; repositories: GhRepo[] }> {
     return this.request("GET", "/installation/repositories", undefined, { installationLevel: true });
   }
@@ -358,6 +365,20 @@ export interface GhPull {
   base: { ref: string };
   changed_files?: number;
   title: string;
+}
+
+export interface GhDeployment {
+  id: number;
+  sha: string;
+  environment: string;
+  created_at: string;
+}
+
+export interface GhDeploymentStatus {
+  state: "error" | "failure" | "inactive" | "in_progress" | "queued" | "pending" | "success";
+  environment_url?: string | null;
+  target_url?: string | null;
+  created_at: string;
 }
 
 export interface GhInstallation {

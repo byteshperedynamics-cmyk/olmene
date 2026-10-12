@@ -201,3 +201,31 @@ describe("GitHub client resilience", () => {
     expect(calls).toBe(2);
   });
 });
+
+describe("preview deployment checks (before merge)", () => {
+  const job = { id: "a1", user_id: "u1", report_id: "r1", connection_id: "c1", provider: "github", status: "completed", current_step: "done", input: {}, step_outputs: {}, error: null, wait_reason: null, locked_until: null, attempts: 0, pr_number: 7 } as never;
+  const fixes = [{ fixer_id: "lang-attribute", preview: null }];
+  const db = { listOpenPrJobs: async () => [], updateJob: async () => {}, audit: async () => {}, getAppliedFixes: async () => fixes };
+
+  test("runs the live checks on the PR head's preview URL", async () => {
+    const { checkPreview } = await import("../sync");
+    const client = {
+      listDeployments: async () => [{ id: 1, sha: "abc", environment: "Preview", created_at: "2026-10-13T10:00:00Z" }],
+      listDeploymentStatuses: async () => [{ state: "success", environment_url: "https://site-git-olmene-fix.vercel.app", created_at: "2026-10-13T10:01:00Z" }],
+    } as never;
+    const fetchFn = async () => new Response('<html lang="en"><body>ok</body></html>', { status: 200 });
+    const out = await checkPreview(client, job, "abc", db, fetchFn, new Date("2026-10-13T11:00:00Z"));
+    expect(out?.url).toBe("https://site-git-olmene-fix.vercel.app/");
+    expect([out?.passed, out?.total]).toEqual([1, 1]);
+  });
+
+  test("no Deployments permission → recorded once, not retried for a day", async () => {
+    const { checkPreview } = await import("../sync");
+    const { GithubApiError } = await import("../github/client");
+    const client = { listDeployments: async () => { throw new GithubApiError(403, "Resource not accessible by integration"); } } as never;
+    const out = await checkPreview(client, job, "abc", db, async () => new Response(""), new Date("2026-10-13T11:00:00Z"));
+    expect(out?.available).toBe(false);
+    const again = await checkPreview(client, { ...(job as object), step_outputs: { previewCheck: out } } as never, "abc", db, async () => new Response(""), new Date("2026-10-13T15:00:00Z"));
+    expect(again).toBeNull();
+  });
+});

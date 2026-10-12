@@ -45,10 +45,15 @@ export async function POST(req: Request) {
       const { writeAudit } = await import("@/lib/agent/audit");
       await writeAudit(db, entry);
     },
+    async getAppliedFixes(jobId) {
+      const { data } = await db.from("planned_actions").select("fixer_id, preview").eq("agent_job_id", jobId).eq("status", "applied");
+      return (data as AppliedFix[] | null) ?? [];
+    },
   };
 
   try {
-    const prs = await syncPullStates(port, makeGithubPort(db));
+    // Open PRs: merge tracking, plus the fixes checked on the PR's preview deployment.
+    const prs = await syncPullStates(port, makeGithubPort(db), { fetchFn: (input, init) => fetch(input, init) });
     // After merges are recorded: confirm merged fixes are live, then weekly.
     const live = await syncLiveChecks(liveCheckPort(db), (input, init) => fetch(input, init));
     let measure: Awaited<ReturnType<typeof syncMeasure>> | null = null;

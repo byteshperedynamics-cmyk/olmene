@@ -50,6 +50,8 @@ export async function GET(req: Request) {
       deltaPct: r.delta_pct === null ? null : Number(r.delta_pct),
       confidence: (r.confidence as MeasureOverview["outcomes"][number]["confidence"]) ?? null,
       afterDays: Number(r.after_days ?? 0),
+      expectedAfterMean: r.expected_after_mean === null || r.expected_after_mean === undefined ? null : Number(r.expected_after_mean),
+      trendAdjusted: r.trend_adjusted === true,
     }));
   }
 
