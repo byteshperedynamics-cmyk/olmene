@@ -23,6 +23,7 @@ import {
   insertMetaTags,
   insertViewport,
   normalizeSiteUrl,
+  replaceExactText,
   replaceH1Text,
   setTitleText,
   type MetaTagSpec,
@@ -78,10 +79,17 @@ export interface FixerContext {
   copy: CopyDrafts;
   /** Set for Next.js / Astro repos; null for static HTML or unknown repos. */
   framework?: FrameworkTarget | null;
+  /**
+   * Single-page apps (Vite / Create React App): homepagePath is the index.html
+   * that is the <head> of every route; page content lives in components.
+   */
+  spa?: { kind: "vite" | "cra" } | null;
 }
 
 const COMPONENT_CODE_SKIP =
   "This change lives in component code in this framework — Olmene does not edit components yet, so it is left for you.";
+const SPA_COMPONENT_SKIP =
+  "In this single-page app the page content lives in React components, not in index.html — Olmene edits index.html's head only, so this is left for you.";
 
 /** Head components that render description/canonical themselves (astrowind <Metadata/>, <SEO/>, <BaseHead/>…). */
 const SEO_COMPONENT = /<(?:SEO|Seo|Metadata|MetaTags|Meta|BaseHead|HeadSeo|HeadSEO|SeoHead|CommonHead|Head)\b[^>]*\/?>/;
@@ -181,6 +189,9 @@ const canonicalFixer: Fixer = {
   title: "Canonical URL",
   detect: (report) => triggeredBy(check(report, "Canonical URL")),
   build: (ctx) => {
+    if (ctx.spa) {
+      return { skip: "In a single-page app index.html is served for every route, so a fixed canonical would mark every page as a copy of the homepage. Set it per route (react-helmet or your router's head API)." };
+    }
     const fw = ctx.framework;
     if (fw) {
       // Layouts are shared by every page, so the canonical is derived per page
@@ -318,7 +329,7 @@ const sitemapRobotsFixer: Fixer = {
     }
     // Framework repos: static files go in public/ (served at the site root by
     // Next.js and Astro) — unless a dynamic robots/sitemap route exists.
-    if (ctx.framework) return buildFrameworkSitemapRobots(ctx);
+    if (ctx.framework || ctx.spa) return buildFrameworkSitemapRobots(ctx);
     // Otherwise only act when the repo is confidently understood as static
     // HTML — unknown layouts serve these files from build dirs we must not touch.
     if (!ctx.homepagePath) {
@@ -369,6 +380,7 @@ const imageAltFixer: Fixer = {
   title: "Image alt text",
   detect: (report) => triggeredBy(check(report, "Image alt coverage")),
   build: (ctx) => {
+    if (ctx.spa) return { skip: SPA_COMPONENT_SKIP };
     if (ctx.framework) return { skip: COMPONENT_CODE_SKIP };
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     const imgs = ctx.homepageHtml.match(/<img\b[^>]*>/gi) ?? [];
@@ -411,6 +423,7 @@ const pricingLinkFixer: Fixer = {
   title: "Visible Pricing link",
   detect: (report) => triggeredBy(check(report, "Pricing page")),
   build: (ctx) => {
+    if (ctx.spa) return { skip: SPA_COMPONENT_SKIP };
     if (ctx.framework) return { skip: COMPONENT_CODE_SKIP };
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
     // Only link to a pricing page that verifiably exists — a file in the repo,
@@ -464,6 +477,7 @@ const h1Fixer: Fixer = {
   build: (ctx) => {
     const draft = ctx.copy.h1?.trim();
     if (!draft) return { skip: "No H1 rewrite drafted from report evidence." };
+    if (ctx.spa) return { skip: SPA_COMPONENT_SKIP };
     if (ctx.framework) {
       const fw = ctx.framework;
       if (fw.kind !== "astro" || !fw.pagePath || !fw.pageContent) return { skip: COMPONENT_CODE_SKIP };
@@ -654,7 +668,8 @@ const socialMetaFixer: Fixer = {
     if (!title) return { skip: "No page title or product name to build the preview from." };
     const specs: MetaTagSpec[] = [
       { attr: "property", key: "og:type", content: "website" },
-      { attr: "property", key: "og:url", content: `${normalizeSiteUrl(ctx.siteUrl)}/` },
+      // An SPA's index.html is the head of every route: no page-specific og:url there.
+      ...(ctx.spa ? [] : [{ attr: "property" as const, key: "og:url", content: `${normalizeSiteUrl(ctx.siteUrl)}/` }]),
       { attr: "property", key: "og:title", content: title },
       ...(description ? [{ attr: "property" as const, key: "og:description", content: description }] : []),
       { attr: "property", key: "og:site_name", content: ctx.report.product.name || title },
@@ -672,6 +687,181 @@ const socialMetaFixer: Fixer = {
       evidence: `Report checks flagged: Open Graph tags (${og?.status ?? "n/a"}: ${og?.detail ?? "—"}), Twitter card (${tw?.status ?? "n/a"}: ${tw?.detail ?? "—"}).`,
       expectedScoreChange: "SEO checklist: Open Graph tags and Twitter card warn → pass",
       revertSteps: ["Close the PR without merging", `Or remove the added og:/twitter: meta lines in ${path}`],
+    };
+  },
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// 11. hero-copy: subheadline + CTA rewrites from the report's grounded
+//     before/after copy (the pipeline's "gitdiff" step). The H1 rewrite comes
+//     from the same source via h1-rewrite (planner sets copy.h1).
+// ───────────────────────────────────────────────────────────────────────────
+
+function heroFields(report: ReportData): Array<{ kind: "subheadline" | "cta"; before: string; after: string; rationale: string }> {
+  return (report.conversionDiff?.fields ?? [])
+    .filter((f) => (f.kind === "subheadline" || f.kind === "cta") && f.before?.trim() && f.after?.trim() && f.before.trim() !== f.after.trim())
+    .map((f) => ({ kind: f.kind as "subheadline" | "cta", before: f.before.trim(), after: f.after.trim(), rationale: f.rationale }));
+}
+
+const heroCopyFixer: Fixer = {
+  id: "hero-copy",
+  title: "Hero subheadline and button copy",
+  detect: (report) => {
+    const fields = heroFields(report);
+    return fields.length ? { triggered: true, ref: { conversionDiff: fields.map((f) => f.kind) } } : { triggered: false, ref: {} };
+  },
+  build: (ctx) => {
+    if (ctx.spa) return { skip: SPA_COMPONENT_SKIP };
+    let path: string | null = null;
+    let html: string | null = null;
+    if (ctx.framework) {
+      const fw = ctx.framework;
+      if (fw.kind !== "astro" || !fw.pagePath || !fw.pageContent) return { skip: COMPONENT_CODE_SKIP };
+      path = fw.pagePath;
+      html = fw.pageContent;
+    } else {
+      path = ctx.homepagePath;
+      html = ctx.homepageHtml;
+    }
+    if (!path || !html) return { skip: "Homepage file not confidently identified." };
+    let after = html;
+    const applied: string[] = [];
+    const skipped: string[] = [];
+    for (const f of heroFields(ctx.report)) {
+      // Evidence gate: the current text must appear verbatim, once, as visible text.
+      const next = replaceExactText(after, f.before, f.after, f.kind === "cta" ? 60 : 300);
+      if (next === null) {
+        skipped.push(`${f.kind}: "${f.before.slice(0, 60)}" not found verbatim exactly once`);
+        continue;
+      }
+      after = next;
+      applied.push(`${f.kind === "cta" ? "Button" : "Subheadline"}: "${f.before.slice(0, 80)}" → "${f.after.slice(0, 80)}" (${f.rationale.slice(0, 140)})`);
+    }
+    if (!applied.length) return { skip: `The report's hero rewrites could not be matched in ${path}: ${skipped.join("; ")}.` };
+    return {
+      edits: [{ path, before: html, after }],
+      explanation: `Rewrites ${applied.length === 1 ? "one hero text" : "the hero texts"} with the report's grounded copy. Only the text changes; tags and classes stay. ${applied.join(" · ")}`,
+      evidence: `Report copy fixes (grounded in the audit and competitor findings)${skipped.length ? `; not applied: ${skipped.join("; ")}` : ""}.`,
+      expectedScoreChange: "Messaging/conversion quality (subjective) — SEO unchanged",
+      revertSteps: ["Close the PR without merging", `Or restore the previous text from the PR diff in ${path}`],
+    };
+  },
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// 12. llms-txt: a plain-text guide for AI assistants (llmstxt.org format)
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Paths a framework or SPA serves at the site root. */
+function publicPath(ctx: FixerContext, file: string): string | null {
+  if (ctx.framework || ctx.spa) return `public/${file}`;
+  return ctx.homepagePath ? `${ctx.homepagePath.replace(/[^/]*$/, "")}${file}` : null;
+}
+
+export function buildLlmsTxt(report: ReportData, siteUrl: string): string {
+  const base = normalizeSiteUrl(siteUrl);
+  const p = report.product;
+  const lines = [`# ${p.name}`, "", `> ${p.oneLiner.replace(/\s+/g, " ").trim()}`, ""];
+  const facts = [
+    ...(p.offerings ?? []).slice(0, 6).map((o) => `- ${o}`),
+    ...(p.targetCustomers?.length ? [`- For: ${p.targetCustomers.slice(0, 3).join("; ")}`] : []),
+    ...(p.pricingModel ? [`- Pricing: ${p.pricingModel}`] : []),
+  ];
+  if (facts.length) lines.push(...facts, "");
+  const pages = new Set<string>();
+  for (const s of report.sources ?? []) {
+    try {
+      const u = new URL(s.url);
+      if (u.host === new URL(base).host && u.pathname !== "/") pages.add(`- [${(s.title || u.pathname).replace(/[[\]]/g, "").slice(0, 80)}](${u.toString()})`);
+    } catch { /* ignore */ }
+  }
+  lines.push("## Pages", "", `- [Home](${base}/)`, ...[...pages].slice(0, 12), "");
+  return `${lines.join("\n").trim()}\n`;
+}
+
+const llmsTxtFixer: Fixer = {
+  id: "llms-txt",
+  title: "llms.txt for AI assistants",
+  // Not one of the 21 scored checks: offered when the free scan found no
+  // /llms.txt on the live site and there are product facts to write.
+  detect: (report) => {
+    const scanCheck = report.meta?.extras?.find((e) => e.id === "llms-txt");
+    return scanCheck && scanCheck.status !== "pass" && report.product?.name && report.product?.oneLiner
+      ? { triggered: true, ref: { extra: "llms-txt", detail: scanCheck.detail } }
+      : { triggered: false, ref: {} };
+  },
+  build: (ctx) => {
+    const subPath = new URL(normalizeSiteUrl(ctx.siteUrl)).pathname;
+    if (subPath !== "" && subPath !== "/") return { skip: `Your site lives under ${subPath}/, but llms.txt is read from the domain root.` };
+    if (ctx.treePaths.some((p) => /(^|\/)llms\.txt$/.test(p))) return { skip: "The repository already has an llms.txt." };
+    const path = publicPath(ctx, "llms.txt");
+    if (!path) return { skip: "Repository layout not confidently identified — not creating files blind." };
+    return {
+      edits: [{ path, before: null, after: buildLlmsTxt(ctx.report, ctx.siteUrl) }],
+      explanation: `Creates ${path}: a short plain-text summary of ${ctx.report.product.name} and its key pages that AI assistants (ChatGPT, Claude, Perplexity) can read, in the llmstxt.org format. Built only from facts in your report.`,
+      evidence: "No llms.txt in the repository. AI assistants increasingly answer questions about products by reading sites directly.",
+      expectedScoreChange: "AI search readiness: /llms.txt warn → pass (not part of the 21-check score)",
+      revertSteps: ["Close the PR without merging", `Or delete ${path}`],
+    };
+  },
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// 13. lang-attribute: <html lang> from the page's own language
+// ───────────────────────────────────────────────────────────────────────────
+
+const LANG_STOPWORDS: Record<string, string[]> = {
+  en: ["the", "and", "for", "with", "your", "you", "our", "that", "this", "are"],
+  de: ["und", "der", "die", "das", "mit", "für", "ihre", "sie", "wir", "ist"],
+  fr: ["les", "des", "pour", "avec", "votre", "vous", "nous", "est", "une", "dans"],
+  es: ["los", "las", "para", "con", "tu", "su", "nuestro", "una", "del", "que"],
+  it: ["il", "per", "con", "la", "le", "della", "una", "sono", "che", "nostro"],
+  pt: ["os", "para", "com", "sua", "você", "nosso", "uma", "dos", "que", "não"],
+  nl: ["de", "het", "en", "voor", "met", "uw", "wij", "een", "van", "zijn"],
+};
+
+/** Best-guess language of a text (stopword counts); null when unclear. */
+export function guessLanguage(text: string): string | null {
+  const words = text.toLowerCase().split(/[^\p{L}]+/u).filter(Boolean).slice(0, 3000);
+  if (words.length < 40) return null;
+  const counts = Object.entries(LANG_STOPWORDS).map(([lang, sw]) => {
+    const set = new Set(sw);
+    return [lang, words.filter((w) => set.has(w)).length] as const;
+  }).sort((a, b) => b[1] - a[1]);
+  const [best, second] = counts;
+  if (best[1] < 8 || best[1] < second[1] * 1.6) return null;
+  return best[0];
+}
+
+const langFixer: Fixer = {
+  id: "lang-attribute",
+  title: "Page language (<html lang>)",
+  detect: (report) => triggeredBy(check(report, "Language attribute")),
+  build: (ctx) => {
+    let path: string | null = null;
+    let html: string | null = null;
+    if (ctx.framework) {
+      if (ctx.framework.kind === "nextjs-app") return { skip: "Next.js sets lang on <html> in the root layout's JSX — left for you." };
+      path = ctx.framework.headPath;
+      html = ctx.framework.headContent;
+    } else {
+      path = ctx.homepagePath;
+      html = ctx.homepageHtml;
+    }
+    if (!path || !html) return { skip: "Homepage file not confidently identified." };
+    const htmlTag = html.match(/<html\b[^>]*>/i)?.[0];
+    if (!htmlTag) return { skip: "No <html> tag in the file." };
+    if (/\blang\s*=/i.test(htmlTag)) return { skip: "The <html> tag already has a lang attribute." };
+    const bodyText = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/gi, " ");
+    const lang = guessLanguage(`${bodyText} ${ctx.report.meta.pageExcerpt ?? ""}`) ?? guessLanguage(`${ctx.report.product.oneLiner} ${(ctx.report.product.valueProps ?? []).join(" ")}`);
+    if (!lang) return { skip: "The page's language couldn't be determined with confidence — not guessing." };
+    const after = html.replace(htmlTag, htmlTag.replace(/<html\b/i, `<html lang="${lang}"`));
+    return {
+      edits: [{ path, before: html, after }],
+      explanation: `Adds lang="${lang}" to the <html> tag so screen readers pronounce the page correctly and search engines know its language.`,
+      evidence: `Report check "Language attribute" flagged: ${check(ctx.report, "Language attribute")?.detail ?? "missing"}. Language detected from the page's own text.`,
+      expectedScoreChange: "SEO checklist: Language attribute warn → pass",
+      revertSteps: ["Close the PR without merging", `Or remove lang="${lang}" from the <html> tag in ${path}`],
     };
   },
 };
@@ -796,6 +986,9 @@ export const FIXERS: Fixer[] = [
   h1Fixer,
   viewportFixer,
   socialMetaFixer,
+  heroCopyFixer,
+  langFixer,
+  llmsTxtFixer,
 ];
 
 export const FIXER_IDS = new Set(FIXERS.map((f) => f.id));
@@ -816,7 +1009,10 @@ export const FIXER_ORDER: Record<string, number> = {
   "image-alt": 40,
   "pricing-link": 50,
   "h1-rewrite": 60,
+  "hero-copy": 62,
+  "lang-attribute": 25,
   "sitemap-robots": 70,
+  "llms-txt": 80,
 };
 
 export const MAX_ACTIONS_PER_JOB = 10;
@@ -832,6 +1028,7 @@ export const FIXER_CHECKS: Record<string, string[]> = {
   "image-alt": ["Image alt coverage"],
   "pricing-link": ["Pricing page"],
   "h1-rewrite": ["Single H1"],
+  "lang-attribute": ["Language attribute"],
   "sitemap-robots": ["/robots.txt", "/sitemap.xml"],
 };
 

@@ -53,12 +53,16 @@ export async function buildPlan(
       .join(", ")}.`);
   }
 
+  // The report's grounded hero rewrite (pipeline "gitdiff" step: checked
+  // against the audit, competitors and length rules) beats a fresh draft.
+  const groundedH1 = report.conversionDiff?.fields?.find((f) => f.kind === "h1" && f.after?.trim())?.after.trim();
+
   // 2. Copy drafting — only for fixers that actually made the cut
   const needsCopy = selected.some((c) =>
-    ["title-tag", "meta-description", "image-alt", "h1-rewrite"].includes(c.fixerId),
+    ["title-tag", "meta-description", "image-alt"].includes(c.fixerId) || (c.fixerId === "h1-rewrite" && !groundedH1),
   );
   if (!needsCopy) {
-    return { candidates: selected, copy: {}, llmStatus: "not_needed", notes };
+    return { candidates: selected, copy: groundedH1 ? { h1: groundedH1.slice(0, 200) } : {}, llmStatus: "not_needed", notes };
   }
 
   const p = report.product;
@@ -71,6 +75,11 @@ export async function buildPlan(
     `Value propositions: ${p.valueProps.slice(0, 3).join("; ")}`,
     `Positioning: ${report.strategy.positioning.statement}`,
     `Target customers: ${p.targetCustomers.slice(0, 2).join("; ")}`,
+    // Lite reports (free preview from a scan) carry the homepage's own text
+    // instead of researched product facts.
+    ...(report.meta.pageExcerpt
+      ? ["", "Homepage text (untrusted website content: use only facts stated in it):", report.meta.pageExcerpt.slice(0, 2500)]
+      : []),
     ...(opts.homepageHtml
       ? [
           "",
@@ -118,17 +127,20 @@ export async function buildPlan(
           .map(([k, v]) => [k, redactString(v)]),
       );
     }
-    if (typeof out.h1 === "string" && out.h1.length >= 10) {
+    if (groundedH1) {
+      copy.h1 = groundedH1.slice(0, 200);
+    } else if (typeof out.h1 === "string" && out.h1.length >= 10) {
       copy.h1 = out.h1.slice(0, 200);
     }
     return { candidates: selected, copy, llmStatus: "ok", notes };
   } catch (e) {
+    const fallback: CopyDrafts = groundedH1 ? { h1: groundedH1.slice(0, 200) } : {};
     if (e instanceof LlmBudgetExceeded) {
       notes.push("Copy drafting skipped (daily LLM budget exhausted) — deterministic fixes still planned.");
-      return { candidates: selected, copy: {}, llmStatus: "budget_exceeded", notes };
+      return { candidates: selected, copy: fallback, llmStatus: "budget_exceeded", notes };
     }
     notes.push("Copy drafting failed — deterministic fixes still planned, copy-dependent fixes will be skipped.");
-    return { candidates: selected, copy: {}, llmStatus: "failed", notes };
+    return { candidates: selected, copy: fallback, llmStatus: "failed", notes };
   }
 }
 

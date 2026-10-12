@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { getEnv } from "@/lib/agent/env";
 import { makeGithubPort } from "@/lib/agent/github/port";
-import { safeEqual, syncLiveChecks, syncPullStates, type LiveCheckDbPort, type SyncDbPort } from "@/lib/agent/sync";
+import { syncLiveChecks, syncPullStates, type LiveCheckDbPort, type SyncDbPort } from "@/lib/agent/sync";
+import { requireCron } from "@/lib/agent/cron";
 import type { AppliedFix, LiveCheckState } from "@/lib/agent/live-check";
 import type { AgentJobRow } from "@/lib/agent/runner";
 import { agentLog } from "@/lib/agent/redact";
@@ -21,32 +22,10 @@ export const maxDuration = 60;
  * secret in `x-cron-secret` (OLMENE_CRON_SECRET on the Worker, the same value
  * in Supabase Vault). Without the secret configured the route is disabled.
  */
-/**
- * The cron secret: OLMENE_CRON_SECRET on the Worker if set, otherwise the
- * `cron_secret` already in Supabase Vault (the one pg_cron sends), read with
- * the service role — so the schedule works without copying a secret by hand.
- */
-let vaultSecretCache: { value: string | null; at: number } | null = null;
-async function cronSecret(db: ReturnType<typeof getServiceDb>): Promise<string | null> {
-  const env = getEnv("OLMENE_CRON_SECRET");
-  if (env && env.length >= 32) return env;
-  if (vaultSecretCache && Date.now() - vaultSecretCache.at < 5 * 60_000) return vaultSecretCache.value;
-  const { data, error } = await db.rpc("vault_secret", { p_name: "cron_secret" });
-  const value = !error && typeof data === "string" && data.length >= 32 && !data.startsWith("REPLACE_") ? data : null;
-  vaultSecretCache = { value, at: Date.now() };
-  return value;
-}
-
 export async function POST(req: Request) {
   const db = getServiceDb();
-  const secret = await cronSecret(db).catch(() => null);
-  if (!secret) {
-    return NextResponse.json({ error: { code: "cron_disabled", message: "Cron secret not configured." } }, { status: 503 });
-  }
-  const given = req.headers.get("x-cron-secret") ?? "";
-  if (!safeEqual(given, secret)) {
-    return NextResponse.json({ error: { code: "unauthorized" } }, { status: 401 });
-  }
+  const denied = await requireCron(req, db);
+  if (denied) return denied;
 
   const port: SyncDbPort = {
     async listOpenPrJobs(limit) {
