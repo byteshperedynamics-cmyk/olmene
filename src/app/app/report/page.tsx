@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -9,68 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentConsole, AnalysisCompleteBanner } from "@/components/agent-console";
 import { ReportViewer } from "@/components/report-viewer";
-import { advanceAnalysis } from "@/lib/api";
 import { getJob, getReportByJobId, type Job } from "@/lib/data";
 import { featureAgentEnabled } from "@/lib/agent-client";
 import { ArrowRight } from "lucide-react";
 import { Flower } from "@/components/v2/flower";
 import { STEPS, waitReasonMessage, JOB_STATUS } from "@/lib/steps";
 import { fmtDateTime } from "@/lib/format";
-import { ADVANCE_MAX_BACKOFF_MS, WAIT_POLL_MS } from "@/lib/config";
-
-/** Drives the pipeline: calls advance-analysis in a loop while the job runs. */
-function useAdvance(jobId: string | null, getJobRef: () => Job | null) {
-  const stoppedRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    stoppedRef.current = false;
-    if (!jobId) return;
-
-    let backoff = 1000;
-    const schedule = (ms: number) => {
-      if (stoppedRef.current) return;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(tick, ms);
-    };
-    const tick = async () => {
-      if (stoppedRef.current) return;
-      const job = getJobRef();
-      if (!job) return schedule(1000);
-      if (job.status === "completed" || job.status === "failed" || job.status === "canceled") return;
-      if (job.waitReason) return schedule(WAIT_POLL_MS);
-      try {
-        await advanceAnalysis(jobId);
-        backoff = 1000;
-        schedule(500);
-      } catch {
-        backoff = Math.min(backoff * 2, ADVANCE_MAX_BACKOFF_MS);
-        schedule(backoff);
-      }
-    };
-    tick();
-    return () => {
-      stoppedRef.current = true;
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [jobId, getJobRef]);
-}
 
 function ReportPageInner() {
   const params = useSearchParams();
   const id = params.get("id");
   const [jobState, setJobState] = useState<Job | null>(null);
-  const jobRef = useRef<Job | null>(null);
-  const onState = useCallback((updater: (j: Job | null) => Job | null) => {
-    setJobState((prev) => {
-      const next = updater(prev);
-      jobRef.current = next;
-      return next;
-    });
-  }, []);
-  const getJobRef = useCallback(() => jobRef.current, []);
 
-  useAdvance(id, getJobRef);
+  // The server advances the pipeline (cron + kick on create) — the tab only
+  // polls for status, so closing it loses nothing.
 
   const { data: job, isLoading } = useQuery({
     queryKey: ["job", id],
@@ -82,8 +34,8 @@ function ReportPageInner() {
     },
   });
   useEffect(() => {
-    if (job) onState(() => job);
-  }, [job, onState]);
+    if (job) setJobState(job);
+  }, [job]);
 
   const { data: report } = useQuery({
     queryKey: ["report", id],

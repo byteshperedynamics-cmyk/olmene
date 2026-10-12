@@ -213,6 +213,14 @@ export function ImpactView({
                             <span className={o.deltaPct > 0 && o.confidence !== "low" ? "text-primary" : ""}>
                               {o.deltaPct > 0 ? "+" : ""}
                               {o.deltaPct}% clicks
+                              {o.trendAdjusted && (
+                                <span
+                                  className="ms-1.5 inline-block rounded bg-surface-2 px-1 py-px align-middle font-mono text-[10px] font-normal text-muted-foreground"
+                                  title="Measured against the trend the site was already on before the merge — not against the raw before-average."
+                                >
+                                  vs trend
+                                </span>
+                              )}
                             </span>
                             <span className="font-mono text-[11px] text-faint">
                               {o.beforeMean} → {o.afterMean} per day

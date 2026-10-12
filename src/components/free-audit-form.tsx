@@ -7,6 +7,8 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
+  Clock,
+  Info,
   RotateCcw,
   Search,
   TriangleAlert,
@@ -40,6 +42,9 @@ function CheckRow({ c }: { c: FreeAuditCheck }) {
     </li>
   );
 }
+
+/** Display order for the unscored extra-check groups (matches the engine's set). */
+const EXTRA_GROUPS = ["AI search", "Performance", "Security", "SEO", "Social"] as const;
 
 type Origin = "hero" | "cta";
 
@@ -86,6 +91,9 @@ export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
     try {
       const r = await runFreeAudit(trimmed);
       setResult(r);
+      // The saved scan id rides along: the agent hub restores it (once) after
+      // sign-in or checkout, so "Preview the fix" survives the detour.
+      if (r.scanId) sessionStorage.setItem("olmene.scanId", r.scanId);
       track("audit_complete", {
         overall: r.scores.overall,
         passed_checks: r.passedChecks,
@@ -295,6 +303,12 @@ export function FreeAuditResult() {
   const { t } = useI18n();
   const { result } = useFreeAudit();
   const highImpact = result?.highImpactCount ?? result?.findings.filter((f) => f.severity === "critical" || f.severity === "high").length ?? 0;
+  // Main-button routing (coordination contract): fixable here → preview the
+  // fix from the saved scan; hosted builder → the report; otherwise the
+  // default (pricing when there are findings, sample report when not).
+  const fixable = result?.platform?.fixable ?? "unknown";
+  const platformNote = result?.platform?.note ?? null;
+  const canPreview = (fixable === "yes" || fixable === "partial") && !!result?.scanId;
 
   return (
     <>
@@ -310,6 +324,19 @@ export function FreeAuditResult() {
                 <p className="mt-0.5 truncate font-mono text-sm" dir="ltr">{result.siteUrl}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {result.cached && (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-background px-3 py-1 font-mono text-xs text-muted-foreground"
+                    title={t("form.cachedBadge")}
+                  >
+                    <Clock className="size-3" aria-hidden /> {t("form.cachedBadge")}
+                  </span>
+                )}
+                {result.platform && result.platform.id !== "unknown" && (
+                  <span className="rounded-full border border-line-strong bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
+                    {result.platform.label}
+                  </span>
+                )}
                 <span className="rounded-full border border-line-strong bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
                   {t("form.checksPassed", { a: result.passedChecks, b: result.totalChecks })}
                 </span>
@@ -335,6 +362,17 @@ export function FreeAuditResult() {
               </div>
             </div>
 
+            {/* ── JS-shell pages: the score says less than usual, and it says so ── */}
+            {result.contentMeasured === false && (
+              <div className="mx-5 mb-5 flex items-start gap-3 rounded-xl border border-signal-amber/40 bg-signal-amber/[0.06] px-4 py-3.5 sm:mx-6">
+                <Info className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-hidden />
+                <p className="text-sm leading-relaxed">
+                  <span className="font-medium">{t("form.contentNotMeasuredTitle")}</span>{" "}
+                  <span className="text-muted-foreground">{t("form.contentNotMeasuredBody")}</span>
+                </p>
+              </div>
+            )}
+
             {/* ── Methodology disclosure — the "evidence you can check" contract ── */}
             <div className="border-t border-line-strong bg-surface-2/30 px-5 py-3 sm:px-6">
               <details className="group">
@@ -355,6 +393,37 @@ export function FreeAuditResult() {
                 </div>
               </details>
             </div>
+
+            {/* ── Extras: real checks, deliberately outside the score ── */}
+            {result.extras && result.extras.length > 0 && (
+              <div className="border-t border-line-strong bg-surface-2/30 px-5 py-3 sm:px-6">
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden">
+                    <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden />
+                    {t("form.extrasTitle")}
+                  </summary>
+                  <p className="mt-2.5 text-xs text-muted-foreground">
+                    <Tx k="form.extrasBody" vars={{ n: result.totalChecks }} />
+                  </p>
+                  <div className="mt-3 grid gap-x-8 gap-y-4 pb-1.5 sm:grid-cols-2">
+                    {EXTRA_GROUPS.map((group) => {
+                      const rows = result.extras!.filter((e) => e.group === group);
+                      if (rows.length === 0) return null;
+                      return (
+                        <div key={group}>
+                          <p className="mb-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">{group}</p>
+                          <ul>
+                            {rows.map((e) => (
+                              <CheckRow key={e.id} c={e} />
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              </div>
+            )}
 
             {/* ── Findings: fact → labelled hypothesis → fix ── */}
             <div className="space-y-4 px-5 py-5 sm:px-6">
@@ -411,18 +480,42 @@ export function FreeAuditResult() {
               )}
             </div>
 
-            {/* ── Bridge: facts are free, strategy is the product ── */}
+            {/* ── Bridge: routed by what the site is built with ── */}
             <div className="flex flex-col items-start gap-3 border-t border-line-strong bg-surface-2/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <p className="max-w-md text-sm text-muted-foreground">
-                <Tx k="form.bridge" />
-              </p>
-              {/* Nothing to fix → the next useful step is the full report, not "fix these". */}
-              <Button asChild variant="sheen" size="lg" className="shrink-0">
-                <Link href={result.findings.length > 0 ? "/pricing/" : "/sample-report/"}>
-                  {result.findings.length > 0 ? t("form.unlock") : t("teardown.paidLayerLink")}{" "}
-                  <ArrowRight className="size-4 rtl-flip" aria-hidden />
-                </Link>
-              </Button>
+              {fixable === "no" ? (
+                /* Hosted builders can't take pull requests — the engine's note
+                   says exactly that, and the report is the honest next step. */
+                <p className="max-w-md text-sm text-muted-foreground">{platformNote}</p>
+              ) : (
+                <div className="max-w-md">
+                  <p className="text-sm text-muted-foreground">
+                    <Tx k="form.bridge" />
+                  </p>
+                  {platformNote && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{platformNote}</p>}
+                </div>
+              )}
+              {canPreview ? (
+                /* Fixable here: the scan is saved and travels to the agent hub. */
+                <Button asChild variant="sheen" size="lg" className="shrink-0">
+                  <Link href={`/app/agent/?scan=${result.scanId}`}>
+                    {t("form.previewFix")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+                  </Link>
+                </Button>
+              ) : fixable === "no" ? (
+                <Button asChild variant="sheen" size="lg" className="shrink-0">
+                  <Link href="/pricing/">
+                    {t("form.getReport")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+                  </Link>
+                </Button>
+              ) : (
+                /* Nothing to fix → the next useful step is the full report, not "fix these". */
+                <Button asChild variant="sheen" size="lg" className="shrink-0">
+                  <Link href={result.findings.length > 0 ? "/pricing/" : "/sample-report/"}>
+                    {result.findings.length > 0 ? t("form.unlock") : t("teardown.paidLayerLink")}{" "}
+                    <ArrowRight className="size-4 rtl-flip" aria-hidden />
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>

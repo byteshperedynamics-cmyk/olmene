@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScoreBar, ScoreRing } from "@/components/score-ring";
 import { severityClass, statusIconClass, reportToMarkdown, buildActionPlan, realDependency } from "@/lib/format";
-import type { ReportData, AuditFinding, SeoCheck, RoadmapAction } from "@/lib/report-types";
+import type { ReportData, AuditFinding, SeoCheck, RoadmapAction, ConversionDiff, ConversionDiffField } from "@/lib/report-types";
 import { PrintReport } from "@/components/print-report";
 import { useI18n } from "@/i18n/provider";
 import { SEVERITY_KEYS, STATUS_KEYS, EFFORT_KEYS, IMPACT_KEYS, CONFIDENCE_KEYS, scoreLabelKey } from "@/i18n/keys";
@@ -79,6 +79,96 @@ function SeoCheckRow({ c }: { c: SeoCheck }) {
 
 // ── Section renderers ───────────────────────────────────────────────────
 
+const COPY_KIND_LABEL: Record<ConversionDiffField["kind"], string> = {
+  h1: "Headline",
+  subheadline: "Subheadline",
+  cta: "CTA button",
+};
+
+/**
+ * "Copy you can paste today" — the grounded hero rewrites from the pipeline's
+ * gitdiff step. `snippetHtml` is engine-escaped HTML of the real element with
+ * the new text swapped in; rendered as text (never dangerouslySetInnerHTML).
+ */
+export function ConversionDiffSection({ diff }: { diff: ConversionDiff }) {
+  const { t } = useI18n();
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  async function copy(key: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 2000);
+    } catch {
+      toast.error(t("rv.toastCopyFail"));
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="font-display text-lg font-semibold">{t("rv.copyTitle")}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{t("rv.copyBody")}</p>
+      </div>
+      {diff.fields.map((f) => (
+        <div key={f.kind} className="rounded-lg border bg-background p-4 print-block">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+              {COPY_KIND_LABEL[f.kind]}
+            </span>
+            <span className="font-mono text-[11px] text-muted-foreground" dir="ltr">
+              {f.tag ? `<${f.tag}>` : null}
+            </span>
+            {f.lengthWarn && (
+              <span className="rounded bg-signal-amber/10 px-1.5 py-0.5 text-[11px] font-medium text-signal-amber">
+                {t("rv.copyLengthWarn", { n: f.lengthDelta })}
+              </span>
+            )}
+          </div>
+          <div className="mt-3 grid gap-2 text-sm leading-relaxed">
+            <p className="text-muted-foreground">
+              <span className="me-1.5 inline-block w-12 shrink-0 text-[11px] font-semibold uppercase tracking-wide">{t("rv.copyBefore")}</span>
+              <span className="line-through decoration-muted-foreground/50">{f.before}</span>
+            </p>
+            <p>
+              <span className="me-1.5 inline-block w-12 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-primary">{t("rv.copyAfter")}</span>
+              <span className="font-medium">{f.after}</span>
+            </p>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{t("rv.copyWhy")}</span>{" "}
+            {f.rationale}
+          </p>
+          <div className="mt-3 overflow-hidden rounded-md border bg-surface-2/60" dir="ltr">
+            <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
+              <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">HTML</span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => copy(`${f.kind}:text`, f.after)}
+                  className="rounded px-2 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  {copiedKey === `${f.kind}:text` ? t("rv.copied") : t("rv.copyText")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => copy(`${f.kind}:html`, f.snippetHtml)}
+                  className="rounded px-2 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  {copiedKey === `${f.kind}:html` ? t("rv.copied") : t("rv.copyHtml")}
+                </button>
+              </div>
+            </div>
+            <pre className="overflow-x-auto px-3 py-2.5 font-mono text-[12px] leading-relaxed">
+              <code>{f.snippetHtml}</code>
+            </pre>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SummarySection({ r }: { r: ReportData }) {
   const { t } = useI18n();
   const s = r.executiveSummary.scores;
@@ -110,6 +200,7 @@ export function SummarySection({ r }: { r: ReportData }) {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t("common.biggestOpportunity")}</p>
         <p className="mt-1.5 leading-relaxed">{r.executiveSummary.biggestOpportunity}</p>
       </div>
+      {r.conversionDiff?.fields?.length ? <ConversionDiffSection diff={r.conversionDiff} /> : null}
     </div>
   );
 }
