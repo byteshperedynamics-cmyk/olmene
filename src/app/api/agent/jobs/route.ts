@@ -4,6 +4,7 @@ import { agentEnabled } from "@/lib/agent/env";
 import { ERR, requireUser } from "@/lib/agent/http";
 import { readFlags } from "@/lib/agent/audit";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
+import { kickAgentJob } from "@/lib/agent/drive";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
 
   const { data: jobs, error } = await db
     .from("agent_jobs")
-    .select("id, status, current_step, input, step_outputs, error, created_at, completed_at, report_id")
+    .select("id, status, current_step, input, step_outputs, error, created_at, completed_at, report_id, scan_id")
     .eq("user_id", auth.user.id)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -44,26 +45,33 @@ export async function GET(req: Request) {
   return NextResponse.json({ jobs: safe });
 }
 
+/** Free previews from a scan: per user per day (planning costs one small AI call). */
+const SCAN_PREVIEWS_PER_DAY = 3;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * POST /api/agent/jobs  { jobId, targetRepo }
- * Creates a fix job for one of the user's completed analyses (jobId = the
- * analysis job whose report should be applied) against one of the repos on
- * their GitHub connection. Planning + preview are free for everyone; the
- * approve endpoint enforces the paid entitlement.
+ * POST /api/agent/jobs  { jobId, targetRepo } | { scanId, targetRepo }
+ * Creates a fix job against one of the repos on the user's GitHub connection,
+ * planned from either a completed analysis (jobId = the analysis job whose
+ * report should be applied) or a saved free scan (scanId: the free preview —
+ * no report needed). Planning + preview are free for everyone; the approve
+ * endpoint enforces the paid entitlement. The run starts moving immediately
+ * and keeps moving without the tab (cron driver).
  */
 export async function POST(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
   const auth = await requireUser(req);
   if ("error" in auth) return auth.error;
 
-  let body: { jobId?: string; targetRepo?: string };
+  let body: { jobId?: string; scanId?: string; targetRepo?: string };
   try {
     body = await req.json();
   } catch {
     return ERR.badRequest("Invalid JSON body.");
   }
-  const { jobId, targetRepo } = body;
-  if (!jobId || !targetRepo) return ERR.badRequest("jobId (analysis job) and targetRepo are required.");
+  const { jobId, scanId, targetRepo } = body;
+  if ((!jobId && !scanId) || !targetRepo) return ERR.badRequest("targetRepo and either jobId (analysis job) or scanId (saved free scan) are required.");
+  if (scanId && !UUID.test(scanId)) return ERR.badRequest("scanId is not a valid scan id.");
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(targetRepo)) {
     return ERR.badRequest("targetRepo must look like owner/repo.");
   }
@@ -77,13 +85,39 @@ export async function POST(req: Request) {
   const app = await loadGithubAppConfig(db);
   if (!app) return ERR.notConfigured();
 
-  // Report ownership — resolve via the analysis job (owner-checked)
-  const { data: report } = await db
-    .from("reports")
-    .select("id, user_id, job_id")
-    .eq("job_id", jobId)
-    .maybeSingle();
-  if (!report || report.user_id !== auth.user.id) return ERR.notFound("report");
+  // Plan source: a report (owner-checked via its analysis job) or a saved scan.
+  let reportId: string | null = null;
+  let scanRowId: string | null = null;
+  if (jobId) {
+    const { data: report } = await db
+      .from("reports")
+      .select("id, user_id, job_id")
+      .eq("job_id", jobId)
+      .maybeSingle();
+    if (!report || report.user_id !== auth.user.id) return ERR.notFound("report");
+    reportId = report.id;
+  } else {
+    const { data: scan } = await db.from("scans").select("id, user_id, expires_at").eq("id", scanId!).maybeSingle();
+    if (!scan || (scan.user_id && scan.user_id !== auth.user.id) || (scan.expires_at && new Date(scan.expires_at) < new Date())) {
+      return ERR.notFound("scan");
+    }
+    const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
+    const { count: previews } = await db
+      .from("agent_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", auth.user.id)
+      .not("scan_id", "is", null)
+      .gte("created_at", dayAgo);
+    if ((previews ?? 0) >= SCAN_PREVIEWS_PER_DAY) {
+      return NextResponse.json(
+        { error: { code: "rate_limited", message: `You've used today's ${SCAN_PREVIEWS_PER_DAY} free previews. Try again tomorrow, or run a full report.` } },
+        { status: 429 },
+      );
+    }
+    // The scan now belongs to this user and no longer expires.
+    await db.from("scans").update({ user_id: auth.user.id, expires_at: null }).eq("id", scan.id);
+    scanRowId = scan.id;
+  }
 
   // Active GitHub connection + repo allowlist
   const { data: connection } = await db
@@ -133,7 +167,8 @@ export async function POST(req: Request) {
     .from("agent_jobs")
     .insert({
       user_id: auth.user.id,
-      report_id: report.id,
+      report_id: reportId,
+      scan_id: scanRowId,
       connection_id: connection.id,
       provider: "github",
       status: "queued",
@@ -153,9 +188,10 @@ export async function POST(req: Request) {
     action_type: "plan",
     provider: "github",
     result: "success",
-    target: { repo: targetRepo, report: report.id },
-    detail: { started: true },
+    target: { repo: targetRepo, report: reportId, scan: scanRowId },
+    detail: { started: true, source: reportId ? "report" : "scan" },
   });
 
+  kickAgentJob(job.id);
   return NextResponse.json({ jobId: job.id });
 }

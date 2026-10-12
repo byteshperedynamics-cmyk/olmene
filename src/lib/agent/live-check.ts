@@ -59,6 +59,9 @@ const LABELS: Record<string, string> = {
   "title-tag": "Page title",
   "viewport-meta": "Mobile viewport",
   "social-meta": "Social preview tags",
+  "hero-copy": "Hero subheadline and button copy",
+  "lang-attribute": "Page language",
+  "llms-txt": "llms.txt",
 };
 
 /** Timing policy (minutes / days) — exported for tests. */
@@ -149,6 +152,22 @@ function addedValue(preview: Record<string, unknown> | null, patterns: RegExp[])
     }
   }
   return null;
+}
+
+/** Visible texts the PR's diff added (lines starting with "+"), normalized; fragments under 8 chars are ignored. */
+function addedTexts(preview: Record<string, unknown> | null): string[] {
+  const edits = (preview?.edits as Array<{ diff?: string }> | undefined) ?? [];
+  const out: string[] = [];
+  for (const e of edits) {
+    for (const line of (e.diff ?? "").split("\n")) {
+      if (!line.startsWith("+") || line.startsWith("+++")) continue;
+      for (const piece of line.slice(1).split(/<[^>]+>/)) {
+        const t = norm(piece);
+        if (t.length >= 8 && !out.includes(t)) out.push(t);
+      }
+    }
+  }
+  return out;
 }
 
 async function fetchText(fetchFn: FetchLike, url: string): Promise<{ status: number; text: string; url: string }> {
@@ -270,6 +289,24 @@ async function checkFix(fix: AppliedFix, html: string, origin: string, fetchFn: 
       const og = metas.filter((t) => key(t).startsWith("og:")).length;
       const twitter = metas.some((t) => key(t).startsWith("twitter:"));
       return res(og >= 2 && twitter, `${og} og: tag${og === 1 ? "" : "s"} and ${twitter ? "a" : "no"} twitter: tag live.`);
+    }
+    case "lang-attribute": {
+      const lang = attr(tags(html, "html")[0] ?? "", "lang");
+      return lang ? res(true, `Live: <html lang="${lang}">.`) : res(false, "No lang attribute on the live <html> tag yet.");
+    }
+    case "llms-txt": {
+      const code = await status(fetchFn, `${origin}/llms.txt`);
+      return res(code === 200, `/llms.txt → ${code || "unreachable"}.`);
+    }
+    case "hero-copy": {
+      // Every text the PR added must be on the live page.
+      const added = addedTexts(fix.preview);
+      if (!added.length) return res(true, "Recorded only (no text to compare).");
+      const page = norm(html);
+      const missing = added.filter((t) => !page.includes(t));
+      return missing.length
+        ? res(false, `Not live yet: “${missing[0].slice(0, 80)}”.`)
+        : res(true, `The new hero text is live (“${added[0].slice(0, 80)}”).`);
     }
     default:
       return res(true, "Not checkable on the live page (recorded only).");

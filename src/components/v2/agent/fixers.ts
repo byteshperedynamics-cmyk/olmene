@@ -14,6 +14,9 @@ export const FIXER_META: Record<string, { label: string; impact: "high" | "mediu
   "next-metadata-routes": { label: "Sitemap and robots routes", impact: "medium" },
   "next-jsonld": { label: "Organization JSON-LD for AI search", impact: "high" },
   "jsx-image-alt": { label: "Image alt text", impact: "medium" },
+  "hero-copy": { label: "Hero subheadline and button copy", impact: "high" },
+  "lang-attribute": { label: "Page language", impact: "medium" },
+  "llms-txt": { label: "llms.txt for AI assistants", impact: "medium" },
 };
 
 export function fixerLabel(id: string): string {

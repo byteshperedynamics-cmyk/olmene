@@ -153,6 +153,9 @@ export const disconnectGithub = (connectionId: string) =>
   );
 export const startAgentJob = (jobId: string, targetRepo: string) =>
   call<{ jobId: string }>("POST", "/api/agent/jobs/", { jobId, targetRepo });
+/** Free fix preview planned from a saved free scan (no report needed); applying still needs a plan. */
+export const startAgentJobFromScan = (scanId: string, targetRepo: string) =>
+  call<{ jobId: string }>("POST", "/api/agent/jobs/", { scanId, targetRepo });
 export const getAgentJobs = () => call<{ jobs: AgentJob[] }>("GET", "/api/agent/jobs/");
 export const getAgentJob = (id: string) => call<JobState>("GET", `/api/agent/jobs/${id}/`);
 export const advanceAgentJob = (id: string) =>

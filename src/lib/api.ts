@@ -104,9 +104,37 @@ export interface FreeAuditResult {
     trustSignals: string[];
     h1: string | null;
     title: string | null;
+    metaDescription?: string | null;
     hasStructuredData: boolean;
     hasPricingPage: boolean;
   };
+  /** Saved scan id (share link / carry through sign-in / free fix preview); null if saving failed. */
+  scanId?: string | null;
+  /** True when served from a scan of the same URL made in the last 10 minutes. */
+  cached?: boolean;
+  /** False when the page is a JavaScript shell that couldn't be rendered: content checks say "Not measured". */
+  contentMeasured?: boolean;
+  /** True when the page was rendered in a browser to read its content. */
+  rendered?: boolean;
+  /** What the site is built with, and whether the fix agent can open PRs for it. */
+  platform?: FreeAuditPlatform;
+  /** Extra checks, not part of the score (AI search, performance, security, links). */
+  extras?: FreeAuditExtra[];
+}
+
+export interface FreeAuditPlatform {
+  id: string;
+  label: string;
+  fixable: "yes" | "partial" | "no" | "unknown";
+  note: string;
+}
+
+export interface FreeAuditExtra {
+  id: string;
+  group: "AI search" | "Performance" | "Security" | "SEO" | "Social";
+  check: string;
+  status: "pass" | "warn" | "fail";
+  detail: string;
 }
 
 export async function runFreeAudit(url: string): Promise<FreeAuditResult> {
@@ -115,6 +143,20 @@ export async function runFreeAudit(url: string): Promise<FreeAuditResult> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
   });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new ApiRequestError(
+      res.status,
+      (data as { error?: { code?: string } })?.error?.code ?? "request_failed",
+      (data as { error?: { message?: string } })?.error?.message ?? "Request failed. Please try again.",
+    );
+  }
+  return data as FreeAuditResult;
+}
+
+/** Read a saved free scan by id (share links, resuming after sign-in). */
+export async function getFreeAudit(scanId: string): Promise<FreeAuditResult> {
+  const res = await fetch(`${fnUrl("free-audit")}?id=${encodeURIComponent(scanId)}`);
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     throw new ApiRequestError(

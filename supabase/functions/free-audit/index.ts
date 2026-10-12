@@ -2,8 +2,20 @@
 // Crawls the homepage (SSRF-safe), computes the same 21-point SEO checklist
 // used by full reports, derives a marketing score + top findings, and returns
 // them for the landing-page "free diagnosis" funnel. No LLM cost, no auth.
+//
+// Also (2026-10-13): every scan is saved and gets a `scanId` (share links,
+// carrying the scan through sign-in, free fix previews, monitoring); POST
+// {scanId} reads one back. JavaScript-built pages are rendered (when
+// Cloudflare Browser Rendering is configured) or their content checks are
+// marked "not measured" instead of failed. `platform` says whether Olmene
+// can fix the site by pull request; `extras` holds unscored checks (AI
+// crawlers, llms.txt, redirects, og:image, weight, broken links, CrUX).
+// Monitoring calls in with the cron secret to bypass the per-IP limit.
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import * as cheerio from "npm:cheerio@1.0.0";
+import { CONTENT_CHECKS, CONTENT_FIELDS, CONTENT_FINDINGS, detectPlatform, runExtraChecks, type SafeFetch } from "./extras.ts";
+import { looksLikeJsShell, renderPage } from "../_shared/render.ts";
+import { recordUsage } from "../_shared/ledger.ts";
 
 // ─── CORS ────────────────────────────────────────────────────────────────
 const APP_URL = Deno.env.get("APP_URL") ?? "https://olmene.com";
@@ -22,7 +34,7 @@ function corsHeaders(req: Request): Record<string, string> {
   const allowed = ORIGIN_ALLOW.some((o) => (typeof o === "string" ? o === origin : o.test(origin)));
   return {
     "Access-Control-Allow-Origin": allowed ? origin : APP_URL,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "content-type",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
@@ -173,7 +185,7 @@ const USER_AGENT = "Mozilla/5.0 (compatible; OlmeneBot/1.0; +https://olmene.com)
 // a hard 1 MB cap rejected ~30% of real homepages (Linear, Cal.com, Framer…).
 const MAX_BYTES = 4 * 1024 * 1024;
 
-async function fetchPage(rawUrl: URL, timeoutMs = 10_000): Promise<{ url: string; html: string }> {
+async function fetchPage(rawUrl: URL, timeoutMs = 10_000): Promise<{ url: string; html: string; bytes: number }> {
   let fetched: { res: Response; url: URL };
   try {
     fetched = await safeFetch(rawUrl, {
@@ -224,7 +236,7 @@ async function fetchPage(rawUrl: URL, timeoutMs = 10_000): Promise<{ url: string
     out.set(c, offset);
     offset += c.byteLength;
   }
-  return { url: url.toString(), html: new TextDecoder("utf-8", { fatal: false }).decode(out) };
+  return { url: url.toString(), html: new TextDecoder("utf-8", { fatal: false }).decode(out), bytes: received };
 }
 
 async function fetchText(url: string, timeoutMs = 5000): Promise<string | null> {
@@ -245,7 +257,7 @@ async function fetchText(url: string, timeoutMs = 5000): Promise<string | null> 
  * robots.txt (Stripe: /sitemap/sitemap.xml, Astro: /sitemap-index.xml), so
  * checking only /sitemap.xml produced false "crawlability gap" findings.
  */
-async function discoverCrawlFiles(origin: string): Promise<{ robotsTxtOk: boolean; sitemapXmlOk: boolean; sitemapUrl: string | null }> {
+async function discoverCrawlFiles(origin: string): Promise<{ robotsTxtOk: boolean; sitemapXmlOk: boolean; sitemapUrl: string | null; robotsTxt: string | null }> {
   const robots = await fetchText(`${origin}/robots.txt`);
   const declared = robots
     ? [...robots.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => {
@@ -254,9 +266,9 @@ async function discoverCrawlFiles(origin: string): Promise<{ robotsTxtOk: boolea
     : [];
   const candidates = [...declared.slice(0, 3), `${origin}/sitemap.xml`, `${origin}/sitemap_index.xml`, `${origin}/sitemap-index.xml`];
   for (const u of candidates) {
-    if (await probeOk(u)) return { robotsTxtOk: robots !== null, sitemapXmlOk: true, sitemapUrl: u };
+    if (await probeOk(u)) return { robotsTxtOk: robots !== null, sitemapXmlOk: true, sitemapUrl: u, robotsTxt: robots };
   }
-  return { robotsTxtOk: robots !== null, sitemapXmlOk: false, sitemapUrl: null };
+  return { robotsTxtOk: robots !== null, sitemapXmlOk: false, sitemapUrl: null, robotsTxt: robots };
 }
 
 async function probeOk(url: string, timeoutMs = 5000): Promise<boolean> {
@@ -662,6 +674,53 @@ function scanFailure(e: unknown): { code: string; message: string; status?: numb
   return { code: "fetch_failed", message: "We couldn't read that site. Check the URL and try again." };
 }
 
+// ─── JavaScript shells ───────────────────────────────────────────────────
+/** Head/technical facts from the raw HTML (what social and AI crawlers see), content from the rendered page. */
+function mergeRendered(raw: Signals, rendered: Signals): Signals {
+  const merged = { ...raw } as Signals & Record<string, unknown>;
+  for (const k of CONTENT_FIELDS) (merged as Record<string, unknown>)[k] = (rendered as unknown as Record<string, unknown>)[k];
+  merged.checklist = buildChecklist(merged);
+  return merged;
+}
+
+/** Content checks on an unrendered shell are "not measured", never failures. */
+function markContentUnmeasured(s: Signals): Signals {
+  const checklist = s.checklist.map((c) =>
+    CONTENT_CHECKS.includes(c.check)
+      ? { ...c, status: "warn" as const, detail: "Not measured: the page is built with JavaScript and its HTML has no content yet" }
+      : c,
+  );
+  return { ...s, checklist };
+}
+
+// ─── Saved scans ─────────────────────────────────────────────────────────
+const SCAN_CACHE_MS = 10 * 60_000;
+const ANON_SCAN_DAYS = 30;
+
+async function sha256Hex(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Visible text for the planner (server-only, never returned by this API). */
+function pageTextOf(html: string): string {
+  const $ = cheerio.load(html);
+  $("script, style, noscript, svg, iframe, template").remove();
+  return $("body").text().replace(/\s+/g, " ").trim().slice(0, 8000);
+}
+
+// One request's SSRF-safe fetch for the extra checks: redirect "manual"
+// means a single validated hop (redirect checks), otherwise follow safely.
+const extraFetch: SafeFetch = async (u, init, timeoutMs) => {
+  const url = new URL(u);
+  if (init.redirect === "manual") {
+    await assertSafeTarget(url);
+    return await fetch(url.toString(), { ...init, headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(timeoutMs) });
+  }
+  const { res } = await safeFetch(url, { ...init, headers: { "User-Agent": USER_AGENT } }, timeoutMs);
+  return res;
+};
+
 // ─── Main ────────────────────────────────────────────────────────────────
 const RATE_LIMIT = 8; // per IP per hour
 const supabase = () =>
@@ -675,31 +734,70 @@ function clientIp(req: Request): string {
   return req.headers.get("cf-connecting-ip") ?? req.headers.get("x-real-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
 }
 
+function cronAuthorized(req: Request): boolean {
+  const secret = Deno.env.get("CRON_SECRET") ?? "";
+  const given = req.headers.get("x-cron-secret") ?? "";
+  if (secret.length < 16 || given.length !== secret.length) return false;
+  let diff = 0;
+  for (let i = 0; i < secret.length; i++) diff |= secret.charCodeAt(i) ^ given.charCodeAt(i);
+  return diff === 0;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req) => {
   const cors = corsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  const db = supabase();
+
+  // Read a saved scan back: GET ?id=… or POST {scanId}. The id is an
+  // unguessable uuid, so it works as a share link; page text never leaves.
+  const getId = req.method === "GET" ? new URL(req.url).searchParams.get("id") : null;
+  if (req.method === "GET" && !getId) return json({ error: { code: "method_not_allowed", message: "Use POST." } }, 405, cors);
+  let body: { url?: string; scanId?: string; siteId?: string; userId?: string } = {};
+  if (req.method === "POST") {
+    try {
+      body = await req.json();
+    } catch {
+      return json({ error: { code: "invalid_body", message: "Expected JSON body." } }, 400, cors);
+    }
+  }
+  const scanId = getId ?? body.scanId ?? null;
+  if (scanId) {
+    if (!UUID.test(scanId)) return json({ error: { code: "scan_not_found", message: "That scan doesn't exist or has expired." } }, 404, cors);
+    const { data } = await db.from("scans").select("id, result, created_at, expires_at").eq("id", scanId).maybeSingle();
+    if (!data || (data.expires_at && new Date(data.expires_at) < new Date())) {
+      return json({ error: { code: "scan_not_found", message: "That scan doesn't exist or has expired." } }, 404, cors);
+    }
+    return json({ ...(data.result as Record<string, unknown>), scanId: data.id, savedAt: data.created_at }, 200, cors);
+  }
   if (req.method !== "POST") return json({ error: { code: "method_not_allowed", message: "Use POST." } }, 405, cors);
 
-  let body: { url?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: { code: "invalid_body", message: "Expected JSON body." } }, 400, cors);
-  }
   const url = normalizeSiteUrl(String(body.url ?? ""));
   if (!url) return json({ error: { code: "invalid_url", message: "Enter a valid website URL, e.g. https://example.com" } }, 400, cors);
 
-  const db = supabase();
+  // Monitoring (cron secret): no per-IP limit, no cache, linked to a site.
+  const internal = cronAuthorized(req);
   const ip = clientIp(req);
-  const hourAgo = new Date(Date.now() - 3600_000).toISOString();
-  try {
-    const { count } = await db.from("free_audits").select("id", { count: "exact", head: true }).eq("ip", ip).gte("created_at", hourAgo);
-    if ((count ?? 0) >= RATE_LIMIT) {
-      return json({ error: { code: "rate_limited", message: "You've run several free audits recently. Try again in a little while." } }, 429, cors);
-    }
-  } catch { /* rate limit best-effort */ }
+  const ipHash = (await sha256Hex(`olmene:${ip}`)).slice(0, 32);
+  if (!internal) {
+    // Same URL scanned in the last 10 minutes: answer from the saved scan
+    // (no refetch, no rate-limit charge).
+    try {
+      const { data: recent } = await db.from("scans").select("id, result, created_at").eq("site_url", url.toString()).eq("source", "free")
+        .gte("created_at", new Date(Date.now() - SCAN_CACHE_MS).toISOString()).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (recent) return json({ ...(recent.result as Record<string, unknown>), scanId: recent.id, cached: true }, 200, cors);
+    } catch { /* cache is best-effort */ }
+    const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+    try {
+      const { count } = await db.from("free_audits").select("id", { count: "exact", head: true }).eq("ip", ip).gte("created_at", hourAgo);
+      if ((count ?? 0) >= RATE_LIMIT) {
+        return json({ error: { code: "rate_limited", message: "You've run several free audits recently. Try again in a little while." } }, 429, cors);
+      }
+    } catch { /* rate limit best-effort */ }
+  }
 
-  let home: { url: string; html: string };
+  let home: { url: string; html: string; bytes: number };
   try {
     home = await fetchPage(url);
   } catch (e) {
@@ -711,8 +809,31 @@ Deno.serve(async (req) => {
     discoverCrawlFiles(origin),
     probeOk(`${origin}/favicon.ico`),
   ]);
-  const signals = computeSeoSignals(home.html, home.url, { ...crawl, faviconIcoOk });
-  const findings = buildFindings(signals).sort((a, b) => ({ critical: 0, high: 1, medium: 2 })[a.severity] - ({ critical: 0, high: 1, medium: 2 })[b.severity]);
+  const crawlExtras = { ...crawl, faviconIcoOk };
+  let signals = computeSeoSignals(home.html, home.url, crawlExtras);
+
+  // JavaScript-built page: render it, or say its content wasn't measured.
+  let contentMeasured = true;
+  let rendered = false;
+  let contentHtml = home.html;
+  const shell = looksLikeJsShell(home.html, signals.wordCount);
+  const extrasPromise = runExtraChecks({ pageUrl: home.url, html: home.html, htmlBytes: home.bytes, robotsTxt: crawl.robotsTxt, fetch: extraFetch, cruxKey: Deno.env.get("CRUX_API_KEY") ?? null });
+  if (shell) {
+    const r = await renderPage(home.url);
+    if (r) {
+      rendered = true;
+      contentHtml = r.html;
+      signals = mergeRendered(signals, computeSeoSignals(r.html, home.url, crawlExtras));
+      await recordUsage(db, { kind: "render", source: internal ? "monitor" : "scan", units: r.ms / 1000, latency_ms: r.ms, step: "free-audit" });
+      if (signals.wordCount < 25) contentMeasured = false; // rendered but still empty (blocked, login wall)
+    } else {
+      contentMeasured = false;
+    }
+    if (!contentMeasured) signals = markContentUnmeasured(signals);
+  }
+
+  let findings = buildFindings(signals).sort((a, b) => ({ critical: 0, high: 1, medium: 2 })[a.severity] - ({ critical: 0, high: 1, medium: 2 })[b.severity]);
+  if (!contentMeasured) findings = findings.filter((f) => !CONTENT_FINDINGS.includes(f.title));
   // Attach the labelled business-impact hypothesis to each deterministic finding.
   for (const finding of findings) {
     const h = IMPACT_HYPOTHESES[finding.title] ?? { impact: "growth friction", impactHypothesis: "Left unfixed, this likely slows some visitors on their way to becoming customers." };
@@ -721,17 +842,27 @@ Deno.serve(async (req) => {
   }
   const highImpactCount = findings.filter((x) => x.severity === "critical" || x.severity === "high").length;
   const scores = subScores(signals);
-  const opportunity = biggestOpportunity(signals);
+  if (!contentMeasured) {
+    // Unmeasured content counts as neutral, not as a failure.
+    scores.messaging = 50;
+    scores.conversion = 50;
+    scores.overall = Math.round(scores.seo * 0.4 + 50 * 0.6);
+  }
+  const opportunity = contentMeasured
+    ? biggestOpportunity(signals)
+    : { title: "Make your homepage readable without JavaScript", why: "Your page's HTML is an empty app shell until JavaScript runs. Search engines render it late and many AI assistants and link previews never do. Server-rendering or prerendering the homepage lets them read your headline, offer and calls to action." };
   const passed = signals.checklist.filter((c) => c.status === "pass").length;
+  const extras = await extrasPromise;
+  const platform = detectPlatform(home.html);
 
   // Record the audit (rate limiting) — must be awaited so the row persists.
-  await db.from("free_audits").insert({ ip, url: home.url.slice(0, 2048) }).then(() => {}, () => {});
+  if (!internal) await db.from("free_audits").insert({ ip, url: home.url.slice(0, 2048) }).then(() => {}, () => {});
   // Opportunistic prune of day-old rows (1% of requests).
   if (Math.random() < 0.01) {
     await db.from("free_audits").delete().lt("created_at", new Date(Date.now() - 86400_000).toISOString()).then(() => {}, () => {});
   }
 
-  return json({
+  const result = {
     siteUrl: home.url,
     fetchedAt: new Date().toISOString(),
     scores,
@@ -742,6 +873,10 @@ Deno.serve(async (req) => {
     hiddenFindings: Math.max(0, findings.length - 4),
     opportunity,
     checklist: signals.checklist,
+    contentMeasured,
+    rendered,
+    platform,
+    extras,
     stats: {
       wordCount: signals.wordCount,
       images: signals.imagesTotal,
@@ -752,8 +887,29 @@ Deno.serve(async (req) => {
       trustSignals: signals.trustSignals.slice(0, 5),
       h1: signals.h1Texts[0] ?? null,
       title: signals.titleText,
+      metaDescription: signals.metaDescription,
       hasStructuredData: signals.jsonLdTypes.length > 0,
       hasPricingPage: signals.hasPricingPage,
     },
-  }, 200, cors);
+  };
+
+  // Save it: share links, carrying the scan through sign-in, free fix
+  // previews and monitoring. A failed save still returns the result.
+  let savedId: string | null = null;
+  try {
+    const { data: saved } = await db.from("scans").insert({
+      site_url: home.url.slice(0, 2048),
+      host: new URL(home.url).hostname,
+      result,
+      page_text: pageTextOf(contentHtml),
+      ip_hash: internal ? null : ipHash,
+      source: internal ? "monitor" : "free",
+      site_id: internal && body.siteId && UUID.test(body.siteId) ? body.siteId : null,
+      user_id: internal && body.userId && UUID.test(body.userId) ? body.userId : null,
+      expires_at: internal ? null : new Date(Date.now() + ANON_SCAN_DAYS * 86400_000).toISOString(),
+    }).select("id").single();
+    savedId = (saved as { id?: string } | null)?.id ?? null;
+  } catch { /* table missing or insert failed: the scan still answers */ }
+
+  return json({ ...result, scanId: savedId }, 200, cors);
 });

@@ -73,3 +73,20 @@ describe("attribution", () => {
     expect(o.deltaPct).toBeNull();
   });
 });
+
+describe("trend and autocorrelation", () => {
+  test("a site that was already growing is not a 'high confidence' fix effect", () => {
+    const growing: DailyPoint[] = Array.from({ length: 70 }, (_, i) => ({ date: day(i), clicks: 100 + i * 3 + ((i * 7) % 5) }));
+    const [o] = measureAll(growing, [{ id: "pr1", mergedAt: day(45) }], day(69));
+    expect(o.trendAdjusted).toBe(true);
+    expect(Math.abs(o.deltaPct!)).toBeLessThan(5);
+    expect(o.confidence).not.toBe("high");
+  });
+
+  test("a real step on top of a trend is still detected", () => {
+    const stepped: DailyPoint[] = Array.from({ length: 70 }, (_, i) => ({ date: day(i), clicks: 100 + i * 2 + (i > 45 ? 80 : 0) + ((i * 7) % 5) }));
+    const [o] = measureAll(stepped, [{ id: "pr1", mergedAt: day(45) }], day(69));
+    expect(o.deltaPct!).toBeGreaterThan(20);
+    expect(o.confidence).toBe("high");
+  });
+});

@@ -1,0 +1,55 @@
+# Deploys Supabase Edge Functions when they change on main, so production
+# functions stop drifting from the repository (they used to be deployed by
+# hand). Database migrations stay with Cloudflare Workers Builds
+# (`supabase db push` on every main push); new functions tolerate the schema
+# not being there yet (bookkeeping writes are best-effort).
+#
+# Needs the repository secret SUPABASE_ACCESS_TOKEN (Supabase → Account →
+# Access Tokens). Without it this workflow does nothing.
+name: Deploy edge functions
+
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/functions/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ffoevhldpppyfsfgufmx
+    steps:
+      - uses: actions/checkout@v4
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+      - uses: denoland/setup-deno@v2
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        with:
+          deno-version: v2.x
+      - name: Tests first
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        run: deno test --allow-all supabase/functions
+      - uses: supabase/setup-cli@v1
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        with:
+          version: latest
+      - name: Deploy
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        run: |
+          for dir in supabase/functions/*/; do
+            name=$(basename "$dir")
+            [ "$name" = "_shared" ] && continue
+            [ -f "$dir/index.ts" ] || continue
+            # create-portal-session keeps the platform JWT check; every other
+            # function verifies its caller itself (user JWT, webhook signature or cron secret).
+            flags="--no-verify-jwt"
+            [ "$name" = "create-portal-session" ] && flags=""
+            echo "Deploying $name"
+            supabase functions deploy "$name" --project-ref "$PROJECT_REF" $flags
+          done

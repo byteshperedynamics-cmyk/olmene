@@ -150,6 +150,25 @@ export interface ScopedGithubOptions {
   fetchFn?: typeof fetch;
 }
 
+const GH_TIMEOUT_MS = 20_000;
+const GH_READ_ATTEMPTS = 3;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** 5xx, 429 and GitHub's secondary rate limit (a 403 that says so) are worth retrying. */
+export function isTransient(status: number, message: string): boolean {
+  return status >= 500 || status === 429 || (status === 403 && /rate limit/i.test(message));
+}
+
+/** Wait before the next attempt: Retry-After / X-RateLimit-Reset when given (capped at 10 s), else 0.5 s, 1.5 s. */
+export function backoffMs(attempt: number, headers: Headers | null, now = Date.now()): number {
+  const retryAfter = Number(headers?.get("retry-after"));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return Math.min(retryAfter * 1000, 10_000);
+  const reset = Number(headers?.get("x-ratelimit-reset"));
+  if (headers?.get("x-ratelimit-remaining") === "0" && Number.isFinite(reset) && reset > 0) return Math.min(Math.max(reset * 1000 - now, 0), 10_000);
+  return attempt === 1 ? 500 : 1500;
+}
+
 export class ScopedGithubClient {
   private readonly token: string;
   readonly allow: RepoAllowlist | null;
@@ -174,19 +193,41 @@ export class ScopedGithubClient {
     if (!check.ok) {
       throw new GithubApiError(403, `blocked by allowlist: ${check.reason}`);
     }
-    const res = await this.fetchFn(`${this.apiBase}${path}`, {
-      method,
-      headers: githubHeaders({
-        Authorization: `Bearer ${this.token}`,
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
-      }),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    if (!res.ok) {
-      throw new GithubApiError(res.status, await githubErrorMessage(res));
+    // Reads retry transient failures (5xx, rate limits, timeouts) with backoff;
+    // writes never retry here (the runner retries the whole step, with its
+    // PR idempotency check), they only get a timeout.
+    const attempts = method === "GET" ? GH_READ_ATTEMPTS : 1;
+    for (let attempt = 1; ; attempt++) {
+      let res: Response;
+      try {
+        res = await this.fetchFn(`${this.apiBase}${path}`, {
+          method,
+          headers: githubHeaders({
+            Authorization: `Bearer ${this.token}`,
+            ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+          }),
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+          signal: AbortSignal.timeout(GH_TIMEOUT_MS),
+        });
+      } catch (e) {
+        if (attempt < attempts) {
+          await sleep(backoffMs(attempt, null));
+          continue;
+        }
+        const name = e instanceof Error ? e.name : "";
+        throw new GithubApiError(0, name === "TimeoutError" || name === "AbortError" ? `GitHub did not answer within ${GH_TIMEOUT_MS / 1000} s` : "GitHub could not be reached");
+      }
+      if (!res.ok) {
+        const message = await githubErrorMessage(res);
+        if (attempt < attempts && isTransient(res.status, message)) {
+          await sleep(backoffMs(attempt, res.headers));
+          continue;
+        }
+        throw new GithubApiError(res.status, message);
+      }
+      if (res.status === 204) return undefined as unknown as T;
+      return (await res.json()) as T;
     }
-    if (res.status === 204) return undefined as unknown as T;
-    return (await res.json()) as T;
   }
 
   // ── Reads ──────────────────────────────────────────────────────────────
@@ -228,6 +269,13 @@ export class ScopedGithubClient {
       `/repos/${this.allow!.owner}/${this.allow!.repo}/pulls?head=${encodeURIComponent(head)}&state=open`,
     );
     return list && list.length > 0 ? list[0] : null;
+  }
+  /** Deployments GitHub recorded for a commit (Vercel, Netlify, Cloudflare Pages… report previews here). */
+  listDeployments(sha: string): Promise<GhDeployment[]> {
+    return this.request<GhDeployment[]>("GET", `/repos/${this.allow!.owner}/${this.allow!.repo}/deployments?sha=${encodeURIComponent(sha)}&per_page=10`);
+  }
+  listDeploymentStatuses(id: number): Promise<GhDeploymentStatus[]> {
+    return this.request<GhDeploymentStatus[]>("GET", `/repos/${this.allow!.owner}/${this.allow!.repo}/deployments/${id}/statuses?per_page=10`);
   }
   listInstallationRepos(): Promise<{ total_count: number; repositories: GhRepo[] }> {
     return this.request("GET", "/installation/repositories", undefined, { installationLevel: true });
@@ -317,6 +365,20 @@ export interface GhPull {
   base: { ref: string };
   changed_files?: number;
   title: string;
+}
+
+export interface GhDeployment {
+  id: number;
+  sha: string;
+  environment: string;
+  created_at: string;
+}
+
+export interface GhDeploymentStatus {
+  state: "error" | "failure" | "inactive" | "in_progress" | "queued" | "pending" | "success";
+  environment_url?: string | null;
+  target_url?: string | null;
+  created_at: string;
 }
 
 export interface GhInstallation {

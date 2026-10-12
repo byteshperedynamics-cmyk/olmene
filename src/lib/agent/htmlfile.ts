@@ -6,15 +6,19 @@
  *    single homepage file is confidently identified.
  *  - "Preserve CSS classes/style": edits insert/replace the smallest possible
  *    fragment; surrounding markup is byte-preserved.
- *  - Supported targets: static HTML, Next.js App Router (root layout) and
- *    Astro (pages/index.astro + its layout). Other frameworks are detected
- *    and skipped with an explicit reason.
+ *  - Supported targets: static HTML, Next.js App Router (root layout),
+ *    Astro (pages/index.astro + its layout) and single-page apps whose
+ *    <head> lives in one index.html (Vite: Lovable/Bolt exports; Create
+ *    React App: public/index.html) — head tags only, content lives in
+ *    components. Other frameworks are detected and skipped with a reason.
  */
 
 export interface TargetDetection {
   homepagePath: string | null;
   reason?: string;
-  repoType: "static-html" | "nextjs-app" | "astro" | "framework" | "unknown";
+  repoType: "static-html" | "nextjs-app" | "astro" | "spa" | "framework" | "unknown";
+  /** Single-page apps: which toolchain serves index.html (and public/ at the site root). */
+  spaKind?: "vite" | "cra";
   /** Next.js: the root layout file (app/layout.* or src/app/layout.*). */
   nextLayoutPath?: string;
   /** Astro: the homepage page file. */
@@ -61,6 +65,17 @@ export function detectTarget(paths: string[]): TargetDetection {
     return { homepagePath: null, repoType: "astro", astroIndexPath: "src/pages/index.astro" };
   }
 
+  // Single-page apps: one index.html is the <head> of every route. Vite keeps
+  // it at the root (Lovable, Bolt and most React starters), Create React App
+  // in public/. Only when no SSR framework config is present.
+  const ssrConfig = [...set].some((p) => /^(next|nuxt|svelte|astro|remix|gatsby-config|angular)\b.*\.(c|m)?(js|ts|json)$/.test(p) || p === "angular.json");
+  if (!ssrConfig && set.has("index.html") && [...set].some((p) => /^vite\.config\.(c|m)?(js|ts)$/.test(p))) {
+    return { homepagePath: "index.html", repoType: "spa", spaKind: "vite" };
+  }
+  if (!ssrConfig && set.has("public/index.html") && [...set].some((p) => /^src\/index\.(jsx?|tsx?)$/.test(p))) {
+    return { homepagePath: "public/index.html", repoType: "spa", spaKind: "cra" };
+  }
+
   // Other framework repos: code we do not edit yet.
   const hasPackageJson = set.has("package.json");
   const hasFrameworkMarker = FRAMEWORK_MARKERS.some((m) => set.has(m));
@@ -70,7 +85,7 @@ export function detectTarget(paths: string[]): TargetDetection {
     return {
       homepagePath: null,
       reason:
-        "This repository uses a framework Olmene can't edit yet. Supported today: static HTML sites, Next.js (App Router) and Astro.",
+        "This repository uses a framework Olmene can't edit yet. Supported today: static HTML sites, Next.js (App Router), Astro and Vite / Create React App single-page apps.",
       repoType: "framework",
     };
   }
@@ -392,14 +407,19 @@ export function replaceH1Text(html: string, newText: string): string | null {
   return html.replace(h1, `${open}${escapeHtmlAttr(clean).replace(/&#39;/g, "'")}</h1>`);
 }
 
-/** Replace exact visible text of a CTA element (strong evidence gate). */
-export function replaceExactText(html: string, currentText: string, newText: string): string | null {
+/**
+ * Replace exact visible text inside one text node (strong evidence gate): the
+ * current text must appear verbatim, exactly once, between tags.
+ */
+export function replaceExactText(html: string, currentText: string, newText: string, maxLength = 80): string | null {
   const cur = currentText.trim();
   const next = newText.trim();
   if (!cur || !next || cur === next) return null;
-  if (cur.length > 80 || next.length > 80) return null;
-  const re = new RegExp(`(>[^<]*)(${cur.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})([^<]*<)`, "i");
+  if (cur.length > maxLength || next.length > maxLength) return null;
+  const escaped = cur.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(>[^<]*)(${escaped})([^<]*<)`, "i");
   if (!re.test(html)) return null; // evidence gate: quoted text must exist verbatim
+  if ((html.match(new RegExp(`>[^<]*${escaped}[^<]*<`, "gi")) ?? []).length !== 1) return null; // ambiguous: appears twice
   return html.replace(re, (_m, pre, _cur, post) => `${pre}${escapeHtmlAttr(next).replace(/&#39;/g, "'")}${post}`);
 }
 

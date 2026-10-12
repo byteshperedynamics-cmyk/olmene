@@ -6,8 +6,12 @@
 import { assert, assertEquals } from "jsr:@std/assert@1";
 
 const src = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
-const patched = src.replace("Deno.serve(", "const __noServe = (") +
-  "\nexport { computeSeoSignals, buildFindings, findTrustSignals, CTA_PATTERN, assertSafeTarget, TargetRejected, ScanError, scanFailure };\n";
+// Relative imports must still resolve from the temp copy.
+const patched = src
+  .replace(/from "\.\/([^"]+)"/g, (_m, f) => `from "${new URL(`./${f}`, import.meta.url).href}"`)
+  .replace(/from "\.\.\/([^"]+)"/g, (_m, f) => `from "${new URL(`../${f}`, import.meta.url).href}"`)
+  .replace("Deno.serve(", "const __noServe = (") +
+  "\nexport { computeSeoSignals, buildFindings, findTrustSignals, CTA_PATTERN, assertSafeTarget, TargetRejected, ScanError, scanFailure, mergeRendered, markContentUnmeasured, subScores };\n";
 const tmp = await Deno.makeTempFile({ suffix: ".ts" });
 await Deno.writeTextFile(tmp, patched);
 const mod = await import(`file://${tmp}`);

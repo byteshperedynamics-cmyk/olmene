@@ -4,6 +4,7 @@ import { agentEnabled } from "@/lib/agent/env";
 import { ERR, requireUser } from "@/lib/agent/http";
 import { checkApplyEntitlement } from "@/lib/agent/entitlement";
 import { writeAudit } from "@/lib/agent/audit";
+import { kickAgentJob } from "@/lib/agent/drive";
 
 export const dynamic = "force-dynamic";
 
@@ -105,5 +106,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   });
 
   await db.from("agent_jobs").update({ status: "applying", current_step: "apply", updated_at: now }).eq("id", id);
+  // Open the PR right away, even if the user closes the tab now.
+  kickAgentJob(id);
   return NextResponse.json({ ok: true, approved: selected.length, rejected: rejected.length });
 }

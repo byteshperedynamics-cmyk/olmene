@@ -12,11 +12,15 @@
   "observability": {
     "enabled": true
   },
-  // Runs before every `wrangler deploy` (and `wrangler dev`): copies the
-  // prerendered pages into the static assets, where open-next.config.ts's
-  // static-assets cache reads them. Same copy as OpenNext's populateCache;
-  // without it the Worker falls back to rendering every page per request.
+  // Runs before every `wrangler deploy` (and `wrangler dev`):
+  //  1. scripts/verify-worker-build.mjs stops the deploy if the bundle would
+  //     crash at startup (a server manifest the adapter didn't inline) or
+  //     carries values from a local env file (see the 2026-10-12 outage).
+  //     Local `wrangler dev` with a .env.local present: OLMENE_ALLOW_LOCAL_ENV=1.
+  //  2. copies the prerendered pages into the static assets, where
+  //     open-next.config.ts's static-assets cache reads them. Same copy as
+  //     OpenNext's populateCache; without it the Worker renders every page.
   "build": {
-    "command": "[ ! -d .open-next/cache ] || (mkdir -p .open-next/assets/cdn-cgi/_next_cache && cp -R .open-next/cache/. .open-next/assets/cdn-cgi/_next_cache/)"
+    "command": "node scripts/verify-worker-build.mjs && ([ ! -d .open-next/cache ] || (mkdir -p .open-next/assets/cdn-cgi/_next_cache && cp -R .open-next/cache/. .open-next/assets/cdn-cgi/_next_cache/))"
   }
 }

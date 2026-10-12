@@ -74,3 +74,6 @@ scripts/polar_webhook_secret.txt
 
 # supabase CLI link state
 supabase/.temp/
+
+# Deno caches from running edge-function tests at the repo root
+/deno.lock

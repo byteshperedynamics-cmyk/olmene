@@ -20,6 +20,10 @@ const READ_PATHS: RegExp[] = [
   /^\/repos\/[^/]+\/[^/]+\/contents(\/[^/?]+)*(\?.*)?$/,
   /^\/repos\/[^/]+\/[^/]+\/git\/trees\/[^/]+(\?.*)?$/,
   /^\/repos\/[^/]+\/[^/]+\/pulls(\/\d+)?(\?.*)?$/,
+  // Preview deployments of a fix PR's head commit (needs the app's
+  // read-only Deployments permission; without it GitHub answers 403).
+  /^\/repos\/[^/]+\/[^/]+\/deployments(\?.*)?$/,
+  /^\/repos\/[^/]+\/[^/]+\/deployments\/\d+\/statuses(\?.*)?$/,
 ];
 
 const WRITE_PATHS: RegExp[] = [
