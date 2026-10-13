@@ -255,3 +255,29 @@ export const getMeasureOverview = () =>
   call<import("@/lib/measure/types").MeasureOverview>("GET", "/api/measure/overview/");
 export const connectSearchConsole = () => call<{ url: string }>("POST", "/api/measure/connect/google/");
 
+
+// ── Alert channels (engine v2): Slack, Discord, webhooks ──────────────────
+
+export interface AlertChannel {
+  id: string;
+  kind: "slack" | "discord" | "webhook";
+  /** Masked: host/…tail. */
+  url: string;
+  label: string | null;
+  /** Empty = every event. */
+  kinds: string[];
+  /** false after 10 failed deliveries in a row (PATCH active:true resumes). */
+  active: boolean;
+  failures: number;
+  lastError: string | null;
+  lastSentAt: string | null;
+  createdAt: string;
+}
+export const getAlertChannels = () => call<{ channels: AlertChannel[]; kinds: string[] }>("GET", "/api/alerts/channels/");
+/** Webhooks return signingSecret once: show it, it's not retrievable later. */
+export const addAlertChannel = (input: { kind: AlertChannel["kind"]; url: string; label?: string; kinds?: string[] }) =>
+  call<{ channel: Pick<AlertChannel, "id" | "kind" | "url" | "kinds">; signingSecret?: string }>("POST", "/api/alerts/channels/", input);
+export const updateAlertChannel = (id: string, patch: { kinds?: string[]; active?: boolean; label?: string }) =>
+  call<{ ok: boolean }>("PATCH", `/api/alerts/channels/${id}/`, patch);
+export const deleteAlertChannel = (id: string) => call<{ ok: boolean }>("DELETE", `/api/alerts/channels/${id}/`);
+export const testAlertChannel = (id: string) => call<{ ok: boolean; queued: boolean }>("POST", `/api/alerts/channels/${id}/test/`);
