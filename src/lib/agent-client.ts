@@ -190,6 +190,13 @@ export interface GuidedFix {
   blocked?: string;
   status: "todo" | "live" | "not_live" | "blocked";
   checkDetail?: string | null;
+  /** Webflow / WordPress connected: Olmene can apply this card for you (after approval) and undo it. */
+  auto?: {
+    channel: "webflow" | "wordpress";
+    changes: Array<{ field: string; label: string; before: string | null; after: string }>;
+    applied?: { at: string; ok: boolean; published?: boolean; error?: string };
+    revertedAt?: string;
+  };
 }
 export interface GuidedRun {
   id: string;
@@ -211,6 +218,32 @@ export const getGuidedRuns = () => call<{ runs: Array<Omit<GuidedRun, "fixes" | 
 export const getGuidedRun = (id: string) => call<{ run: GuidedRun }>("GET", `/api/agent/guided/${id}/`);
 /** "I've made the changes": re-check the live site now (429 if called within 20 s). */
 export const verifyGuidedRun = (id: string) => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/verify/`);
+/** After connecting Webflow/WordPress: mark the cards Olmene can apply (409 not_connected, 422 no_channel). */
+export const planGuidedAuto = (id: string) => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/auto/`);
+/** Apply approved cards on the platform (402 plan_required for free accounts). */
+export const applyGuidedAuto = (id: string, fixIds: string[] | "all") => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/apply/`, { fixIds });
+/** Put back the values Olmene replaced (no plan needed). */
+export const revertGuidedAuto = (id: string, fixIds: string[]) => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/revert/`, { fixIds });
+
+// ── Site connections (engine v2): Webflow token, WordPress application password ──
+
+export interface SiteConnection {
+  id: string;
+  provider: "webflow" | "wordpress";
+  host: string;
+  metadata: Record<string, unknown>;
+  lastVerifiedAt: string | null;
+  createdAt: string;
+}
+export const getSiteConnections = () => call<{ connections: SiteConnection[] }>("GET", "/api/agent/connections/site/");
+/** 422 connect_failed with a plain reason (token refused, site not on this token…). */
+export const connectWebflowSite = (token: string, siteUrl: string) =>
+  call<{ connection: { id: string; provider: "webflow"; host: string; siteName: string | null } }>("POST", "/api/agent/connect/webflow/", { token, siteUrl });
+/** 403 site_not_yours until the site has been scanned by this user; 422 connect_failed. */
+export const connectWordpressSite = (siteUrl: string, username: string, appPassword: string) =>
+  call<{ connection: { id: string; provider: "wordpress"; host: string; user: string } }>("POST", "/api/agent/connect/wordpress/", { siteUrl, username, appPassword });
+export const disconnectSiteConnection = (id: string) =>
+  call<{ ok: boolean; manualSteps: string[] }>("POST", `/api/agent/connections/site/${id}/disconnect/`);
 
 // ── Measure (Search Console impact) ────────────────────────────────────────
 
