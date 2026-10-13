@@ -281,3 +281,29 @@ export const updateAlertChannel = (id: string, patch: { kinds?: string[]; active
   call<{ ok: boolean }>("PATCH", `/api/alerts/channels/${id}/`, patch);
 export const deleteAlertChannel = (id: string) => call<{ ok: boolean }>("DELETE", `/api/alerts/channels/${id}/`);
 export const testAlertChannel = (id: string) => call<{ ok: boolean; queued: boolean }>("POST", `/api/alerts/channels/${id}/test/`);
+
+// ── AI search visibility (engine v2) ──────────────────────────────────────
+
+export interface AiVisibilityAnswer {
+  question: string;
+  mentioned: boolean;
+  cited: boolean;
+  rank: number | null;
+  competitors: string[];
+  sources: string[];
+  excerpt: string | null;
+}
+export interface AiVisibilityRun {
+  id: number;
+  engine: string;
+  mention_share: number;
+  cite_share: number;
+  competitor_mentions: Record<string, number>;
+  results: AiVisibilityAnswer[];
+  checked_at: string;
+}
+/** Site ids come from the `sites` table (RLS: own rows). Runs are newest first, weekly. */
+export const getAiVisibility = (siteId: string) =>
+  call<{ site: { id: string; host: string; questions: string[]; nextCheckAt: string; competitors: Array<{ name: string; url: string }> }; runs: AiVisibilityRun[] }>("GET", `/api/sites/${siteId}/ai-visibility/`);
+export const setAiVisibilityQuestions = (siteId: string, questions: string[]) =>
+  call<{ ok: boolean; questions: string[] }>("PUT", `/api/sites/${siteId}/ai-visibility/`, { questions });
