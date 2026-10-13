@@ -63,6 +63,16 @@ export function render(kind: string, p: Payload, appUrl: string, footer: string)
         optional: false,
       };
     }
+    case "ai_visibility_change": {
+      const url = `${app}/app/sites/?site=${encodeURIComponent(p.siteId ?? "")}&tab=ai`;
+      const lines = ((p.summary as string[] | undefined) ?? []).slice(0, 4);
+      return {
+        subject: `AI search: what changed for ${p.site} this week`,
+        text: `Olmene asked an AI assistant with web search ${p.questions} questions your buyers ask.\n\n${lines.join("\n")}\n\n${url}`,
+        html: html(`AI search: what changed for ${p.site}`, [`Olmene asked an AI assistant with web search ${e(p.questions)} questions your buyers ask.`, lines.map((l) => e(l)).join("<br>")], { label: "See the answers", url }),
+        optional: true,
+      };
+    }
     case "fix_regression": {
       const url = `${app}/app/agent/job/${encodeURIComponent(p.jobId ?? "")}`;
       const items = (p.regressed as string[] | undefined) ?? [];

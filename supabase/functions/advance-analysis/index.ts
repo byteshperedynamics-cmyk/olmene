@@ -3997,11 +3997,20 @@ async function onReportCompleted(supabase, job, outcome) {
   try {
     const competitors = (job.step_outputs?.competitors_pick?.competitors ?? []).slice(0, 5).map((c)=>({ name: c.name, url: c.url }));
     // The report just crawled the site: the first weekly re-scan is due in 7 days.
+    const pr = job.step_outputs?.profile;
+    const profile = pr?.name ? {
+      name: pr.name,
+      category: pr.category ?? null,
+      oneLiner: pr.oneLiner ?? null,
+      targetCustomers: (pr.targetCustomers ?? []).slice(0, 3),
+      language: job.input?.language ?? null
+    } : null;
     await supabase.from("sites").upsert({
       user_id: job.user_id,
       url: job.site_url,
       host,
       competitors,
+      ...profile ? { profile } : {},
       next_scan_at: new Date(Date.now() + 7 * 864e5).toISOString(),
       updated_at: new Date().toISOString()
     }, { onConflict: "user_id,host" });

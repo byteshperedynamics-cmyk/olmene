@@ -7,6 +7,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { enqueueNotification, recordOps } from "../_shared/ledger.ts";
 import { type Check, competitorChanges, type CompetitorSnapshot, isoWeek, privateIp, publicUrl, regressions, snapshotOf } from "./logic.ts";
+import { groundedAnswer, smallJsonCall } from "../_shared/llm.ts";
+import { analyzeAnswer, type Competitor, questionPrompt, type SiteProfile, summarize, validateQuestions, type VisibilityRun, visibilityChange } from "./visibility.ts";
 
 const SITES_PER_RUN = 4;
 const DIGEST_USERS_PER_RUN = 25;
@@ -131,6 +133,77 @@ async function scanSite(supabase: ReturnType<typeof db>, site: Site): Promise<{ 
   return { regressions: worse.length, competitorAlerts };
 }
 
+// ─── AI search visibility (opt-in: AI_VISIBILITY=1) ──────────────────────
+const AI_SITES_PER_RUN = 2;
+
+interface AiSite {
+  id: string;
+  user_id: string;
+  host: string;
+  url: string;
+  competitors: Competitor[] | null;
+  profile: (Partial<SiteProfile> & { name?: string }) | null;
+  ai_prompts: string[] | null;
+  ai_last: VisibilityRun | null;
+}
+
+async function watchAiVisibility(supabase: ReturnType<typeof db>): Promise<{ checked: number; alerts: number }> {
+  const out = { checked: 0, alerts: 0 };
+  if (Deno.env.get("AI_VISIBILITY") !== "1") return out;
+  const count = Math.max(3, Math.min(10, Number(Deno.env.get("AI_VISIBILITY_PROMPTS") ?? 6)));
+  const { data: due } = await supabase.from("sites").select("id, user_id, host, url, competitors, profile, ai_prompts, ai_last")
+    .eq("monitor", true).lte("ai_next_check_at", new Date().toISOString()).order("ai_next_check_at", { ascending: true }).limit(AI_SITES_PER_RUN * 3);
+  for (const site of (due ?? []) as AiSite[]) {
+    if (out.checked >= AI_SITES_PER_RUN) break;
+    const later = (ms: number) => supabase.from("sites").update({ ai_next_check_at: new Date(Date.now() + ms).toISOString() }).eq("id", site.id);
+    if (!(await subscribed(supabase, site.user_id)) || !site.profile?.name) {
+      await later(WEEK_MS);
+      continue;
+    }
+    const profile: SiteProfile = { name: site.profile.name, host: site.host, category: site.profile.category ?? null, oneLiner: site.profile.oneLiner ?? null, targetCustomers: site.profile.targetCustomers ?? [], location: site.profile.location ?? null, language: site.profile.language ?? null };
+    let prompts = site.ai_prompts?.length ? site.ai_prompts : null;
+    if (!prompts) {
+      const { system, user } = questionPrompt(profile, count);
+      const gen = await smallJsonCall<string[]>(supabase, { step: "ai-visibility-questions", source: "monitor", system, user, maxTokens: 500, temperature: 0.4, userId: site.user_id, validate: (v) => validateQuestions(v, profile, count) });
+      prompts = gen?.data ?? null;
+    }
+    if (!prompts?.length) {
+      await later(86_400_000);
+      continue;
+    }
+    const competitors = (site.competitors ?? []).slice(0, 5);
+    const answers = await Promise.all(prompts.map((q) => groundedAnswer(supabase, q, { userId: site.user_id }).then((a) => (a ? analyzeAnswer(q, a, profile, competitors) : null))));
+    const results = answers.filter((a): a is NonNullable<typeof a> => !!a);
+    out.checked++;
+    if (results.length < Math.ceil(prompts.length / 2)) {
+      await recordOps(supabase, "monitor", `AI visibility: only ${results.length}/${prompts.length} answers for ${site.host}`, { siteId: site.id }, "warn");
+      await supabase.from("sites").update({ ai_prompts: prompts, ai_next_check_at: new Date(Date.now() + 86_400_000).toISOString() }).eq("id", site.id);
+      continue;
+    }
+    const run = summarize(results);
+    await supabase.from("ai_visibility_runs").insert({
+      site_id: site.id, user_id: site.user_id, engine: "gemini-search", mention_share: run.mentionShare, cite_share: run.citeShare,
+      competitor_mentions: run.competitorMentions, results: run.results,
+    }).then(() => {}, () => {});
+    const change = visibilityChange(site.ai_last, run, profile.name);
+    if (change.changed) {
+      out.alerts++;
+      await enqueueNotification(supabase, {
+        userId: site.user_id,
+        kind: "ai_visibility_change",
+        payload: { siteId: site.id, site: site.host, summary: change.summary, mentionShare: run.mentionShare, previousShare: site.ai_last?.mentionShare ?? null, questions: results.length },
+        dedupeKey: `ai_visibility_change:${site.id}:${isoWeek(new Date())}`,
+      });
+    }
+    await supabase.from("sites").update({
+      ai_prompts: prompts,
+      ai_last: { mentionShare: run.mentionShare, citeShare: run.citeShare, competitorMentions: run.competitorMentions, results: run.results.map((r) => ({ question: r.question, mentioned: r.mentioned, cited: r.cited })), checkedAt: new Date().toISOString() },
+      ai_next_check_at: new Date(Date.now() + WEEK_MS).toISOString(),
+    }).eq("id", site.id);
+  }
+  return out;
+}
+
 /** One digest per user per ISO week, once their sites have a scan from the last 7 days. */
 async function queueDigests(supabase: ReturnType<typeof db>): Promise<number> {
   const week = isoWeek(new Date());
@@ -205,6 +278,10 @@ Deno.serve(async (req) => {
       out.competitorAlerts += r.competitorAlerts;
     }
   }
+  const ai = await watchAiVisibility(supabase).catch(async (e) => {
+    await recordOps(supabase, "monitor", "AI visibility watch crashed", { error: String(e).slice(0, 200) });
+    return { checked: 0, alerts: 0 };
+  });
   out.digests = await queueDigests(supabase).catch(() => 0);
-  return Response.json({ ok: true, ...out });
+  return Response.json({ ok: true, ...out, aiVisibility: ai });
 });

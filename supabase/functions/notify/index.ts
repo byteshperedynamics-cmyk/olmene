@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       out.skipped++;
       continue;
     }
-    const isDigest = n.kind === "weekly_digest" || n.kind === "competitor_change";
+    const isDigest = n.kind === "weekly_digest" || n.kind === "competitor_change" || n.kind === "ai_visibility_change";
     if (!profile.notify_email || (isDigest && !profile.digest_email)) {
       await mark({ status: "skipped", error: "user opted out" });
       out.skipped++;

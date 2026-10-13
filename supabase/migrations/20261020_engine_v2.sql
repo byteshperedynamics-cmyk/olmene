@@ -84,3 +84,28 @@ alter table public.notifications add column if not exists channels_done_at times
 -- Rows that existed before this migration were already handled (email only).
 update public.notifications set channels_done_at = coalesce(sent_at, created_at) where channels_done_at is null and created_at < now() - interval '1 minute';
 create index if not exists notifications_channels_idx on public.notifications (created_at) where channels_done_at is null;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 5. AI search visibility (weekly, opt-in with the AI_VISIBILITY=1 secret)
+-- ─────────────────────────────────────────────────────────────────────────
+alter table public.sites add column if not exists profile jsonb;
+alter table public.sites add column if not exists ai_prompts jsonb;
+alter table public.sites add column if not exists ai_last jsonb;
+alter table public.sites add column if not exists ai_next_check_at timestamptz not null default now();
+create index if not exists sites_ai_due_idx on public.sites (ai_next_check_at) where monitor;
+
+create table if not exists public.ai_visibility_runs (
+  id                  bigserial primary key,
+  site_id             uuid not null references public.sites(id) on delete cascade,
+  user_id             uuid not null references auth.users(id) on delete cascade,
+  engine              text not null default 'gemini-search',
+  mention_share       numeric not null,
+  cite_share          numeric not null,
+  competitor_mentions jsonb not null default '{}'::jsonb,
+  results             jsonb not null default '[]'::jsonb,
+  checked_at          timestamptz not null default now()
+);
+create index if not exists ai_visibility_runs_site_idx on public.ai_visibility_runs (site_id, checked_at desc);
+alter table public.ai_visibility_runs enable row level security;
+drop policy if exists ai_visibility_runs_own on public.ai_visibility_runs;
+create policy ai_visibility_runs_own on public.ai_visibility_runs for select to authenticated using (user_id = auth.uid());
