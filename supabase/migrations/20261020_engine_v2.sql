@@ -109,3 +109,41 @@ create index if not exists ai_visibility_runs_site_idx on public.ai_visibility_r
 alter table public.ai_visibility_runs enable row level security;
 drop policy if exists ai_visibility_runs_own on public.ai_visibility_runs;
 create policy ai_visibility_runs_own on public.ai_visibility_runs for select to authenticated using (user_id = auth.uid());
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 6. Olmene checks on every pull request (needs the GitHub App's Checks:
+--    write + Deployments: read permissions)
+-- ─────────────────────────────────────────────────────────────────────────
+create table if not exists public.pr_check_repos (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  connection_id  uuid not null references public.connections(id) on delete cascade,
+  repo           text not null,
+  site_url       text not null,
+  enabled        boolean not null default true,
+  last_error     text,
+  last_polled_at timestamptz,
+  created_at     timestamptz not null default now(),
+  unique (user_id, repo)
+);
+create index if not exists pr_check_repos_poll_idx on public.pr_check_repos (last_polled_at nulls first) where enabled;
+alter table public.pr_check_repos enable row level security;
+
+create table if not exists public.pr_checks (
+  id            bigserial primary key,
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  repo          text not null,
+  pr_number     integer not null,
+  head_sha      text not null,
+  preview_url   text,
+  conclusion    text not null check (conclusion in ('success', 'neutral', 'failure')),
+  regressions   jsonb not null default '[]'::jsonb,
+  improvements  jsonb not null default '[]'::jsonb,
+  check_run_url text,
+  created_at    timestamptz not null default now(),
+  unique (repo, head_sha)
+);
+create index if not exists pr_checks_user_idx on public.pr_checks (user_id, created_at desc);
+alter table public.pr_checks enable row level security;
+drop policy if exists pr_checks_own on public.pr_checks;
+create policy pr_checks_own on public.pr_checks for select to authenticated using (user_id = auth.uid());

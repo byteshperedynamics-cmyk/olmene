@@ -307,3 +307,12 @@ export const getAiVisibility = (siteId: string) =>
   call<{ site: { id: string; host: string; questions: string[]; nextCheckAt: string; competitors: Array<{ name: string; url: string }> }; runs: AiVisibilityRun[] }>("GET", `/api/sites/${siteId}/ai-visibility/`);
 export const setAiVisibilityQuestions = (siteId: string, questions: string[]) =>
   call<{ ok: boolean; questions: string[] }>("PUT", `/api/sites/${siteId}/ai-visibility/`, { questions });
+
+// ── Olmene checks on every pull request (engine v2) ──────────────────────
+
+export interface PrCheckRepo { id: string; repo: string; site_url: string; enabled: boolean; last_error: string | null; last_polled_at: string | null; created_at: string }
+export interface PrCheck { repo: string; pr_number: number; head_sha: string; preview_url: string | null; conclusion: "success" | "neutral" | "failure"; regressions: string[]; improvements: string[]; check_run_url: string | null; created_at: string }
+export const getPrChecks = () => call<{ repos: PrCheckRepo[]; checks: PrCheck[] }>("GET", "/api/agent/pr-checks/");
+/** 402 plan_required on free accounts. last_error explains missing GitHub App permissions (Checks: write, Deployments: read). */
+export const setPrChecks = (repo: string, enabled: boolean, siteUrl?: string) =>
+  call<{ ok: boolean; enabled: boolean }>("POST", "/api/agent/pr-checks/", { repo, enabled, siteUrl });

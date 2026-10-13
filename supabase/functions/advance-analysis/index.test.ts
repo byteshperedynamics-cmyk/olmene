@@ -6,6 +6,7 @@ import { assert, assertEquals } from "jsr:@std/assert@1";
 const src = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
 const patched = src
   .replace(/from "\.\.\/([^"]+)"/g, (_m, f) => `from "${new URL(`../${f}`, import.meta.url).href}"`)
+  .replace(/from "\.\/([^"]+)"/g, (_m, f) => `from "${new URL(`./${f}`, import.meta.url).href}"`)
   .replace("Deno.serve(", "const __noServe = (") +
   "\nexport { groundCompetitorPrices, researchQueries, schemaOf, ProductProfile, brandToken, hostMatchesBrand, PARKED, chainNext, STEP_IDS };\n";
 const tmp = await Deno.makeTempFile({ suffix: ".ts" });

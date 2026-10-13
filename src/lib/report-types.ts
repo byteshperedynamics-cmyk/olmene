@@ -90,6 +90,10 @@ export interface ReportData {
     appStoreId?: string | null;
     /** engine v2: what the site is built with (free scan platform id), for guided fixes. */
     platformId?: string | null;
+    /** engine v2: mobile lab speed (PageSpeed Insights) measured during the report. */
+    speed?: { source: string; performance: number | null; lcpMs: number | null; cls: number | null; tbtMs: number | null } | null;
+    /** engine v2: market claims whose numbers were checked against their cited sources. */
+    quality?: { claimsChecked: number; claimsUnverified: number };
   };
   executiveSummary: {
     headline: string;
@@ -108,8 +112,9 @@ export interface ReportData {
   };
   market: {
     definition: string;
-    size: { value: string; basis: string; confidence: string; sourceIds: string[] };
-    trends: { trend: string; implication: string; sourceIds: string[] }[];
+    /** verified (engine v2): false when a number in the claim isn't in any cited source; absent when there's no number to check. */
+    size: { value: string; basis: string; confidence: string; sourceIds: string[]; verified?: boolean };
+    trends: { trend: string; implication: string; sourceIds: string[]; verified?: boolean }[];
     segments: { name: string; fitScore: number; why: string; howToReach: string }[];
     potentialAssessment: string;
   };

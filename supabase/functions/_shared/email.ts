@@ -54,16 +54,25 @@ export function escapeHtml(s: string): string {
  * Plain, readable layout. Visual design belongs to the UI lane
  * (docs/email-templates/); this keeps every message legible in any client.
  */
-export function layout(opts: { heading: string; paragraphs: string[]; cta?: { label: string; url: string }; footer: string }): string {
-  const p = opts.paragraphs.map((t) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1f2328;">${t}</p>`).join("");
+/**
+ * Email shell (design: GLM's proposal, docs/email-templates/notify-layout.html):
+ * paper background, white card, Georgia wordmark and heading, green button,
+ * same look as the auth emails. tone "attention" adds an amber eyebrow
+ * (regressions). paragraphs are trusted HTML: callers escape user content.
+ */
+export function layout(opts: { heading: string; paragraphs: string[]; cta?: { label: string; url: string }; footer: string; tone?: "default" | "attention" }): string {
+  const p = opts.paragraphs.filter(Boolean).map((t) => `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#55534E;">${t}</p>`).join("");
   const cta = opts.cta
-    ? `<p style="margin:22px 0;"><a href="${escapeHtml(opts.cta.url)}" style="display:inline-block;padding:11px 18px;border-radius:6px;background:#1f2328;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;">${escapeHtml(opts.cta.label)}</a></p>`
+    ? `<a href="${escapeHtml(opts.cta.url)}" style="display:inline-block;background:#2F6B45;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:600;padding:12px 22px;border-radius:10px;">${escapeHtml(opts.cta.label)}</a>`
     : "";
-  return `<!doctype html><html><body style="margin:0;padding:24px;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<div style="max-width:560px;margin:0 auto;">
-<p style="margin:0 0 18px;font-size:16px;font-weight:600;color:#1f2328;">olmene</p>
-<h1 style="margin:0 0 16px;font-size:21px;line-height:1.3;color:#1f2328;">${escapeHtml(opts.heading)}</h1>
-${p}${cta}
-<p style="margin:28px 0 0;font-size:12px;line-height:1.5;color:#59636e;">${opts.footer}</p>
-</div></body></html>`;
+  const eyebrow = opts.tone === "attention"
+    ? `<p style="margin:0 0 10px 0;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#946F12;">Needs your attention</p>`
+    : "";
+  return `<!doctype html><html lang="en"><body style="margin:0;padding:0;background:#F6F5F1;font-family:Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1C1D1B;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F5F1;padding:40px 16px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border:1px solid #E4E2DC;border-radius:16px;">
+<tr><td style="padding:32px 32px 8px 32px;"><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;color:#2F6B45;">&#10047; olmene</p></td></tr>
+<tr><td style="padding:16px 32px 0 32px;">${eyebrow}<h1 style="margin:0 0 12px 0;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;font-weight:500;color:#1C1D1B;">${escapeHtml(opts.heading)}</h1>${p}${cta}</td></tr>
+<tr><td style="padding:24px 32px 32px 32px;"><p style="margin:0;padding-top:16px;border-top:1px solid #E4E2DC;font-size:12px;line-height:1.6;color:#8A8882;">${opts.footer}</p></td></tr>
+</table></td></tr></table></body></html>`;
 }
