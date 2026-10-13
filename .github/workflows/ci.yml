@@ -41,13 +41,15 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      # The functions' own deno.json (no node_modules): without it Deno picks up
+      # the root package.json and looks for npm packages in node_modules.
       - name: Unit tests
-        run: deno test --allow-all supabase/functions
+        run: deno test --allow-all --config supabase/functions/deno.json supabase/functions
       # Older functions are plain JS in .ts files: parse them (syntax, imports).
       # Typed functions (TYPED below) get a full type-check.
       - name: Parse every function
-        run: for f in supabase/functions/*/index.ts; do deno cache "$f" || exit 1; done
+        run: for f in supabase/functions/*/index.ts; do deno cache --config supabase/functions/deno.json "$f" || exit 1; done
       - name: Type-check typed functions
         env:
           TYPED: free-audit notify monitor health-watch
-        run: for f in $TYPED; do [ -f "supabase/functions/$f/index.ts" ] && { deno check "supabase/functions/$f/index.ts" || exit 1; }; done; true
+        run: for f in $TYPED; do [ -f "supabase/functions/$f/index.ts" ] && { deno check --config supabase/functions/deno.json "supabase/functions/$f/index.ts" || exit 1; }; done; true

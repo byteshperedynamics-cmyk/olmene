@@ -34,7 +34,7 @@ jobs:
           deno-version: v2.x
       - name: Tests first
         if: env.SUPABASE_ACCESS_TOKEN != ''
-        run: deno test --allow-all supabase/functions
+        run: deno test --allow-all --config supabase/functions/deno.json supabase/functions
       - uses: supabase/setup-cli@v1
         if: env.SUPABASE_ACCESS_TOKEN != ''
         with:

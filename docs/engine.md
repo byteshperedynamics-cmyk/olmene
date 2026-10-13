@@ -93,7 +93,7 @@ Run it before and after any prompt or model change (`LLM_STEP_MODELS`, `LLM_SCHE
 
 ```bash
 npm test                                   # app + agent + measure (bun)
-deno test --allow-all supabase/functions   # scan, pipeline, parity, monitor, notify, health-watch
+deno test --allow-all --config supabase/functions/deno.json supabase/functions   # scan, pipeline, parity, monitor, notify, health-watch
 npm run check:rls                          # every table has row level security
 npx opennextjs-cloudflare build && node scripts/verify-worker-build.mjs
 ```
