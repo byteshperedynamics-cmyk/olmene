@@ -32,6 +32,8 @@ const WRITE_PATHS: RegExp[] = [
   /^\/repos\/[^/]+\/[^/]+\/git\/commits$/,
   /^\/repos\/[^/]+\/[^/]+\/git\/refs$/,
   /^\/repos\/[^/]+\/[^/]+\/pulls$/,
+  // PR checks (engine v2): a completed check run on a commit; needs Checks: write.
+  /^\/repos\/[^/]+\/[^/]+\/check-runs$/,
 ];
 
 /** Installation-level reads (not repo-scoped). */

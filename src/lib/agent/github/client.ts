@@ -277,6 +277,14 @@ export class ScopedGithubClient {
   listDeploymentStatuses(id: number): Promise<GhDeploymentStatus[]> {
     return this.request<GhDeploymentStatus[]>("GET", `/repos/${this.allow!.owner}/${this.allow!.repo}/deployments/${id}/statuses?per_page=10`);
   }
+  /** Open pull requests, newest first (PR checks). */
+  listOpenPulls(limit = 10): Promise<GhPull[]> {
+    return this.request<GhPull[]>("GET", `/repos/${this.allow!.owner}/${this.allow!.repo}/pulls?state=open&sort=updated&direction=desc&per_page=${Math.min(30, limit)}`);
+  }
+  /** A completed check run on a commit (needs the app's Checks: write permission). */
+  createCheckRun(input: { name: string; head_sha: string; status: "completed"; conclusion: "success" | "neutral" | "failure"; details_url?: string; output: { title: string; summary: string; text?: string } }): Promise<{ id: number; html_url: string }> {
+    return this.request("POST", `/repos/${this.allow!.owner}/${this.allow!.repo}/check-runs`, input);
+  }
   listInstallationRepos(): Promise<{ total_count: number; repositories: GhRepo[] }> {
     return this.request("GET", "/installation/repositories", undefined, { installationLevel: true });
   }
