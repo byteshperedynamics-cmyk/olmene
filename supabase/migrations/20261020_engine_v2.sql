@@ -57,3 +57,30 @@ begin
     check (provider in ('github', 'cloudflare', 'supabase', 'google', 'webflow', 'wordpress'));
 end $$;
 alter table public.guided_runs add column if not exists connection_id uuid references public.connections(id) on delete set null;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 4. Alert channels: Slack, Discord, webhooks (same events as the emails)
+--    Read and written only through the Worker API (no client policies):
+--    webhook URLs are secrets and are shown masked.
+-- ─────────────────────────────────────────────────────────────────────────
+create table if not exists public.alert_channels (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users(id) on delete cascade,
+  kind         text not null check (kind in ('slack', 'discord', 'webhook')),
+  url          text not null,
+  secret       text,
+  label        text,
+  kinds        text[] not null default '{}',
+  active       boolean not null default true,
+  failures     integer not null default 0,
+  last_error   text,
+  last_sent_at timestamptz,
+  created_at   timestamptz not null default now()
+);
+create index if not exists alert_channels_user_idx on public.alert_channels (user_id) where active;
+alter table public.alert_channels enable row level security;
+
+alter table public.notifications add column if not exists channels_done_at timestamptz;
+-- Rows that existed before this migration were already handled (email only).
+update public.notifications set channels_done_at = coalesce(sent_at, created_at) where channels_done_at is null and created_at < now() - interval '1 minute';
+create index if not exists notifications_channels_idx on public.notifications (created_at) where channels_done_at is null;

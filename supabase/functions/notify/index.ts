@@ -9,6 +9,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { emailConfigured, sendEmail } from "../_shared/email.ts";
 import { render } from "./templates.ts";
+import { type AlertChannel, allowedHookUrl, discordBody, MAX_FAILURES, signBody, slackBody, wants, webhookBody } from "./channels.ts";
+import { privateIp } from "../monitor/logic.ts";
 
 const STALE_MS = 48 * 3600_000;
 const BATCH = 40;
@@ -36,6 +38,43 @@ interface Row {
   payload: Record<string, unknown>;
   attempts: number;
   created_at: string;
+  channels_done_at?: string | null;
+}
+
+/** Kinds that exist only for alert channels (no email). */
+const CHANNEL_ONLY = new Set(["channel_test"]);
+
+/** Post one event to the user's Slack / Discord / webhook channels (one attempt each). */
+async function deliverToChannels(supabase: ReturnType<typeof db>, n: Row, appUrl: string): Promise<number> {
+  const { data } = await supabase.from("alert_channels").select("id, user_id, kind, url, secret, kinds, failures").eq("user_id", n.user_id).eq("active", true).limit(10);
+  const channels = ((data ?? []) as AlertChannel[]).filter((c) => wants(c, n.kind) || n.kind === "channel_test");
+  if (!channels.length) return 0;
+  const msg = n.kind === "channel_test"
+    ? { subject: "Olmene alerts are connected", text: `This channel will get Olmene updates: reports ready, pull requests, fixes going live, regressions and competitor changes.\n\n${appUrl}/app/` }
+    : render(n.kind, n.payload, appUrl, "");
+  if (!msg) return 0;
+  let delivered = 0;
+  for (const c of channels) {
+    if (!allowedHookUrl(c.kind, c.url)) continue;
+    try {
+      if (c.kind === "webhook") {
+        const ips = await Deno.resolveDns(new URL(c.url).hostname, "A").catch(() => [] as string[]);
+        if (!ips.length || ips.some(privateIp)) throw new Error("webhook host is not public");
+      }
+      const body = JSON.stringify(c.kind === "slack" ? slackBody(msg.subject, msg.text) : c.kind === "discord" ? discordBody(msg.subject, msg.text) : webhookBody(n.kind, n.payload, msg.subject));
+      const headers: Record<string, string> = { "Content-Type": "application/json", "User-Agent": "Olmene-Alerts/1.0" };
+      if (c.kind === "webhook" && c.secret) headers["X-Olmene-Signature"] = await signBody(c.secret, body);
+      const res = await fetch(c.url, { method: "POST", headers, body, redirect: "manual", signal: AbortSignal.timeout(8_000) });
+      await res.body?.cancel().catch(() => {});
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await supabase.from("alert_channels").update({ failures: 0, last_error: null, last_sent_at: new Date().toISOString() }).eq("id", c.id);
+      delivered++;
+    } catch (e) {
+      const failures = (c.failures ?? 0) + 1;
+      await supabase.from("alert_channels").update({ failures, last_error: String((e as Error).message ?? e).slice(0, 200), ...(failures >= MAX_FAILURES ? { active: false } : {}) }).eq("id", c.id);
+    }
+  }
+  return delivered;
 }
 
 Deno.serve(async (req) => {
@@ -55,9 +94,25 @@ Deno.serve(async (req) => {
 
   if (req.method !== "POST") return text("POST only.", 405);
   if (!cronAuthorized(req)) return text("Bad cron secret.", 401);
-  if (!emailConfigured()) return Response.json({ ok: true, skipped: "BREVO_API_KEY / NOTIFY_FROM_EMAIL not set" });
-
   const appUrl = Deno.env.get("APP_URL") ?? "https://olmene.com";
+
+  // Alert channels first (Slack, Discord, webhooks): independent of email.
+  const channelOut = { posted: 0 };
+  {
+    const { data: pending } = await supabase
+      .from("notifications")
+      .select("id, user_id, kind, payload, attempts, created_at, channels_done_at")
+      .is("channels_done_at", null)
+      .gte("created_at", new Date(Date.now() - STALE_MS).toISOString())
+      .order("created_at", { ascending: true })
+      .limit(BATCH);
+    for (const n of (pending ?? []) as Row[]) {
+      channelOut.posted += await deliverToChannels(supabase, n, appUrl).catch(() => 0);
+      await supabase.from("notifications").update({ channels_done_at: new Date().toISOString(), ...(CHANNEL_ONLY.has(n.kind) ? { status: "sent", sent_at: new Date().toISOString() } : {}) }).eq("id", n.id);
+    }
+  }
+  if (!emailConfigured()) return Response.json({ ok: true, ...channelOut, skipped: "BREVO_API_KEY / NOTIFY_FROM_EMAIL not set" });
+
   const fnBase = `${Deno.env.get("SUPABASE_URL") ?? ""}/functions/v1/notify`;
   const { data: rows } = await supabase
     .from("notifications")
@@ -112,5 +167,5 @@ Deno.serve(async (req) => {
       out.failed++;
     }
   }
-  return Response.json({ ok: true, ...out });
+  return Response.json({ ok: true, ...out, ...channelOut });
 });
