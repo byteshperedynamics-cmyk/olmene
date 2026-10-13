@@ -1240,9 +1240,9 @@ function buildNextPages(id: string, ctx: FixerContext, fw: FrameworkTarget, orig
       }
       const target = doc ?? page;
       if (!target) return { skip: "pages/_document and pages/index not found." };
-      const module = doc ? "next/document" : "next/head";
+      const headModule = doc ? "next/document" : "next/head";
       if (/application\/ld\+json/.test(target.src)) return { skip: "This file already emits JSON-LD — not adding a second, possibly conflicting block." };
-      const r = jsxHeadInsert(target.src, module, [jsxJsonLd(payload)]);
+      const r = jsxHeadInsert(target.src, headModule, [jsxJsonLd(payload)]);
       if (!r.ok) return { skip: r.reason };
       return done(target.path, target.src, r.content, `Adds ${what} to the <Head> in ${target.path}.`, `Structured data was flagged as missing by the scan.`, id === "json-ld-org" ? "SEO checklist: Structured data warn → pass" : "Business check: LocalBusiness structured data warn → pass");
     }
@@ -1270,9 +1270,9 @@ function buildNextPages(id: string, ctx: FixerContext, fw: FrameworkTarget, orig
       const appId = ctx.report.meta.appStoreId;
       const target = doc ?? page;
       if (!appId || !target) return { skip: "No App Store app id or head file." };
-      const module = doc ? "next/document" : "next/head";
-      if (jsxHasMeta(target.src, module, "name", "apple-itunes-app")) return { skip: "The page already has a smart app banner tag." };
-      const r = jsxHeadInsert(target.src, module, [jsxMeta("name", "apple-itunes-app", `app-id=${appId}`)]);
+      const headModule = doc ? "next/document" : "next/head";
+      if (jsxHasMeta(target.src, headModule, "name", "apple-itunes-app")) return { skip: "The page already has a smart app banner tag." };
+      const r = jsxHeadInsert(target.src, headModule, [jsxMeta("name", "apple-itunes-app", `app-id=${appId}`)]);
       if (!r.ok) return { skip: r.reason };
       return done(target.path, target.src, r.content, `Adds the iPhone smart app banner tag for App Store app ${appId}.`, "The homepage links to the App Store but has no apple-itunes-app tag.", "Business check: smart app banner warn → pass");
     }
