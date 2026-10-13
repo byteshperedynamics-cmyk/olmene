@@ -20,7 +20,7 @@ const e = (v: unknown) => escapeHtml(String(v ?? ""));
 
 export function render(kind: string, p: Payload, appUrl: string, footer: string): Rendered | null {
   const app = appUrl.replace(/\/$/, "");
-  const html = (heading: string, paragraphs: string[], cta?: { label: string; url: string }) => layout({ heading, paragraphs, cta, footer });
+  const html = (heading: string, paragraphs: string[], cta?: { label: string; url: string }, tone: "default" | "attention" = "default") => layout({ heading, paragraphs, cta, footer, tone });
   switch (kind) {
     case "report_ready": {
       const url = `${app}/app/report/?id=${encodeURIComponent(p.jobId ?? "")}`;
@@ -79,7 +79,7 @@ export function render(kind: string, p: Payload, appUrl: string, footer: string)
       return {
         subject: `A merged fix stopped working on ${p.site}`,
         text: `This week's re-check of ${p.site} found that these merged fixes are no longer live: ${items.join(", ")}. A later change probably removed them.\n\n${url}`,
-        html: html(`A merged fix stopped working on ${p.site}`, [`This week's re-check found that these fixes are no longer on your live site: <strong>${items.map(e).join(", ")}</strong>.`, "A later change to the site probably removed them. You can start a new fix run to put them back."], { label: "See what changed", url }),
+        html: html(`A merged fix stopped working on ${p.site}`, [`This week's re-check found that these fixes are no longer on your live site: <strong>${items.map(e).join(", ")}</strong>.`, "A later change to the site probably removed them. You can start a new fix run to put them back."], { label: "See what changed", url }, "attention"),
         optional: false,
       };
     }
@@ -90,7 +90,7 @@ export function render(kind: string, p: Payload, appUrl: string, footer: string)
       return {
         subject: `${items.length} check${items.length === 1 ? "" : "s"} got worse on ${p.site}`,
         text: `Olmene's weekly scan of ${p.site} found ${items.length} check${items.length === 1 ? "" : "s"} that passed last week and don't now: ${list.join(", ")}.${typeof p.score === "number" ? ` Readiness: ${p.score}/100${typeof p.previousScore === "number" ? ` (was ${p.previousScore})` : ""}.` : ""}\n\n${url}`,
-        html: html(`Something changed on ${p.site}`, [`This week's scan found ${items.length === 1 ? "a check" : `${items.length} checks`} that passed last week and doesn't now:`, `<strong>${list.map(e).join("<br>")}</strong>`, typeof p.score === "number" ? `Readiness: ${e(p.score)}/100${typeof p.previousScore === "number" ? ` (was ${e(p.previousScore)})` : ""}.` : ""].filter(Boolean), { label: "Open Olmene", url }),
+        html: html(`Something changed on ${p.site}`, [`This week's scan found ${items.length === 1 ? "a check" : `${items.length} checks`} that passed last week and doesn't now:`, `<strong>${list.map(e).join("<br>")}</strong>`, typeof p.score === "number" ? `Readiness: ${e(p.score)}/100${typeof p.previousScore === "number" ? ` (was ${e(p.previousScore)})` : ""}.` : ""].filter(Boolean), { label: "Open Olmene", url }, "attention"),
         optional: false,
       };
     }
