@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Clock,
   Info,
+  ListChecks,
   RotateCcw,
   Search,
   TriangleAlert,
@@ -18,8 +19,9 @@ import { Button } from "@/components/ui/button";
 import { CHECK_COUNT } from "@/lib/config";
 import { Input } from "@/components/ui/input";
 import { LogoLoader, ShimmerText } from "@/components/logo-loader";
-import { ApiRequestError, runFreeAudit, type FreeAuditResult, type FreeAuditCheck } from "@/lib/api";
+import { ApiRequestError, getFreeAudit, runFreeAudit, streamFreeAudit, type FreeAuditCategory, type FreeAuditCheck, type FreeAuditExtra, type FreeAuditPlatform, type FreeAuditProposals, type FreeAuditResult, type FreeAuditShot } from "@/lib/api";
 import { ScoreRing, ScoreBar } from "@/components/score-ring";
+import { CategoryBadge, PreviewCards, ProposalsPanel, ShotPanel } from "@/components/free-scan-v2";
 import { severityClass } from "@/lib/format";
 import { track } from "@/lib/track";
 import { useI18n, Tx } from "@/i18n/provider";
@@ -44,15 +46,28 @@ function CheckRow({ c }: { c: FreeAuditCheck }) {
 }
 
 /** Display order for the unscored extra-check groups (matches the engine's set). */
-const EXTRA_GROUPS = ["AI search", "Performance", "Security", "SEO", "Social"] as const;
+const EXTRA_GROUPS = ["AI search", "Performance", "Security", "SEO", "Social", "Business"] as const;
 
 type Origin = "hero" | "cta";
+
+/** Live scan events from the streaming endpoint (engine v2) — drives the honest progress UI. */
+export interface ScanLiveProgress {
+  siteUrl?: string;
+  platform?: FreeAuditPlatform;
+  rendering: boolean;
+  checklist: FreeAuditCheck[];
+  scores?: FreeAuditResult["scores"];
+  category?: FreeAuditCategory;
+  extras: FreeAuditExtra[];
+}
 
 interface FreeAuditState {
   url: string;
   setUrl: (v: string) => void;
   loading: boolean;
   result: FreeAuditResult | null;
+  /** Stream events as they arrive; null when not scanning (or on the non-streaming fallback). */
+  progress: ScanLiveProgress | null;
   /** Inline error for the last scan (stays until the next attempt). */
   error: string | null;
   /** Which input started the scan — progress and errors render under it. */
@@ -62,18 +77,41 @@ interface FreeAuditState {
 
 const FreeAuditContext = createContext<FreeAuditState | null>(null);
 
+const EMPTY_PROGRESS: ScanLiveProgress = { rendering: false, checklist: [], extras: [] };
+
 /**
  * Holds the free-audit state so several inputs (hero + final CTA) share one
- * result, rendered once by <FreeAuditResult/>. Logic and API calls are
- * unchanged from the original single-component form.
+ * result, rendered once by <FreeAuditResult/>.
  */
 export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
   const { t } = useI18n();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<FreeAuditResult | null>(null);
+  const [progress, setProgress] = useState<ScanLiveProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [origin, setOrigin] = useState<Origin>("hero");
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (pollRef.current) clearTimeout(pollRef.current);
+  }, []);
+
+  /** The screenshot lags the result ("shot" may follow "done"): poll the saved scan a couple of times. */
+  function pollShot(scanId: string, attempt: number) {
+    pollRef.current = setTimeout(async () => {
+      try {
+        const r = await getFreeAudit(scanId);
+        if (r.shot && r.shot.status !== "pending") {
+          setResult((prev) => (prev && prev.scanId === scanId ? { ...prev, shot: r.shot } : prev));
+          return;
+        }
+        if (attempt < 3) pollShot(scanId, attempt + 1);
+      } catch {
+        /* the scan result stands on its own without the screenshot */
+      }
+    }, attempt === 0 ? 4000 : 8000);
+  }
 
   async function submit(e: React.FormEvent, from: Origin = "hero") {
     e.preventDefault();
@@ -86,14 +124,44 @@ export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
     }
     setLoading(true);
     setResult(null);
+    setProgress(EMPTY_PROGRESS);
     setError(null);
     track("audit_start", { site_url: trimmed });
     try {
-      const r = await runFreeAudit(trimmed);
+      // Streaming first (real milestones as they happen); runFreeAudit stays
+      // the fallback for browsers without ReadableStream.
+      let r: FreeAuditResult;
+      if (typeof ReadableStream !== "undefined") {
+        r = await streamFreeAudit(trimmed, (ev) => {
+          setProgress((prev) => {
+            const p = prev ?? EMPTY_PROGRESS;
+            switch (ev.type) {
+              case "start":
+                return { ...p, siteUrl: ev.url };
+              case "page":
+                return { ...p, siteUrl: ev.siteUrl, platform: ev.platform };
+              case "rendering":
+                return { ...p, rendering: true };
+              case "checklist":
+                return { ...p, checklist: ev.checklist };
+              case "scores":
+                return { ...p, scores: ev.scores };
+              case "category":
+                return { ...p, category: ev.category };
+              case "extra":
+                return { ...p, extras: [...p.extras, ev.check] };
+              default:
+                return p;
+            }
+          });
+        });
+      } else {
+        r = await runFreeAudit(trimmed);
+      }
       setResult(r);
-      // The saved scan id rides along: the agent hub restores it (once) after
-      // sign-in or checkout, so "Preview the fix" survives the detour.
+      setProgress(null);
       if (r.scanId) sessionStorage.setItem("olmene.scanId", r.scanId);
+      if (r.shot?.status === "pending" && r.scanId) pollShot(r.scanId, 0);
       track("audit_complete", {
         overall: r.scores.overall,
         passed_checks: r.passedChecks,
@@ -108,13 +176,14 @@ export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
       // network failures don't, so they get the translated fallback.
       const msg = err instanceof ApiRequestError ? err.message : t("form.toastError");
       setError(msg);
+      setProgress(null);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <FreeAuditContext.Provider value={{ url, setUrl, loading, result, error, origin, submit }}>{children}</FreeAuditContext.Provider>
+    <FreeAuditContext.Provider value={{ url, setUrl, loading, result, progress, error, origin, submit }}>{children}</FreeAuditContext.Provider>
   );
 }
 
@@ -166,7 +235,7 @@ function useTypedPlaceholder(base: string, active: boolean) {
 /** The URL field + submit button. `variant="hero"` is the v2 instrument style. */
 export function FreeAuditInput({ variant = "hero", className }: { variant?: "hero" | "cta"; className?: string }) {
   const { t } = useI18n();
-  const { url, setUrl, loading, error, origin, submit } = useFreeAudit();
+  const { url, setUrl, loading, progress, error, origin, submit } = useFreeAudit();
   const mine = origin === variant;
   const [focused, setFocused] = useState(false);
   const placeholder = useTypedPlaceholder(t("form.placeholder"), variant === "hero" && !focused && !url);
@@ -207,7 +276,7 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
           )}
         </Button>
       </div>
-      {loading && mine && <ScanProgress />}
+      {loading && mine && <ScanProgress progress={progress ?? EMPTY_PROGRESS} />}
       {!loading && error && mine && (
         <div
           role="alert"
@@ -231,25 +300,17 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
   );
 }
 
-/** Steps shown while a scan runs; the last stays active until the result lands. */
-const SCAN_STEPS = [
-  { key: "form.stepFetch", at: 0 },
-  { key: "form.stepRead", at: 2200 },
-  { key: "form.stepCrawl", at: 4800 },
-  { key: "form.stepScore", at: 8000 },
-] as const;
-
-function ScanProgress() {
+/**
+ * Live scan progress from the streaming events (engine v2). Every line
+ * reflects something that actually happened: the platform detection, the
+ * browser rendering, checks as they land, the score. The bar stays
+ * asymptotic — it never claims 100% before the result.
+ */
+function ScanProgress({ progress }: { progress: ScanLiveProgress }) {
   const { t } = useI18n();
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    const t0 = Date.now();
-    const iv = setInterval(() => setElapsed(Date.now() - t0), 250);
-    return () => clearInterval(iv);
-  }, []);
-  const active = SCAN_STEPS.reduce((acc, s, i) => (elapsed >= s.at ? i : acc), 0);
-  // Asymptotic bar: moves fast at first, never claims 100% before the result.
-  const pct = Math.min(92, 100 * (1 - Math.exp(-elapsed / 7000)));
+  const events = progress.checklist.length + progress.extras.length + (progress.scores ? 1 : 0) + (progress.category ? 1 : 0) + (progress.platform ? 1 : 0);
+  const pct = Math.min(92, 100 * (1 - Math.exp(-events / 22)));
+  const recentChecks = progress.checklist.slice(-3);
   return (
     <div className="mt-4 overflow-hidden rounded-xl border border-line-strong bg-card/80 text-start fade-up-in" role="status" aria-live="polite">
       <div className="h-0.5 bg-surface-2">
@@ -258,29 +319,58 @@ function ScanProgress() {
           style={{ transform: `scaleX(${pct / 100})` }}
         />
       </div>
-      <div className="flex items-center gap-2.5 px-3.5 pt-3">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3.5 pt-3">
         <LogoLoader size={18} glow />
         <ShimmerText className="text-[13px] font-medium">{t("form.reading", { n: CHECK_COUNT })}</ShimmerText>
+        {progress.platform && progress.platform.id !== "unknown" && (
+          <span className="rounded-full border border-line-strong bg-background px-2 py-0.5 font-mono text-[10.5px] text-muted-foreground">
+            {progress.platform.label}
+          </span>
+        )}
       </div>
-      <ol className="grid gap-1.5 px-3.5 pb-3.5 pt-2.5 font-mono text-[12px]">
-        {SCAN_STEPS.map((s, i) => {
-          const done = i < active;
-          const now = i === active;
-          return (
-            <li key={s.key} className={`flex items-center gap-2.5 transition-colors duration-300 ${done ? "text-muted-foreground" : now ? "text-foreground" : "text-faint"}`}>
-              <span className="grid size-4 shrink-0 place-items-center">
-                {done ? (
-                  <Check className="size-3.5 text-primary" strokeWidth={3} aria-hidden />
-                ) : now ? (
-                  <span className="o-pulse-dot size-1.5 rounded-full bg-primary" aria-hidden />
-                ) : (
-                  <span className="size-1.5 rounded-full bg-line-strong" aria-hidden />
-                )}
-              </span>
-              {t(s.key)}
-            </li>
-          );
-        })}
+      <ol className="grid gap-1 px-3.5 pb-3.5 pt-2.5 font-mono text-[12px]">
+        {progress.platform && (
+          <li className="flex items-center gap-2.5 text-muted-foreground">
+            <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+            {t("form.progressPlatform", { label: progress.platform.label })}
+          </li>
+        )}
+        {progress.rendering && (
+          <li className="flex items-center gap-2.5 text-foreground">
+            <span className="o-pulse-dot size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+            {t("form.progressRendering")}
+          </li>
+        )}
+        {progress.scores && (
+          <li className="flex items-center gap-2.5 text-muted-foreground">
+            <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+            {t("form.progressScored", { overall: progress.scores.overall })}
+          </li>
+        )}
+        {progress.category && (
+          <li className="flex items-center gap-2.5 text-muted-foreground">
+            <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+            {progress.category.label}
+          </li>
+        )}
+        {recentChecks.map((c) => (
+          <li key={c.check} className="flex items-center gap-2.5 text-muted-foreground">
+            {c.status === "pass" ? (
+              <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+            ) : c.status === "warn" ? (
+              <TriangleAlert className="size-3.5 shrink-0 score-mid" aria-hidden />
+            ) : (
+              <XCircle className="size-3.5 shrink-0 score-bad" aria-hidden />
+            )}
+            <span className="min-w-0 truncate">{c.check}</span>
+          </li>
+        ))}
+        {progress.extras.length > 0 && (
+          <li className="flex items-center gap-2.5 text-faint">
+            <ListChecks className="size-3.5 shrink-0" aria-hidden />
+            {t("form.progressExtras", { n: progress.extras.length })}
+          </li>
+        )}
       </ol>
     </div>
   );
@@ -302,13 +392,18 @@ export function FreeAuditForm() {
 export function FreeAuditResult() {
   const { t } = useI18n();
   const { result } = useFreeAudit();
+  const [proposals, setProposals] = useState<FreeAuditProposals | null>(null);
   const highImpact = result?.highImpactCount ?? result?.findings.filter((f) => f.severity === "critical" || f.severity === "high").length ?? 0;
-  // Main-button routing (coordination contract): fixable here → preview the
-  // fix from the saved scan; hosted builder → the report; otherwise the
-  // default (pricing when there are findings, sample report when not).
-  const fixable = result?.platform?.fixable ?? "unknown";
+  // Main-button routing (engine v2 fixModes, falling back to v1 `fixable`):
+  // PR-fixable → the agent preview from the saved scan; api → guided run with
+  // the connect flow (Olmene applies on the platform); guided → the step-by-
+  // step run. The report stays the fallback for unsaved scans.
+  const modes = result?.platform?.fixModes;
+  const v1Fixable = result?.platform?.fixable ?? "unknown";
+  const prMode = (modes ? modes.includes("pr") : v1Fixable === "yes" || v1Fixable === "partial") && !!result?.scanId;
+  const apiMode = !prMode && !!result?.scanId && (modes?.includes("api") ?? false);
+  const guidedMode = !prMode && !apiMode && !!result?.scanId && (modes?.includes("guided") ?? false);
   const platformNote = result?.platform?.note ?? null;
-  const canPreview = (fixable === "yes" || fixable === "partial") && !!result?.scanId;
 
   return (
     <>
@@ -332,6 +427,7 @@ export function FreeAuditResult() {
                     <Clock className="size-3" aria-hidden /> {t("form.cachedBadge")}
                   </span>
                 )}
+                {result.category && <CategoryBadge category={result.category} />}
                 {result.platform && result.platform.id !== "unknown" && (
                   <span className="rounded-full border border-line-strong bg-background px-3 py-1 font-mono text-xs text-muted-foreground">
                     {result.platform.label}
@@ -370,6 +466,28 @@ export function FreeAuditResult() {
                   <span className="font-medium">{t("form.contentNotMeasuredTitle")}</span>{" "}
                   <span className="text-muted-foreground">{t("form.contentNotMeasuredBody")}</span>
                 </p>
+              </div>
+            )}
+
+            {/* ── How you show up: Google result + shared-link card, with the proposed after-state ── */}
+            {result.preview && (
+              <div className="border-t border-line-strong px-5 py-5 sm:px-6">
+                <p className="text-sm font-semibold">{t("form.previewTitle")}</p>
+                <p className="mb-4 mt-1 text-[13px] text-muted-foreground">{t("form.previewBody")}</p>
+                <PreviewCards preview={result.preview} after={proposals?.previewAfter ?? null} />
+                {result.scanId && (
+                  <div className="mt-4">
+                    <ProposalsPanel scanId={result.scanId} onProposals={setProposals} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── The first screen, annotated — the pins are the findings ── */}
+            {result.shot && result.shot.status !== "unavailable" && (
+              <div className="border-t border-line-strong bg-surface-2/30 px-5 py-5 sm:px-6">
+                <p className="mb-4 text-sm font-semibold">{t("form.shotTitle")}</p>
+                <ShotPanel shot={result.shot} />
               </div>
             )}
 
@@ -480,28 +598,42 @@ export function FreeAuditResult() {
               )}
             </div>
 
-            {/* ── Bridge: routed by what the site is built with ── */}
+            {/* ── Bridge: routed by how this site can actually be fixed ── */}
             <div className="flex flex-col items-start gap-3 border-t border-line-strong bg-surface-2/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              {fixable === "no" ? (
-                /* Hosted builders can't take pull requests — the engine's note
-                   says exactly that, and the report is the honest next step. */
-                <p className="max-w-md text-sm text-muted-foreground">{platformNote}</p>
-              ) : (
+              {prMode ? (
                 <div className="max-w-md">
                   <p className="text-sm text-muted-foreground">
                     <Tx k="form.bridge" />
                   </p>
                   {platformNote && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{platformNote}</p>}
                 </div>
+              ) : (
+                /* Guided / API modes don't open pull requests — the engine's
+                   note says exactly what happens instead, so it leads. */
+                <p className="max-w-md text-sm text-muted-foreground">{platformNote}</p>
               )}
-              {canPreview ? (
+              {prMode ? (
                 /* Fixable here: the scan is saved and travels to the agent hub. */
                 <Button asChild variant="sheen" size="lg" className="shrink-0">
                   <Link href={`/app/agent/?scan=${result.scanId}`}>
                     {t("form.previewFix")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
                   </Link>
                 </Button>
-              ) : fixable === "no" ? (
+              ) : apiMode ? (
+                /* Connected platform: Olmene applies the approved fixes for you. */
+                <Button asChild variant="sheen" size="lg" className="shrink-0">
+                  <Link href={`/app/agent/guided/?scan=${result.scanId}&connect=1`}>
+                    {t("form.fixApi")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+                  </Link>
+                </Button>
+              ) : guidedMode ? (
+                /* Everything else: step-by-step fixes for this platform. */
+                <Button asChild variant="sheen" size="lg" className="shrink-0">
+                  <Link href={`/app/agent/guided/?scan=${result.scanId}`}>
+                    {t("form.fixGuided")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+                  </Link>
+                </Button>
+              ) : v1Fixable === "no" ? (
                 <Button asChild variant="sheen" size="lg" className="shrink-0">
                   <Link href="/pricing/">
                     {t("form.getReport")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
