@@ -126,7 +126,7 @@ function ReportPageInner() {
             <div className="print:hidden">
               <AnalysisCompleteBanner job={jobState} />
               {featureAgentEnabled() && report.data.meta?.siteUrl && (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-leaf-soft p-4 sm:p-5">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-rim bg-artifact p-4 shadow-[inset_0_1px_0_var(--edge-top)] sm:p-5">
                   <div className="flex min-w-0 items-start gap-3">
                     <Flower size={22} variant="breathe" className="mt-0.5 shrink-0" />
                     <div className="min-w-0">

@@ -68,7 +68,7 @@ export function PreviewCards({ preview, after }: { preview: FreeAuditPreview; af
           <TruncatedLine text={preview.serp.description} className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-muted-foreground" />
           {after && (after.serp.title !== preview.serp.title || after.serp.description !== preview.serp.description) && (
             <p className="mt-2 border-t border-line-strong pt-2 text-[12px] leading-snug">
-              <span className="me-1 font-mono text-[10px] uppercase tracking-wide text-primary">after</span>
+              <span className="me-1 font-mono text-[10px] uppercase tracking-wide text-tel-emerald">after</span>
               <TruncatedLine text={after.serp.title} className="line-clamp-1 text-[13.5px] text-primary" />
               <TruncatedLine text={after.serp.description} className="mt-0.5 line-clamp-2 text-[11.5px] text-muted-foreground" />
             </p>
@@ -92,7 +92,7 @@ export function PreviewCards({ preview, after }: { preview: FreeAuditPreview; af
             <TruncatedLine text={preview.social.description} className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-muted-foreground" />
             {after && (after.social.title !== preview.social.title || after.social.description !== preview.social.description) && (
               <p className="mt-2 border-t border-line-strong pt-2 text-[12px] leading-snug">
-                <span className="me-1 font-mono text-[10px] uppercase tracking-wide text-primary">after</span>
+                <span className="me-1 font-mono text-[10px] uppercase tracking-wide text-tel-emerald">after</span>
                 <TruncatedLine text={after.social.title} className="line-clamp-1 text-[12.5px]" />
                 <TruncatedLine text={after.social.description} className="mt-0.5 line-clamp-2 text-[11.5px] text-muted-foreground" />
               </p>

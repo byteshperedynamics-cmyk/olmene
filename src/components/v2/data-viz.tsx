@@ -32,7 +32,7 @@ export function KpiTile({
         {unit && <span className="ms-0.5 text-base text-faint">{unit}</span>}
       </span>
       {delta && (
-        <span className={cn("font-mono text-[11px] leading-snug text-pretty", positive ? "text-primary" : "text-muted-foreground")}>{delta}</span>
+        <span className={cn("font-mono text-[11px] leading-snug text-pretty", positive ? "text-tel-emerald" : "text-muted-foreground")}>{delta}</span>
       )}
     </div>
   );
@@ -286,7 +286,7 @@ export function FixFeed({ items, mergedLabel, className }: { items: FeedItem[]; 
   if (!items.length) return null;
   const row = (it: FeedItem, hidden: boolean, k: string) => (
     <li key={k} aria-hidden={hidden || undefined} className="flex min-w-0 items-center gap-2 text-[12.5px]">
-      <span className="shrink-0 rounded-full bg-leaf-soft px-2 py-0.5 font-mono text-[10.5px] text-primary">{mergedLabel}</span>
+      <span className="shrink-0 rounded-full bg-tel-emerald/10 px-2 py-0.5 font-mono text-[10.5px] text-tel-emerald">{mergedLabel}</span>
       <span className="min-w-0 truncate" title={`${it.title} · ${it.site}`}>
         {it.title} <span className="text-muted-foreground">· {it.site}</span>
       </span>

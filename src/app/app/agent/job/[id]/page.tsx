@@ -145,7 +145,7 @@ export default function AgentJobPage() {
   return (
     <div className="mx-auto grid max-w-6xl gap-6">
       {planRequired && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-primary/35 bg-leaf-soft p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-rim bg-artifact p-5 shadow-[inset_0_1px_0_var(--edge-top)] sm:p-6">
           <div className="min-w-0">
             <p className="text-[15px] font-medium">Applying fixes needs a plan</p>
             <p className="mt-0.5 text-[13.5px] text-muted-foreground">

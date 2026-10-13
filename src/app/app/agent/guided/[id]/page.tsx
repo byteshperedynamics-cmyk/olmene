@@ -94,7 +94,7 @@ function GuidedValueRow({ v }: { v: GuidedValue }) {
 
 function GuidedFixCard({ fix }: { fix: GuidedFix }) {
   return (
-    <div className={cn("min-w-0 rounded-2xl border bg-card", fix.status === "live" && "border-primary/35")}>
+    <div className={cn("min-w-0 rounded-2xl border bg-card", fix.status === "live" && "border-tel-emerald/35")}>
       <div className="grid gap-2 p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
           <FixStatusPill fix={fix} />
@@ -143,8 +143,8 @@ function AutoStrip({ fix }: { fix: GuidedFix }) {
   }
   if (auto.applied) {
     return auto.applied.ok ? (
-      <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-leaf-soft px-3 py-2 text-[12.5px]">
-        <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
+      <p className="flex items-start gap-2 rounded-lg border border-tel-emerald/30 bg-tel-emerald/[0.06] px-3 py-2 text-[12.5px]">
+        <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-tel-emerald" aria-hidden />
         <span>
           Olmene applied {chg} on {auto.channel} at {fmtDateTime(auto.applied.at)}
           {auto.applied.published ? " and published" : ""}.
@@ -158,7 +158,7 @@ function AutoStrip({ fix }: { fix: GuidedFix }) {
     );
   }
   return (
-    <p className="flex items-start gap-2 rounded-lg border border-primary/30 bg-leaf-soft px-3 py-2 text-[12.5px]">
+    <p className="flex items-start gap-2 rounded-lg border border-rim bg-chip px-3 py-2 text-[12.5px]">
       <Flower size={14} variant="static" className="mt-0.5 shrink-0" />
       <span>
         Your {auto.channel} connection lets Olmene apply this for you: {chg}. Use &ldquo;Apply on {auto.channel}&rdquo; below —
@@ -327,7 +327,7 @@ export default function GuidedRunPage() {
       </header>
 
       {planRequired && (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-primary/35 bg-leaf-soft p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-rim bg-artifact p-5 shadow-[inset_0_1px_0_var(--edge-top)] sm:p-6">
           <div className="min-w-0">
             <p className="text-[15px] font-medium">Applying fixes on {channel ?? "your platform"} needs a plan</p>
             <p className="mt-0.5 text-[13.5px] text-muted-foreground">
@@ -348,8 +348,8 @@ export default function GuidedRunPage() {
       )}
 
       {live === total && total > 0 && (
-        <div className="flex items-center gap-3 rounded-2xl border border-primary/35 bg-leaf-soft p-5">
-          <CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden />
+        <div className="flex items-center gap-3 rounded-2xl border border-tel-emerald/35 bg-tel-emerald/[0.06] p-5">
+          <CheckCircle2 className="size-5 shrink-0 text-tel-emerald" aria-hidden />
           <p className="text-[14px]">
             Every fix is live on your site. Olmene re-checks daily for a month and tells you if one stops working.
           </p>

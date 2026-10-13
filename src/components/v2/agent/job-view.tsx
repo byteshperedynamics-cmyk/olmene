@@ -143,7 +143,7 @@ export function JobView({
           )}
 
           {applyOut?.prUrl && (
-            <div className="grid gap-4 rounded-2xl border border-primary/35 bg-leaf-soft p-6 sm:p-7">
+            <div className="grid gap-4 rounded-2xl border border-tel-emerald/35 bg-tel-emerald/[0.06] p-6 sm:p-7">
               <div className="flex items-start gap-4">
                 <Flower size={36} variant="bloom-once" />
                 <div className="min-w-0">
@@ -280,7 +280,7 @@ function ActionCard({
   const impact = fixerImpact(action.fixer_id);
   const p = action.preview;
   return (
-    <div className={cn("min-w-0 rounded-2xl border bg-card transition-colors", checked && "border-primary/40")}>
+    <div className={cn("min-w-0 rounded-2xl border bg-card transition-colors", checked && "border-rim shadow-[inset_0_1px_0_var(--edge-top)]")}>
       <div className="flex items-start gap-3 p-4 sm:p-5">
         <input
           id={`act-${action.id}`}
@@ -463,7 +463,7 @@ function AuditLog({ audit }: { audit: AuditRow[] }) {
               className={cn(
                 "mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10.5px]",
                 row.result === "success"
-                  ? "bg-leaf-soft text-primary"
+                  ? "bg-tel-emerald/10 text-tel-emerald"
                   : row.result === "blocked" || row.result === "failure"
                     ? "bg-diff-del text-signal-rust"
                     : "bg-surface-2 text-muted-foreground",
@@ -532,10 +532,10 @@ function PreviewCheckPanel({ out }: { out: PreviewCheckState | undefined }) {
   const all = out.passed === out.total;
 
   return (
-    <div className={cn("grid gap-3 rounded-2xl border p-5", all ? "border-primary/35 bg-leaf-soft" : "border-signal-amber/40 bg-card")}>
+    <div className={cn("grid gap-3 rounded-2xl border p-5", all ? "border-tel-emerald/35 bg-tel-emerald/[0.06]" : "border-signal-amber/40 bg-card")}>
       <div className="flex items-start gap-3">
         {all ? (
-          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-tel-emerald" aria-hidden />
         ) : (
           <AlertTriangle className="mt-0.5 size-5 shrink-0 text-signal-amber" aria-hidden />
         )}
@@ -563,7 +563,7 @@ function PreviewCheckPanel({ out }: { out: PreviewCheckState | undefined }) {
           {out.results.map((r) => (
             <li key={r.fixer} className="flex items-start gap-3 text-[14px]">
               {r.ok ? (
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-label="Verified" />
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-tel-emerald" aria-label="Verified" />
               ) : (
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-label="Not verified" />
               )}
@@ -594,7 +594,7 @@ function LiveCheckPanel({ state, mergedAt }: { state: LiveCheckState | undefined
   }
   const allLive = last.total > 0 && last.passed === last.total;
   return (
-    <div className={cn("grid gap-4 rounded-2xl border p-6", allLive ? "border-primary/35 bg-leaf-soft" : "bg-card")}>
+    <div className={cn("grid gap-4 rounded-2xl border p-6", allLive ? "border-tel-emerald/35 bg-tel-emerald/[0.06]" : "bg-card")}>
       <div className="grid gap-1">
         <p className="o-display text-2xl">
           {last.fetchError
@@ -620,7 +620,7 @@ function LiveCheckPanel({ state, mergedAt }: { state: LiveCheckState | undefined
           {last.results.map((r) => (
             <li key={r.fixer} className="flex items-start gap-3 text-[14px]">
               {r.ok ? (
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-label="Live" />
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-tel-emerald" aria-label="Live" />
               ) : (
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-label="Not live yet" />
               )}

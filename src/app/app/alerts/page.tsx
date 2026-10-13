@@ -80,9 +80,9 @@ function AddChannelForm({ kinds, onAdded }: { kinds: string[]; onAdded: () => vo
 
   if (secret) {
     return (
-      <div className="grid gap-3 rounded-xl border border-primary/35 bg-leaf-soft p-4" role="alert">
+      <div className="grid gap-3 rounded-xl border border-tel-amber/40 bg-tel-amber/[0.06] p-4" role="alert">
         <p className="flex items-center gap-2 text-[14px] font-medium">
-          <KeyRound className="size-4 text-primary" aria-hidden /> Your webhook signing secret — shown once
+          <KeyRound className="size-4 text-tel-amber" aria-hidden /> Your webhook signing secret — shown once
         </p>
         <p className="text-[13px] text-muted-foreground">
           Verify incoming deliveries with it (HMAC-SHA256 of the body). It&apos;s not retrievable later — store it now.
@@ -152,7 +152,7 @@ function AddChannelForm({ kinds, onAdded }: { kinds: string[]; onAdded: () => vo
                 aria-pressed={selected.has(k)}
                 className={cn(
                   "rounded-full border px-2.5 py-1 font-mono text-[11.5px] transition-colors",
-                  selected.has(k) ? "border-primary/40 bg-leaf-soft text-primary" : "border-line-strong text-muted-foreground hover:text-foreground",
+                  selected.has(k) ? "border-rim bg-chip text-foreground" : "border-line-strong text-muted-foreground hover:text-foreground",
                 )}
               >
                 {k}

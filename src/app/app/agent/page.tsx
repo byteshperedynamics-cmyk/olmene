@@ -281,13 +281,13 @@ function DisconnectNotice({ result }: { result: DisconnectResult }) {
     <div
       className={cn(
         "grid gap-2 rounded-2xl border p-5 text-[14px]",
-        result.verified ? "border-primary/35 bg-leaf-soft" : "border-signal-amber/40 bg-card",
+        result.verified ? "border-tel-emerald/35 bg-tel-emerald/[0.06]" : "border-signal-amber/40 bg-card",
       )}
     >
       <p className="flex items-center gap-2 font-medium">
         {result.verified ? (
           <>
-            <ShieldCheck className="size-4 text-primary" aria-hidden /> Access removed and verified with GitHub
+            <ShieldCheck className="size-4 text-tel-emerald" aria-hidden /> Access removed and verified with GitHub
           </>
         ) : (
           <>

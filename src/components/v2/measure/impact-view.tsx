@@ -210,7 +210,7 @@ export function ImpactView({
                           <span className="text-muted-foreground">—</span>
                         ) : (
                           <span className="grid gap-0.5">
-                            <span className={o.deltaPct > 0 && o.confidence !== "low" ? "text-primary" : ""}>
+                            <span className={o.deltaPct > 0 && o.confidence !== "low" ? "text-tel-emerald" : ""}>
                               {o.deltaPct > 0 ? "+" : ""}
                               {o.deltaPct}% clicks
                               {o.trendAdjusted && (

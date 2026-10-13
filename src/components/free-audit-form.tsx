@@ -368,32 +368,32 @@ function ScanProgress({ progress }: { progress: ScanLiveProgress }) {
       <ol className="grid gap-1 px-3.5 pb-3.5 pt-2.5 font-mono text-[12px]">
         {progress.platform && (
           <li className="flex items-center gap-2.5 text-muted-foreground">
-            <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+            <Check className="size-3.5 shrink-0 text-tel-emerald" strokeWidth={3} aria-hidden />
             {t("form.progressPlatform", { label: progress.platform.label })}
           </li>
         )}
         {progress.rendering && (
           <li className="flex items-center gap-2.5 text-foreground">
-            <span className="o-pulse-dot size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+            <span className="o-pulse-dot size-1.5 shrink-0 rounded-full" aria-hidden />
             {t("form.progressRendering")}
           </li>
         )}
         {progress.scores && (
           <li className="flex items-center gap-2.5 text-muted-foreground">
-            <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+            <Check className="size-3.5 shrink-0 text-tel-emerald" strokeWidth={3} aria-hidden />
             {t("form.progressScored", { overall: progress.scores.overall })}
           </li>
         )}
         {progress.category && (
           <li className="flex items-center gap-2.5 text-muted-foreground">
-            <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+            <Check className="size-3.5 shrink-0 text-tel-emerald" strokeWidth={3} aria-hidden />
             {progress.category.label}
           </li>
         )}
         {recentChecks.map((c) => (
           <li key={c.check} className="flex items-center gap-2.5 text-muted-foreground">
             {c.status === "pass" ? (
-              <Check className="size-3.5 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+              <Check className="size-3.5 shrink-0 text-tel-emerald" strokeWidth={3} aria-hidden />
             ) : c.status === "warn" ? (
               <TriangleAlert className="size-3.5 shrink-0 score-mid" aria-hidden />
             ) : (
@@ -475,7 +475,7 @@ export function FreeAuditResult() {
                 </span>
                 <span
                   className={`rounded-full border px-3 py-1 font-mono text-xs ${
-                    highImpact > 0 ? "border-signal-rust/35 bg-signal-rust/[0.06] text-signal-rust" : "border-primary/30 bg-leaf-soft text-primary"
+                    highImpact > 0 ? "border-signal-rust/35 bg-signal-rust/[0.06] text-signal-rust" : "border-tel-emerald/35 bg-tel-emerald/[0.06] text-tel-emerald"
                   }`}
                 >
                   {highImpact > 0 ? t("form.highImpact", { n: highImpact }) : t("form.noHighImpact")}
@@ -621,7 +621,7 @@ export function FreeAuditResult() {
                 </p>
               )}
 
-              <div className="rounded-xl border border-primary/30 bg-leaf-soft p-4">
+              <div className="o-artifact rounded-xl p-4">
                 <p className="o-eyebrow">{t("common.biggestOpportunity")}</p>
                 <p className="mt-1 font-medium">{result.opportunity.title}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{result.opportunity.why}</p>

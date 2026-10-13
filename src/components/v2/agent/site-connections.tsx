@@ -208,7 +208,7 @@ function DisconnectDialog({ id, host, onDone }: { id: string; host: string; onDo
             <AlertDialogTitle className="flex items-center gap-2">
               {result.verified ? (
                 <>
-                  <ShieldCheck className="size-4 text-primary" aria-hidden /> Disconnected and verified
+                  <ShieldCheck className="size-4 text-tel-emerald" aria-hidden /> Disconnected and verified
                 </>
               ) : (
                 <>

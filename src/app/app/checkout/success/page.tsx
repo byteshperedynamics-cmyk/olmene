@@ -145,14 +145,14 @@ export default function CheckoutSuccessPage() {
       {phase === "activating" && (
         <div className="w-full max-w-sm" role="status" aria-live="polite">
           <div className="mx-auto mb-6 flex flex-col items-center gap-2">
-            <span className="inline-flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <span className="inline-flex size-10 items-center justify-center rounded-full border border-tel-emerald/40 bg-tel-emerald/10 text-tel-emerald">
               <Check className="size-5" aria-hidden />
             </span>
             <p className="font-display text-2xl font-semibold">Payment received</p>
           </div>
           <ol className="space-y-3 text-start">
             <li className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 text-sm">
-              <Check className="size-4 shrink-0 text-primary" aria-hidden />
+              <Check className="size-4 shrink-0 text-tel-emerald" aria-hidden />
               <span>Payment confirmed by Polar</span>
             </li>
             <li className="flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3 text-sm">
@@ -208,7 +208,7 @@ export default function CheckoutSuccessPage() {
           {/* Check ring */}
           <div className="relative mx-auto mb-6 size-24">
             <div className="check-glow absolute -inset-6 rounded-full" aria-hidden />
-            <svg viewBox="0 0 96 96" className="relative size-full text-primary" role="img" aria-label="Purchase confirmed">
+            <svg viewBox="0 0 96 96" className="relative size-full text-tel-emerald" role="img" aria-label="Purchase confirmed">
               <circle cx="48" cy="48" r="42" fill="none" stroke="currentColor" strokeWidth="3" className="check-ring" />
               <path
                 d="M31 50.5 43 62 66 37"
@@ -223,7 +223,7 @@ export default function CheckoutSuccessPage() {
           </div>
 
           <Enter delay={0.05}>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-tel-emerald/30 bg-tel-emerald/10 px-3 py-1 font-mono text-xs font-medium uppercase tracking-widest text-tel-emerald">
               <Check className="size-3" aria-hidden /> Payment confirmed
             </span>
           </Enter>
