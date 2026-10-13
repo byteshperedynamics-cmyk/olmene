@@ -46,17 +46,22 @@ const W = Math.round(1920 * SCALE), H = Math.round(1080 * SCALE);
 /* Sub-frames per frame. Fast moves get many, holds get few. */
 const BLUR = [
   [1.66, 3.02, 6],   // dissolve + converge
-  [3.40, 4.20, 14],  // zoom through the dot, portal
+  [3.40, 3.72, 14],  // zoom through the dot
+  [3.72, 3.94, 32],  // ...its last, most violent frames
+  [3.94, 4.20, 14],  // portal opens
   [4.20, 5.40, 3],   // scan
-  [5.90, 6.90, 14],  // dive into the pin, morph
+  [5.90, 6.18, 14],  // dive into the pin
+  [6.18, 6.38, 32],  // ...the final rush and the slam
+  [6.38, 6.90, 14],  // morph into the struck line
   [6.90, 7.50, 4],   // typing
   [7.50, 8.15, 8],   // cursor + click
   [8.15, 8.45, 4],
   [8.45, 9.25, 12],  // ring flight
   [9.25, 10.10, 10], // odometer
   [10.10, 11.25, 4], // chart
-  [11.25, 12.05, 14],// implode + travel
-  [12.05, 13.20, 10],// bloom
+  [11.25, 12.00, 14],// implode + travel
+  [12.00, 12.12, 24],// the oat world bursts open
+  [12.12, 13.20, 10],// bloom
   [13.20, 14.10, 4], // type
 ];
 const samplesAt = (t) => { for (const [a, b, n] of BLUR) if (t >= a && t < b) return n; return 2; };
@@ -115,8 +120,8 @@ async function sampleParticles(page) {
   return { x, y, a };
 }
 
-async function capture(w, t) {
-  const info = await w.page.evaluate((tt) => window.Reel.render(tt), t);
+async function capture(w, t, dt = 0) {
+  const info = await w.page.evaluate(([tt, d]) => window.Reel.render(tt, { dt: d }), [t, dt]);
   const { data } = await w.cdp.send('Page.captureScreenshot', { format: 'png', optimizeForSpeed: true, captureBeyondViewport: false, clip: { x: 0, y: 0, width: 1920, height: 1080, scale: SCALE } });
   return { png: Buffer.from(data, 'base64'), info };
 }
@@ -207,7 +212,7 @@ async function renderFrame(w, frame) {
   for (let s = 0; s < n; s++) {
     const off = n === 1 ? 0 : ((s + 0.5) / n - 0.5) * SHUTTER / FPS;
     const ts = Math.min(DURATION - 1e-4, Math.max(0, t + off));
-    const { png, info } = await capture(w, ts);
+    const { png, info } = await capture(w, ts, n === 1 ? 0 : SHUTTER / FPS / n);
     ca += info.ca / n;
     vig = info.vig;
     const { data, info: im } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -244,17 +249,36 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
 const f0 = Math.round(R0 * FPS), f1 = Math.min(Math.round(R1 * FPS), Math.round(DURATION * FPS));
 const total = f1 - f0;
 const withAudio = fs.existsSync(AUDIO) && R0 === 0 && R1 >= DURATION && !flag('--noaudio');
+const BITRATE = opt('--bitrate', '7600k');
+// Full renders go to a lossless master first (FFV1, RGB) and are then encoded
+// for delivery in two passes; previews and partial ranges encode directly.
+const MASTER = path.join(path.dirname(OUT), 'master.mkv');
+const DIRECT = PREVIEW || !(R0 === 0 && R1 >= DURATION);
 const ff = spawn('ffmpeg', [
   '-y', '-loglevel', 'error',
   '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${W}x${H}`, '-r', String(FPS), '-i', '-',
-  ...(withAudio ? ['-i', AUDIO] : []),
-  '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
-  '-c:v', 'libx264', '-preset', PREVIEW ? 'veryfast' : 'slow', '-crf', PREVIEW ? '20' : '15', '-tune', 'film',
-  '-profile:v', 'high', '-level', '4.2', '-g', String(FPS), '-bf', '3',
-  '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
-  ...(withAudio ? ['-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-shortest'] : []),
-  '-movflags', '+faststart', OUT,
+  ...(DIRECT
+    ? ['-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+      '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv', '-movflags', '+faststart', OUT]
+    : ['-c:v', 'ffv1', '-level', '3', '-pix_fmt', 'bgr0', '-g', '1', MASTER]),
 ], { stdio: ['pipe', 'inherit', 'inherit'] });
+
+/** Two-pass H.264 from the lossless master, with BT.709 tags and the soundtrack. */
+async function deliver() {
+  const run = (a) => new Promise((res, rej) => {
+    const p = spawn('ffmpeg', ['-y', '-loglevel', 'error', ...a], { stdio: ['ignore', 'inherit', 'inherit'] });
+    p.on('close', (c) => (c === 0 ? res() : rej(new Error('ffmpeg exited ' + c))));
+  });
+  const log = path.join(path.dirname(OUT), 'x264pass');
+  const v = ['-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p', '-c:v', 'libx264', '-preset', 'slower', '-tune', 'film',
+    '-b:v', BITRATE, '-maxrate', '12000k', '-bufsize', '16000k', '-profile:v', 'high', '-level', '4.2', '-g', String(FPS), '-bf', '3',
+    '-x264-params', 'aq-mode=3:aq-strength=0.9', '-passlogfile', log];
+  await run(['-i', MASTER, ...v, '-pass', '1', '-an', '-f', 'null', '-']);
+  await run(['-i', MASTER, ...(withAudio ? ['-i', AUDIO] : []), ...v, '-pass', '2',
+    '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
+    ...(withAudio ? ['-c:a', 'aac', '-b:a', '256k', '-ar', '48000', '-shortest'] : []), '-movflags', '+faststart', OUT]);
+  for (const f of fs.readdirSync(path.dirname(OUT))) if (f.startsWith('x264pass')) fs.rmSync(path.join(path.dirname(OUT), f));
+}
 
 const workers = [];
 const first = await openPage();
@@ -289,6 +313,7 @@ await Promise.all(workers.map(async (w) => {
 await flush();
 ff.stdin.end();
 await new Promise((r) => ff.on('close', r));
-console.log(`\nwrote ${OUT}${withAudio ? ' (with audio)' : ''} in ${((Date.now() - started) / 1000).toFixed(0)}s`);
+if (!DIRECT) { process.stdout.write('\nencoding for delivery (two-pass)...'); await deliver(); }
+console.log(`\nwrote ${OUT}${withAudio && !DIRECT ? ' (with audio)' : ''} in ${((Date.now() - started) / 1000).toFixed(0)}s`);
 await browser.close();
 server.close();

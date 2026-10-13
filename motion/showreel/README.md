@@ -55,10 +55,13 @@ node render.mjs --range 3.4:4.4          # part of the timeline
 | `index.html`, `style.css` | The six scenes as real HTML/CSS/SVG (the scan browser, PR panel, ring and chart are built like the product UI) |
 | `engine.js` | Easing (including the brand bezier), keyframe tracks, seeded randomness, noise, camera shake |
 | `scenes.js` | `Reel.render(t)` poses every element for time `t`. Pure function of time: no state between frames |
-| `render.mjs` | Drives headless Chromium frame by frame, averages sub-frames in linear light for a 180° shutter (up to 14 samples on fast moves), adds lens aberration on impacts, vignette and grain, and encodes H.264 with BT.709 tags |
+| `render.mjs` | Drives headless Chromium frame by frame and averages sub-frames in linear light for a 180° shutter (up to 32 samples on the fastest moves). Adds lens aberration on impacts, a vignette and grain, writes a lossless FFV1 master (`out/master.mkv`), then a two-pass H.264 delivery file (~15 MB, BT.709 tags) with the soundtrack |
 | `audio/synth.py` | The soundtrack: 120 BPM, D minor to D major on the bloom. Drums, sidechained bass, pads, plucks, FM bells, risers, whooshes and UI foley, mixed to −14 LUFS / −1 dBFS |
 
 The particles are sampled from the rendered pixels of the word itself, so the
-handover from type to dust is seamless.
+handover from type to dust is seamless. Circles that zoom violently (the
+period, the portal, the pin dive, the oat reveal) also get analytic motion
+blur: each sub-frame softens their edge by exactly how far it travels in that
+slice, so a 150x zoom blurs smoothly instead of leaving stepped rings.
 
 Fonts are under the SIL Open Font License; see `fonts/OFL-*.txt`.

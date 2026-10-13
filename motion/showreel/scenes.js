@@ -17,6 +17,23 @@
     del: hex('#3C3128'), mint: hex('#9BE3AD'), amberish: hex('#F0B08A'),
   };
 
+  // Duration of the sub-frame being rendered (0 when not motion-blurring).
+  // Circles that zoom violently soften their edge by exactly how far it
+  // travels in that slice, so the accumulated sub-frames blend into one
+  // continuous blur instead of stepped rings.
+  let SUB = 0;
+  const travel = (fn, t) => (SUB > 0 ? Math.abs(fn(t + SUB / 2) - fn(t - SUB / 2)) : 0);
+  /** Solid disc with a soft edge of width w (px), drawn as a radial gradient. */
+  function disc(el, cx, cy, r, w, color, extra) {
+    if (r <= 0.01) { S(el, { 'background-image': 'none', 'background-color': 'transparent' }); return; }
+    const R = r + w / 2 + 1;
+    const a = Math.max(0, r - w / 2), b = Math.max(a + 0.75, r + w / 2);
+    S(el, Object.assign({
+      left: px(cx - R), top: px(cy - R), width: px(2 * R), height: px(2 * R), 'border-radius': '50%', 'background-color': 'transparent',
+      'background-image': `radial-gradient(circle at 50% 50%, ${color} ${n3(a)}px, ${color.replace(/,[\d.]+\)$/, ',0)')} ${n3(b)}px)`,
+    }, extra || {}));
+  }
+
   const box = (el) => {
     const r = el.getBoundingClientRect();
     return { x: r.left, y: r.top, w: r.width, h: r.height, cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
@@ -227,7 +244,8 @@
     const b = beats(t, [A.dot, A.pulse], 8);
     const r = DOT_R * Math.max(grown * 0.85, pop) * (1 + 0.28 * b);
     S(an.wrap, { left: px(T.x), top: px(T.y) });
-    circle(an.dot, 0, 0, r);
+    const zw = r * travel(zoomScale, t) / zoomScale(t);
+    disc(an.dot, 0, 0, r, zw, 'rgba(105,194,126,1)');
     circle(an.halo, 0, 0, r * 8.5, { opacity: n3(clamp(0.35 + 0.65 * b) * clamp(grown + pop)) });
     ring(an.ring, t, A.pulse, 0, 0, DOT_R, 120, 0.6, 0.7);
 
@@ -266,8 +284,11 @@
 
     // portal clip while we fly in through the dot
     const T = state.dotTarget;
-    if (t < A.portal[1]) S(fd.sec, { 'clip-path': `circle(${n3(portalRadius(t))}px at ${n3(T.x)}px ${n3(T.y)}px)` });
-    else S(fd.sec, { 'clip-path': 'none' });
+    if (t < A.portal[1]) {
+      const pr = portalRadius(t), pw = travel(portalRadius, t);
+      const pa = Math.max(0, pr - pw / 2), pb = Math.max(pa + 0.75, pr + pw / 2);
+      S(fd.sec, { 'mask-image': `radial-gradient(circle at ${n3(T.x)}px ${n3(T.y)}px, #000 ${n3(pa)}px, transparent ${n3(pb)}px)` });
+    } else S(fd.sec, { 'mask-image': 'none' });
 
     // the camera keeps travelling forward: the scene arrives from depth
     const settle = ease.out(prog(t, A.portal[0], F.drop + 0.9));
@@ -336,7 +357,8 @@
       const e = ease.inOut(zu);
       const pdx = lerp(p0.cx, CX, e), pdy = lerp(p0.cy, CY, e);
       S(fd.cam, { transform: `translate3d(${n3(pdx - Z * p0.cx)}px,${n3(pdy - Z * p0.cy)}px,0) scale(${n3(Z)}) ${settleTf}` });
-      state.pinDot = { x: pdx, y: pdy, r: (Math.max(p0.w, p0.h) / 2) * Z };
+      const zf = (tt) => Math.exp(Math.log(220) * ease.inExpo(prog(tt, F.zoom[0], F.zoom[1])));
+      state.pinDot = { x: pdx, y: pdy, r: (Math.max(p0.w, p0.h) / 2) * Z, w: (Math.max(p0.w, p0.h) / 2) * travel(zf, t) };
     } else state.pinDot = null;
   }
   function fadeIn(t, t0, d) { return ease.brand(prog(t, t0, t0 + d)); }
@@ -521,7 +543,7 @@
     show(morph, phase1 || phase2);
     if (phase1) {
       const d = state.pinDot;
-      S(morph, { left: px(d.x - d.r), top: px(d.y - d.r), width: px(2 * d.r), height: px(2 * d.r), 'border-radius': '50%', 'background-color': rgba(RGB.rustL), opacity: '1' });
+      disc(morph, d.x, d.y, d.r, d.w, rgba(RGB.rustL), { opacity: '1' });
     } else if (phase2) {
       const r = state.delRect;
       const hu = ease.out(prog(t, X.cut, X.cut + 0.3));
@@ -532,7 +554,7 @@
       const rad = Math.min(w, h) / 2 * (1 - ease.out(prog(t, X.cut + 0.1, X.morph[1] - 0.1)));
       const col = mixRGB(RGB.rustL, RGB.del, ease.inOutSine(prog(t, X.cut + 0.12, X.morph[1] - 0.08)));
       const fade = 1 - ease.inOutSine(prog(t, X.morph[1] - 0.16, X.morph[1]));
-      S(morph, { left: px(cx - w / 2), top: px(cy - h / 2), width: px(w), height: px(h), 'border-radius': px(rad), 'background-color': rgba(col), opacity: n3(fade) });
+      S(morph, { left: px(cx - w / 2), top: px(cy - h / 2), width: px(w), height: px(h), 'border-radius': px(rad), 'background-color': rgba(col), 'background-image': 'none', opacity: n3(fade) });
     }
   }
 
@@ -746,8 +768,9 @@
     show(lg.sec, on);
     if (!on) return;
     // the oat world opens from the dot
-    const R = lerp(4, 1180, ease.out(prog(t, L.hit, L.hit + 0.55)));
-    S(lg.sec, { 'clip-path': R < 1170 ? `circle(${n3(R)}px at 960px 540px)` : 'none' });
+    const oatR = (tt) => lerp(4, 1180, ease.out(prog(tt, L.hit, L.hit + 0.55)));
+    const R = oatR(t), rw = travel(oatR, t);
+    S(lg.sec, { 'mask-image': R < 1170 ? `radial-gradient(circle at 960px 540px, #000 ${n3(Math.max(0, R - rw / 2))}px, transparent ${n3(Math.max(R - rw / 2 + 0.75, R + rw / 2))}px)` : 'none' });
     ring(lg.shock, t, L.hit + 0.02, 960, 540, 20, 760, 0.9, 0.5);
 
     // bloom: five petals unfurl from the centre, one after another
@@ -783,7 +806,8 @@
   }
 
   /* ───────────────────────── frame ───────────────────────── */
-  function render(t) {
+  function render(t, opts) {
+    SUB = (opts && opts.dt) || 0;
     renderCam(t);
     renderNight(t, ...gridCam(t));
     renderHook(t);
