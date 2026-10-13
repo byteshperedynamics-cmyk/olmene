@@ -43,7 +43,7 @@ export function HomeLoop() {
             </div>
             <div className="grid gap-2 px-1">
               <div className="flex items-baseline gap-3">
-                <span className="o-readout-strong text-xs text-faint">{c.n}</span>
+                <span className="o-readout-strong text-xs text-faint">{c.n}</span>{" "}
                 <h3 className="o-display text-2xl">{t(c.title)}</h3>
               </div>
               <p className="max-w-[64ch] text-[15px] leading-relaxed text-muted-foreground">{t(c.body, { n: CHECK_COUNT })}</p>
@@ -143,7 +143,7 @@ function FixStage({ stage }: { stage: Stage }) {
         </div>
         <div className="min-h-[58px] rounded-md bg-diff-add px-2 py-1 text-foreground">
           <span className="text-tel-emerald">+ </span>
-          <span className="break-all">{INSERTION.slice(0, typed)}</span>
+          <span className="[overflow-wrap:anywhere]">{INSERTION.slice(0, typed)}</span>
           {!done && <span className="ms-px inline-block h-3 w-[6px] translate-y-[2px] animate-[o-caret_0.9s_steps(1)_infinite] bg-foreground/80" />}
         </div>
       </div>
@@ -237,9 +237,8 @@ function VerifyStage({ stage }: { stage: Stage }) {
       <span className="o-readout-strong -mt-1 flex items-baseline gap-1.5 text-[12px] text-faint">
         <span className={good ? "text-tel-emerald" : "text-foreground"} style={{ fontSize: 24 }}>
           {Math.round(score)}
-        </span>
-        <span>/ 100</span>
-        <span className="ms-1 font-mono text-[10px] uppercase tracking-[0.12em]">{t("scores.readiness")}</span>
+        </span>{" "}
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em]">{t("scores.readiness")}</span>
       </span>
     </div>
   );

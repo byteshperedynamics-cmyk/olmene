@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getEntitlement, getPlans, type Plan } from "@/lib/data";
 import { CHECK_COUNT } from "@/lib/config";
@@ -11,7 +11,6 @@ import { featureAgentEnabled } from "@/lib/agent-client";
 import { useSession } from "@/lib/session";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
-import { LivePill } from "../atoms";
 
 /** Buy CTA: straight to billing when signed in, otherwise through login. */
 function ctaHref(productId: string, loggedIn: boolean): string {
@@ -36,7 +35,7 @@ function intervalOf(p: Plan): "month" | "year" | "once" {
  * no code change. The billing toggle exists only when yearly plans exist.
  * Signature motion: light travelling around the highlighted plan's border.
  */
-export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
+export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Plan[]; layout?: "full" | "home" } = {}) {
   const { t } = useI18n();
   const { loggedIn } = useSession();
   const agentOn = featureAgentEnabled();
@@ -82,11 +81,72 @@ export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
     return isHighlight ? t("pc.cta.pro") : t("pc.cta.starter");
   };
 
+  if (layout === "home") {
+    // Homepage: the three ways in — free scan, one cited report, the fix plan.
+    // Team and yearly billing stay on /pricing/.
+    const report = oneTimes[0];
+    const fix = sorted.find((p) => intervalOf(p) === "month" && p.slug?.startsWith("fix")) ?? highlight;
+    return (
+      <div className="grid items-stretch gap-4 md:grid-cols-3">
+        <TierCard
+          name={t("pc.free.name")}
+          amount="€0"
+          suffix=""
+          features={[t("pc.free.f1"), t("pc.free.f2", { n: CHECK_COUNT }), t("pc.free.f3")]}
+          cta={
+            <Button asChild variant="hairline" size="xl" className="w-full">
+              <Link href="/#free-diagnosis">{t("pc.free.cta")}</Link>
+            </Button>
+          }
+        />
+        {isLoading ? (
+          [0, 1].map((i) => <div key={i} className="o-skeleton h-[420px] rounded-2xl" />)
+        ) : (
+          <>
+            {report && (
+              <TierCard
+                name={report.name}
+                amount={splitPrice(report.price_label).amount}
+                suffix={t("pc.once")}
+                features={[t("pc.feature.research"), t("pc.feature.audit", { n: CHECK_COUNT }), t("pc.feature.roadmap"), t("pc.noGithub")]}
+                cta={
+                  <Button asChild variant="hairline" size="xl" className="w-full">
+                    <Link href={ctaHref(report.polar_product_id, loggedIn)}>{t("pc.onetime.cta")}</Link>
+                  </Button>
+                }
+              />
+            )}
+            {fix && (
+              <TierCard
+                name={fix.name}
+                amount={splitPrice(fix.price_label).amount}
+                suffix={splitPrice(fix.price_label).suffix}
+                highlight
+                flag={t("pc.recommended")}
+                features={featuresFor(fix)}
+                cta={
+                  <Button asChild size="xl" className="w-full">
+                    <Link href={ctaHref(fix.polar_product_id, loggedIn)}>
+                      {ctaFor(fix, true)} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+                    </Link>
+                  </Button>
+                }
+              />
+            )}
+          </>
+        )}
+        {!isLoading && (isError || sorted.length === 0) && (
+          <p className="text-center text-sm text-muted-foreground md:col-span-3">{t("pc.updating")}</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6">
       {hasYearly && (
         <div className="flex justify-center">
-          <div className="inline-flex rounded-xl border bg-card p-1" role="group" aria-label={t("pc.billing")}>
+          <div className="o-well inline-flex rounded-xl p-1" role="group" aria-label={t("pc.billing")}>
             {[false, true].map((y) => (
               <button
                 key={String(y)}
@@ -95,11 +155,11 @@ export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
                 onClick={() => setYearly(y)}
                 className={cn(
                   "rounded-lg px-4 py-1.5 text-[13px] font-medium transition-colors duration-[var(--dur-state)]",
-                  yearly === y ? "bg-surface-2 text-foreground" : "text-muted-foreground hover:text-foreground",
+                  yearly === y ? "bg-chip text-foreground shadow-[inset_0_1px_0_var(--edge-top)]" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {y ? t("pc.yearly") : t("pc.monthly")}
-                {y && <span className="ms-1.5 font-mono text-[11px] text-primary">−20%</span>}
+                {y && <span className="ms-1.5 font-mono text-[11px] text-tel-emerald">−20%</span>}
               </button>
             ))}
           </div>
@@ -163,7 +223,7 @@ export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
       {oneTimes.map((p) => (
         <div
           key={p.polar_product_id}
-          className="flex flex-col gap-4 rounded-2xl border border-dashed px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8"
+          className="o-well flex flex-col gap-4 rounded-2xl px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8"
         >
           <div className="min-w-0">
             <p className="text-[15px]">
@@ -173,7 +233,7 @@ export function PlanGrid({ initialPlans }: { initialPlans?: Plan[] } = {}) {
             <p className="mt-1.5 font-mono text-[11px] text-faint">{t("pc.onetime.validity")}</p>
           </div>
           <div className="flex shrink-0 items-center gap-4">
-            <span className="font-display text-2xl">{splitPrice(p.price_label).amount}</span>
+            <span className="o-readout-strong text-2xl">{splitPrice(p.price_label).amount}</span>
             <Button asChild variant="hairline">
               <Link href={ctaHref(p.polar_product_id, loggedIn)}>{t("pc.onetime.cta")}</Link>
             </Button>
@@ -205,29 +265,27 @@ function TierCard({
     <div
       className={cn(
         "relative flex min-w-0 flex-col gap-5 rounded-2xl p-6 sm:p-7",
-        highlight ? "o-glow-border" : "border bg-card",
+        highlight ? "o-artifact ring-1 ring-foreground/25" : "o-well",
       )}
     >
       {flag && (
-        <LivePill tone="live" pulse={false} className="absolute -top-3 end-5 bg-[color-mix(in_oklab,var(--primary)_16%,var(--card))]">
+        <span className="absolute -top-3 end-5 rounded-full bg-primary px-2.5 py-1 font-mono text-[11px] leading-none text-primary-foreground">
           {flag}
-        </LivePill>
+        </span>
       )}
       <div>
         <h2 className="o-display text-[22px]">{name}</h2>
         <p className="mt-3 flex items-baseline gap-1.5">
-          <span key={amount} className="o-crossfade font-display text-[40px] leading-none tabular-nums">
+          <span key={amount} className="o-crossfade o-readout-strong text-[40px] leading-none">
             {amount}
-          </span>
+          </span>{" "}
           {suffix && <span className="text-[13px] text-muted-foreground">{suffix}</span>}
         </p>
       </div>
       <ul className="grid flex-1 content-start gap-2.5 text-[14px] text-muted-foreground">
         {features.map((f) => (
-          <li key={f} className="flex gap-2">
-            <span aria-hidden className="inline-block font-mono text-primary rtl:-scale-x-100">
-              →
-            </span>
+          <li key={f} className="flex gap-2.5">
+            <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-foreground/70" strokeWidth={2.25} />
             <span className="text-foreground/85">{f}</span>
           </li>
         ))}

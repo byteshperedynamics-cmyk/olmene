@@ -40,8 +40,7 @@ export function StepRail({
               s.state === "failed" && "border-tel-rose/50 text-tel-rose",
             )}
           >
-            <Node state={s.state} small />
-            {s.label}
+            <Node state={s.state} small /> {s.label}
           </li>
         ))}
       </ol>
@@ -73,7 +72,7 @@ export function StepRail({
               />
             )}
             <Node state={s.state} />
-            <span className="min-w-0 flex-1">{s.label}</span>
+            <span className="min-w-0 flex-1">{s.label}</span>{" "}
             {s.meta && <span className="shrink-0 ps-2 font-mono text-[11px] tabular-nums text-faint">{s.meta}</span>}
           </li>
         );

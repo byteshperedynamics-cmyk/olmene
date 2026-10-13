@@ -76,21 +76,21 @@ export function ReviewShowcase() {
                 <div className="min-w-0">
                   <div aria-live="polite">
                     {phase === "review" && (
-                      <LivePill tone="example" className="gap-1.5 whitespace-normal leading-snug">
+                      <LivePill tone="example" className="min-w-0 max-w-full gap-1.5">
                         <span className="size-1.5 animate-[soft-pulse_1.6s_ease-in-out_infinite] rounded-full bg-tel-amber o-anim" aria-hidden />
-                        {t("review.status")}
+                        <span className="truncate">{t("review.status")}</span>
                       </LivePill>
                     )}
                     {phase === "opening" && <LivePill tone="neutral">{t("agent.step.pr")}…</LivePill>}
                     {phase === "verifying" && (
-                      <LivePill tone="live" className="whitespace-normal py-1.5 leading-snug shadow-[0_0_18px_-4px_var(--tel-emerald)]">
-                        <GitPullRequest className="size-3" aria-hidden /> {t("review.opened", { pr: "#14", branch: "olmene/fix-7f3a" })}
+                      <LivePill tone="live" className="min-w-0 max-w-full shadow-[0_0_18px_-4px_var(--tel-emerald)]">
+                        <GitPullRequest className="size-3 shrink-0" aria-hidden /> <span className="truncate">{t("review.prOpened", { pr: "#14" })}</span>
                       </LivePill>
                     )}
                     {phase === "declined" && <LivePill tone="neutral">{t("review.declined")}</LivePill>}
                   </div>
                   <p className="mt-1.5 truncate font-mono text-[10.5px] text-tel-sky" dir="ltr">
-                    acme/site · main
+                    {phase === "verifying" ? "olmene/fix-7f3a → main" : "acme/site · main"}
                   </p>
                 </div>
               </div>
@@ -111,7 +111,7 @@ export function ReviewShowcase() {
                     >
                       {phase !== "declined" && <Check className="size-3" strokeWidth={3} />}
                     </span>
-                    <span className="min-w-0 flex-1 leading-snug">{c.label}</span>
+                    <span className="min-w-0 flex-1 leading-snug">{c.label}</span>{" "}
                     <LivePill tone={c.impact === "high" ? "problem" : "neutral"}>
                       {t(c.impact === "high" ? "review.impact.high" : "review.impact.medium")}
                     </LivePill>

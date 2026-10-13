@@ -76,7 +76,7 @@ export function Teardown() {
                   view === v ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {t(v === "before" ? "teardown.before" : "teardown.after")}
+                {t(v === "before" ? "teardown.before" : "teardown.after")}{" "}
                 <span className={`o-readout-strong text-[12px] ${v === "before" ? "text-tel-amber" : "text-tel-emerald"}`}>
                   {STATES[v].readiness}/100
                 </span>
@@ -106,7 +106,7 @@ export function Teardown() {
                   <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-tel-rose/35 bg-tel-rose/10 px-1.5 py-0.5 font-mono text-[10px] text-tel-rose">
                     <TriangleAlert className="size-3" aria-hidden /> {t("teardown.warning")}
                   </span>
-                )}
+                )}{" "}
                 <span key={view} className="o-crossfade min-w-0 text-muted-foreground">
                   {t(view === "after" ? it.after : it.before)}
                 </span>

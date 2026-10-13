@@ -32,5 +32,11 @@ export const STUDIO_NAME = "Bytesphere_Dynamics";
 export const FOUNDER_NAME = "Hermes Lekkas";
 export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/hermes-lekkas-453722441/";
 export const STUDIO_GITHUB = "https://github.com/byteshperedynamics-cmyk";
-/** Support / security contact (the mailbox is spelled "byteshpere"). null hides contact links. */
-export const SUPPORT_EMAIL: string | null = "byteshpere.dynamics@gmail.com";
+/**
+ * Domain contact addresses (owner request, 2026-10-13). olmene.com had no MX
+ * records on that date: these only receive mail once email routing is on
+ * (Cloudflare Email Routing → forward both to the studio mailbox). Do that
+ * before this ships. null hides contact links.
+ */
+export const SUPPORT_EMAIL: string | null = "support@olmene.com";
+export const SECURITY_EMAIL: string | null = "security@olmene.com";

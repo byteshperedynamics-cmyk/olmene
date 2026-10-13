@@ -244,7 +244,7 @@
 
   --destructive: #E11D48;
   --border: rgb(9 9 11 / 0.09);
-  --input: rgb(9 9 11 / 0.42);               /* 3:1 control boundary */
+  --input: rgb(9 9 11 / 0.48);               /* 3:1 control boundary */
   --ring: #09090B;
 
   --chart-1: #09090B;
@@ -363,7 +363,7 @@
   --artifact-shadow: 0 24px 60px rgb(0 0 0 / 0.7);
 
   --surface-2: #141418;
-  --faint: #8B8B94;                           /* AA on every dark surface */
+  --faint: #96969F;                           /* AA on every dark surface */
   --line-strong: rgb(255 255 255 / 0.14);
   --leaf-soft: rgb(255 255 255 / 0.04);
   --glow: rgb(255 255 255 / 0.10);
@@ -380,6 +380,8 @@
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklab, var(--foreground) 20%, transparent) transparent;
     scroll-behavior: smooth;
+    /* the floating header pill (68px) must never cover a focused control or an anchor target */
+    scroll-padding-top: 5.5rem;
   }
   /* Jump cuts, not glides, for people who are sensitive to motion */
   @media (prefers-reduced-motion: reduce) {
@@ -1289,3 +1291,11 @@
 @media (prefers-reduced-motion: reduce) {
   .o-ripple { display: none; }
 }
+
+/* Security: trust-boundary steps light up once, in order */
+@keyframes o-step-in {
+  from { opacity: 0.25; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.o-boundary[data-stage="armed"] .o-step { opacity: 0.25; }
+.o-boundary[data-stage="run"] .o-step { animation: o-step-in 420ms var(--ease-out-expo) var(--d) both; }

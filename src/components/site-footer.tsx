@@ -22,7 +22,7 @@ export function SiteFooter() {
   // "Olmene is built and operated by {studio}." — split so the studio name is the link in any word order.
   const [beforeStudio, afterStudio = ""] = t("footer.operated").split("{studio}");
   return (
-    <footer className="border-t border-border/70 bg-secondary/30 print:hidden">
+    <footer className="border-t border-edge print:hidden">
       <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_1fr_1fr]">
           <div className="space-y-3 sm:col-span-2 md:col-span-1">
@@ -70,7 +70,7 @@ export function SiteFooter() {
           <div className="space-y-1">
             <p>
               {beforeStudio}
-              <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground/80 underline-offset-4 hover:underline">
+              <a translate="no" href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground/80 underline-offset-4 hover:underline">
                 {STUDIO_NAME}
               </a>
               {afterStudio}

@@ -179,9 +179,6 @@ export function ScanPreview({
             <span className="text-[10px] opacity-80">/ 100</span>
           </span>
         </div>
-        {scoreLabel && (
-          <span className="absolute end-[5%] bottom-[12.5%] font-mono text-[9px] uppercase tracking-[0.12em] text-faint">{scoreLabel}</span>
-        )}
       </div>
     </div>
   );

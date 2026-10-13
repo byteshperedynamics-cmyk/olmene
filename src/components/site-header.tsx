@@ -11,18 +11,15 @@ import { useSession } from "@/lib/session";
 import { useI18n } from "@/i18n/provider";
 
 /**
- * Jump nav — the landing page is ~12 sections deep, so decided buyers get
- * straight to Pricing/FAQ from any page. Anchor hrefs ("/#…") work from
- * every route. The language selector lives here (and in the footer), never
- * in the hero — the H1 owns the first second.
+ * Floating header pill (DESIGN.md): four links, a globe popover for the 15
+ * languages (the list only exists while it is open), theme, sign-in.
+ * Anchor hrefs ("/#…") work from every route.
  */
 const NAV = [
   { href: "/#how-it-works", label: "nav.howItWorks" },
-  { href: "/#teardown", label: "nav.proof" },
-  { href: "/pricing/", label: "nav.pricing" },
-  { href: "/#faq", label: "nav.faq" },
-  { href: "/security/", label: "nav.security" },
   { href: "/sample-report/", label: "nav.sampleReport" },
+  { href: "/security/", label: "nav.security" },
+  { href: "/#pricing", label: "nav.pricing" },
 ];
 
 export function SiteHeader() {
@@ -41,23 +38,24 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 print:hidden">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="sticky top-0 z-40 px-3 pt-3 print:hidden">
+      <div className="mx-auto max-w-5xl rounded-2xl border border-rim bg-background/75 shadow-[inset_0_1px_0_var(--edge-top),0_12px_40px_-18px_rgb(0_0_0/0.7)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 w-full items-center justify-between gap-4 ps-4 pe-2.5">
         <Logo />
-        <nav className="hidden items-center gap-5 lg:flex" aria-label={t("nav.main")}>
+        <nav className="hidden items-center gap-1 lg:flex" aria-label={t("nav.main")}>
           {NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-chip hover:text-foreground"
             >
               {t(n.label)}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <div className="hidden md:block">
-            <LanguageSelector size="sm" />
+            <LanguageSelector size="sm" compact />
           </div>
           <ThemeToggle />
           {loading ? null : loggedIn ? (
@@ -92,10 +90,10 @@ export function SiteHeader() {
         </div>
       </div>
       {open && (
-        <div className="border-t border-border/70 bg-background lg:hidden">
-          <nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3" aria-label={t("nav.mobile")}>
+        <div className="border-t border-edge lg:hidden">
+          <nav className="flex flex-col gap-1 px-3 py-3" aria-label={t("nav.mobile")}>
             <div className="py-1.5 md:hidden">
-              <LanguageSelector size="sm" />
+              <LanguageSelector size="sm" compact />
             </div>
             {NAV.map((n) => (
               <Link
@@ -110,7 +108,7 @@ export function SiteHeader() {
             {!loggedIn && !loading && (
               <Link
                 href="/login/"
-                className="rounded-md px-2 py-2.5 text-sm font-medium text-primary hover:bg-accent"
+                className="rounded-md px-2 py-2.5 text-sm font-medium text-foreground hover:bg-accent"
                 onClick={() => setOpen(false)}
               >
                 {t("common.signIn")}
@@ -119,6 +117,7 @@ export function SiteHeader() {
           </nav>
         </div>
       )}
+      </div>
       {/* keep session referenced for future use (avatar etc.) */}
       <span className="hidden">{session?.user?.email}</span>
     </header>
