@@ -15,6 +15,7 @@ import { liteReportFromScan, type ScanRow } from "../lite-report";
 import { fetchLiveHtml, runLiveCheck } from "../live-check";
 import { buildGuidedFixes, livePreviewFor, type GuidedFix } from "./build";
 import { detectWordpressSeoPlugin, playbookFor } from "./playbooks";
+import { attachAutoPlans, CHANNEL_PLATFORMS, loadSiteConnection } from "../channels";
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -84,6 +85,16 @@ export async function createGuidedRun(
   const plan = await buildPlan(report, llm, { homepageHtml: live.html });
   const run = buildGuidedFixes({ report, copy: plan.copy, playbook, liveHtml: live.html });
   if (!run.fixes.length) throw new GuidedError("nothing_to_fix", "Nothing to fix by hand on this page: the checks that failed need no change Olmene can write for you.");
+  // Connected Webflow / WordPress: mark the cards Olmene can apply for you (after approval).
+  let connectionId: string | null = null;
+  const provider = CHANNEL_PLATFORMS[platformId ?? ""];
+  if (provider) {
+    const conn = await loadSiteConnection(db, userId, provider, report.meta.siteUrl).catch(() => null);
+    if (conn) {
+      run.fixes = await attachAutoPlans(conn, report.meta.siteUrl, run.fixes, fetchFn).catch(() => run.fixes);
+      connectionId = conn.id;
+    }
+  }
   const c = counts(run.fixes);
   const { data: row, error } = await db.from("guided_runs").insert({
     user_id: userId,
@@ -93,6 +104,7 @@ export async function createGuidedRun(
     platform_id: platformId,
     platform: run.platform,
     fixes: run.fixes,
+    connection_id: connectionId,
     live_count: c.live,
     total_count: c.total,
   }).select("*").single();

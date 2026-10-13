@@ -11,6 +11,7 @@ import type { ReportData } from "@/lib/report-types";
 import { FIXERS, FIXER_ORDER, buildLlmsTxt, guessLanguage, localBusinessJsonLd, type CopyDrafts } from "../fixers";
 import { escapeHtmlAttr, findImagesWithoutAlt, normalizeSiteUrl } from "../htmlfile";
 import { type Playbook } from "./playbooks";
+import type { AutoState } from "../channels/types";
 
 export interface GuidedValue {
   label: string;
@@ -20,6 +21,8 @@ export interface GuidedValue {
   /** Current value on the live site, when there is one (for before → after). */
   current?: string | null;
   filename?: string;
+  /** What the value belongs to (image-alt: the image src). */
+  key?: string;
 }
 
 export interface GuidedFix {
@@ -33,6 +36,8 @@ export interface GuidedFix {
   status: "todo" | "live" | "not_live" | "blocked";
   /** Last live check detail. */
   checkDetail?: string | null;
+  /** Set when a connected platform (Webflow, WordPress) can apply this fix after approval. */
+  auto?: AutoState;
 }
 
 export interface GuidedRun {
@@ -124,7 +129,7 @@ export function buildGuidedFixes(input: {
       case "image-alt": {
         const imgs = findImagesWithoutAlt(liveHtml).slice(0, 12);
         const alts = copy.altTexts ?? {};
-        const values = imgs.filter((i) => i.src && alts[i.src]).map((i) => ({ label: i.src!.split("/").pop()?.split("?")[0] ?? i.src!, value: alts[i.src!], kind: "text" as const }));
+        const values = imgs.filter((i) => i.src && alts[i.src]).map((i) => ({ label: i.src!.split("/").pop()?.split("?")[0] ?? i.src!, value: alts[i.src!], kind: "text" as const, key: i.src! }));
         if (!values.length) break;
         fixes.push({ id: f.id, title: "Image descriptions (alt text)", why: `${evidence("Image alt coverage")}. Screen readers and image search can't tell what these show.`, values, steps: pb.alt, status: "todo" });
         break;
@@ -187,4 +192,15 @@ export function livePreviewFor(fix: GuidedFix): Record<string, unknown> | null {
         : fix.id === "hero-copy" ? fix.values.map((x) => `+<p>${x.value}</p>`).join("\n")
           : null;
   return line ? { edits: [{ diff: line }] } : null;
+}
+
+/** The copy a run's cards carry (to plan automatic changes after connecting a platform). */
+export function copyFromFixes(fixes: GuidedFix[]): CopyDrafts {
+  const copy: CopyDrafts = {};
+  for (const f of fixes) {
+    if (f.id === "title-tag" && f.values[0]) copy.title = f.values[0].value;
+    if (f.id === "meta-description" && f.values[0]) copy.metaDescription = f.values[0].value;
+    if (f.id === "image-alt") copy.altTexts = Object.fromEntries(f.values.filter((v) => v.key).map((v) => [v.key!, v.value]));
+  }
+  return copy;
 }

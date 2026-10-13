@@ -42,3 +42,18 @@ create index if not exists guided_runs_recheck_idx on public.guided_runs (last_c
 alter table public.guided_runs enable row level security;
 drop policy if exists guided_runs_own on public.guided_runs;
 create policy guided_runs_own on public.guided_runs for select to authenticated using (user_id = auth.uid());
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 3. API channels: Webflow site tokens and WordPress application passwords
+--    (envelope-encrypted like every other connection secret)
+-- ─────────────────────────────────────────────────────────────────────────
+do $$
+begin
+  if exists (select 1 from pg_constraint where conname = 'connections_provider_check') then
+    alter table public.connections drop constraint connections_provider_check;
+  end if;
+  alter table public.connections
+    add constraint connections_provider_check
+    check (provider in ('github', 'cloudflare', 'supabase', 'google', 'webflow', 'wordpress'));
+end $$;
+alter table public.guided_runs add column if not exists connection_id uuid references public.connections(id) on delete set null;
