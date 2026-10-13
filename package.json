@@ -16,6 +16,8 @@
     "test:agent": "bun test src/lib/agent",
     "build:cf": "opennextjs-cloudflare build && node scripts/verify-worker-build.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "deploy:gated": "node scripts/gated-deploy.mjs",
+    "check:rls": "node scripts/check-rls.mjs",
     "test:measure": "bun test src/lib/measure",
     "test": "bun test src/lib"
   },

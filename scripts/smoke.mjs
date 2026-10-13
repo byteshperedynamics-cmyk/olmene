@@ -4,9 +4,19 @@
  * way they should. Server routes return 5xx when the Worker cannot start,
  * while prerendered pages keep working, so both kinds are checked.
  *
- * usage: node scripts/smoke.mjs [baseUrl]   (default https://olmene.com)
+ * usage: node scripts/smoke.mjs [baseUrl] [--version <id>] [--worker <name>]
+ *   --version: send the requests to that Worker version only (Cloudflare
+ *   version overrides), to test a version before it takes traffic.
  */
-const base = (process.argv[2] ?? "https://olmene.com").replace(/\/$/, "");
+const args = process.argv.slice(2);
+const flag = (name) => {
+  const i = args.indexOf(name);
+  return i >= 0 ? args[i + 1] : null;
+};
+const base = (args.find((a, i) => !a.startsWith("--") && !(i > 0 && args[i - 1].startsWith("--"))) ?? "https://olmene.com").replace(/\/$/, "");
+const version = flag("--version");
+const worker = flag("--worker") ?? "olmene";
+const headers = { "User-Agent": "olmene-smoke/1.0", ...(version ? { "Cloudflare-Workers-Version-Overrides": `${worker}="${version}"` } : {}) };
 
 const checks = [
   { path: "/", ok: (r) => r.status === 200, want: "200" },
@@ -27,7 +37,7 @@ for (const c of checks) {
   let status = "ERR";
   let pass = false;
   try {
-    const r = await fetch(base + c.path, { redirect: "manual", headers: { "User-Agent": "olmene-smoke/1.0" } });
+    const r = await fetch(base + c.path, { redirect: "manual", headers });
     status = String(r.status);
     pass = await c.ok(r);
   } catch (e) {
@@ -37,6 +47,6 @@ for (const c of checks) {
   if (!pass) failed++;
 }
 if (failed) {
-  console.error(`\n${failed} check(s) failed on ${base}. Roll back: npx wrangler deployments list && npx wrangler rollback <version>`);
+  console.error(`\n${failed} check(s) failed on ${base}${version ? ` (version ${version})` : ""}. Roll back: npx wrangler deployments list && npx wrangler rollback <version>`);
   process.exit(1);
 }

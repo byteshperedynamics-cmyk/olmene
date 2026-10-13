@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npx tsc --noEmit
+      - run: npm run check:rls
       - run: bun test src/lib
       - run: node scripts/i18n_validate.js
       # Same build the Worker deploy runs, plus the startup/secret gate.
