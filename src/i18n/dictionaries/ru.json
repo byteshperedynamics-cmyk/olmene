@@ -591,5 +591,19 @@
   "footer.about": "О нас",
   "footer.contact": "Контакты",
   "footer.connect": "Связь",
-  "footer.operated": "Olmene разработан и поддерживается {studio}."
+  "footer.operated": "Olmene разработан и поддерживается {studio}.",
+  "hero.trySample": "Попробуйте на",
+  "loop.merged": "Слито в main",
+  "review.opened": "PR {pr} открыт в {branch}",
+  "review.declined": "Отклонено. Ничего не изменилось.",
+  "review.approved": "Изменений одобрено: {n}",
+  "review.reset": "Сбросить демо",
+  "teardown.b1": "Метаописание слишком длинное: 181 символ",
+  "teardown.b2": "Нет канонического URL",
+  "teardown.b5": "Нет изображений, поэтому проверке alt-текста нечего было измерять",
+  "teardown.lessonTitle": "Ошибка, которую мы нашли в собственном парсере",
+  "teardown.engineTag": "Движок обновлён: 18 → 21 проверка",
+  "teardown.engine18": "Измерено движком на 18 проверок",
+  "teardown.verified": "проверено",
+  "teardown.warning": "предупреждение"
 }

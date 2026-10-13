@@ -591,5 +591,19 @@
   "footer.about": "ہمارے بارے میں",
   "footer.contact": "رابطہ",
   "footer.connect": "جڑیں",
-  "footer.operated": "Olmene کو {studio} نے بنایا ہے اور وہی اسے چلاتا ہے۔"
+  "footer.operated": "Olmene کو {studio} نے بنایا ہے اور وہی اسے چلاتا ہے۔",
+  "hero.trySample": "آزما کر دیکھیں:",
+  "loop.merged": "main میں ضم ہو گیا",
+  "review.opened": "{branch} پر PR {pr} کھولا گیا",
+  "review.declined": "مسترد۔ کچھ نہیں بدلا۔",
+  "review.approved": "{n} تبدیلیاں منظور",
+  "review.reset": "ڈیمو دوبارہ شروع کریں",
+  "teardown.b1": "میٹا تفصیل بہت لمبی: 181 حروف",
+  "teardown.b2": "کوئی کینونیکل URL نہیں",
+  "teardown.b5": "کوئی تصویر نہیں، اس لیے alt-ٹیکسٹ جانچ کے پاس ناپنے کو کچھ نہیں تھا",
+  "teardown.lessonTitle": "ہمارے اپنے پارسر میں ملنے والا بگ",
+  "teardown.engineTag": "انجن اپ گریڈ: 18 → 21 جانچیں",
+  "teardown.engine18": "18 جانچوں والے انجن سے ناپا گیا",
+  "teardown.verified": "تصدیق شدہ",
+  "teardown.warning": "انتباہ"
 }

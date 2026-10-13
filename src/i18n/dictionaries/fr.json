@@ -591,5 +591,19 @@
   "footer.about": "À propos",
   "footer.contact": "Contact",
   "footer.connect": "Réseaux",
-  "footer.operated": "Olmene est conçu et exploité par {studio}."
+  "footer.operated": "Olmene est conçu et exploité par {studio}.",
+  "hero.trySample": "Essayez avec",
+  "loop.merged": "Fusionné dans main",
+  "review.opened": "PR {pr} ouverte sur {branch}",
+  "review.declined": "Refusé. Rien n'a changé.",
+  "review.approved": "{n} modifications approuvées",
+  "review.reset": "Rejouer la démo",
+  "teardown.b1": "Méta-description trop longue : 181 caractères",
+  "teardown.b2": "Pas d'URL canonique",
+  "teardown.b5": "Aucune image : le contrôle du texte alternatif n'avait rien à mesurer",
+  "teardown.lessonTitle": "Le bug trouvé dans notre propre analyseur",
+  "teardown.engineTag": "Moteur mis à niveau : 18 → 21 contrôles",
+  "teardown.engine18": "Mesuré par le moteur à 18 contrôles",
+  "teardown.verified": "vérifié",
+  "teardown.warning": "alerte"
 }

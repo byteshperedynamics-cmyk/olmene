@@ -591,5 +591,19 @@
   "footer.about": "概要",
   "footer.contact": "お問い合わせ",
   "footer.connect": "関連リンク",
-  "footer.operated": "Olmene は {studio} によって開発・運営されています。"
+  "footer.operated": "Olmene は {studio} によって開発・運営されています。",
+  "hero.trySample": "試しにスキャン:",
+  "loop.merged": "main にマージ済み",
+  "review.opened": "{branch} で PR {pr} を作成しました",
+  "review.declined": "却下しました。何も変更されていません。",
+  "review.approved": "{n} 件の変更を承認しました",
+  "review.reset": "デモをリセット",
+  "teardown.b1": "メタディスクリプションが長すぎる:181 文字",
+  "teardown.b2": "正規 URL がない",
+  "teardown.b5": "画像がなく、代替テキストのチェックで測るものがなかった",
+  "teardown.lessonTitle": "自分たちのパーサーで見つけたバグ",
+  "teardown.engineTag": "エンジン更新:18 → 21 項目",
+  "teardown.engine18": "18 項目のエンジンで測定",
+  "teardown.verified": "確認済み",
+  "teardown.warning": "警告"
 }

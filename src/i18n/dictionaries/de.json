@@ -591,5 +591,19 @@
   "footer.about": "Über uns",
   "footer.contact": "Kontakt",
   "footer.connect": "Verbinden",
-  "footer.operated": "Olmene wird entwickelt und betrieben von {studio}."
+  "footer.operated": "Olmene wird entwickelt und betrieben von {studio}.",
+  "hero.trySample": "Probier es mit",
+  "loop.merged": "In main gemergt",
+  "review.opened": "PR {pr} auf {branch} geöffnet",
+  "review.declined": "Abgelehnt. Nichts wurde geändert.",
+  "review.approved": "{n} Änderungen freigegeben",
+  "review.reset": "Demo zurücksetzen",
+  "teardown.b1": "Meta-Beschreibung zu lang: 181 Zeichen",
+  "teardown.b2": "Keine kanonische URL",
+  "teardown.b5": "Keine Bilder, also hatte der Alt-Text-Check nichts zu messen",
+  "teardown.lessonTitle": "Der Fehler, den wir im eigenen Parser fanden",
+  "teardown.engineTag": "Engine erweitert: 18 → 21 Checks",
+  "teardown.engine18": "Gemessen mit der 18-Check-Engine",
+  "teardown.verified": "geprüft",
+  "teardown.warning": "Warnung"
 }

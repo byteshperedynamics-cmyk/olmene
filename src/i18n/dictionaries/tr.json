@@ -591,5 +591,19 @@
   "footer.about": "Hakkında",
   "footer.contact": "İletişim",
   "footer.connect": "Bağlantı",
-  "footer.operated": "Olmene, {studio} tarafından geliştirilmekte ve işletilmektedir."
+  "footer.operated": "Olmene, {studio} tarafından geliştirilmekte ve işletilmektedir.",
+  "hero.trySample": "Şununla deneyin:",
+  "loop.merged": "main'e birleştirildi",
+  "review.opened": "{branch} üzerinde PR {pr} açıldı",
+  "review.declined": "Reddedildi. Hiçbir şey değişmedi.",
+  "review.approved": "{n} değişiklik onaylandı",
+  "review.reset": "Demoyu sıfırla",
+  "teardown.b1": "Meta açıklama çok uzun: 181 karakter",
+  "teardown.b2": "Kanonik URL yok",
+  "teardown.b5": "Görsel yok, bu yüzden alt metin kontrolünün ölçecek bir şeyi yoktu",
+  "teardown.lessonTitle": "Kendi ayrıştırıcımızda bulduğumuz hata",
+  "teardown.engineTag": "Motor yükseltildi: 18 → 21 kontrol",
+  "teardown.engine18": "18 kontrollük motorla ölçüldü",
+  "teardown.verified": "doğrulandı",
+  "teardown.warning": "uyarı"
 }

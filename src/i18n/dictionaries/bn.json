@@ -591,5 +591,19 @@
   "footer.about": "সম্পর্কে",
   "footer.contact": "যোগাযোগ",
   "footer.connect": "কানেক্ট",
-  "footer.operated": "Olmene তৈরি এবং পরিচালনা করেছে {studio}।"
+  "footer.operated": "Olmene তৈরি এবং পরিচালনা করেছে {studio}।",
+  "hero.trySample": "চেষ্টা করে দেখুন:",
+  "loop.merged": "main-এ মার্জ হয়েছে",
+  "review.opened": "{branch}-এ PR {pr} খোলা হয়েছে",
+  "review.declined": "প্রত্যাখ্যাত। কিছুই বদলায়নি।",
+  "review.approved": "{n}টি পরিবর্তন অনুমোদিত",
+  "review.reset": "ডেমো রিসেট করুন",
+  "teardown.b1": "মেটা বিবরণ খুব দীর্ঘ: ১৮১ অক্ষর",
+  "teardown.b2": "কোনো ক্যানোনিকাল URL নেই",
+  "teardown.b5": "কোনো ছবি নেই, তাই alt-টেক্সট যাচাইয়ের মাপার কিছু ছিল না",
+  "teardown.lessonTitle": "আমাদের নিজের পার্সারে পাওয়া বাগ",
+  "teardown.engineTag": "ইঞ্জিন আপগ্রেড: ১৮ → ২১টি যাচাই",
+  "teardown.engine18": "১৮-যাচাইয়ের ইঞ্জিনে মাপা",
+  "teardown.verified": "যাচাইকৃত",
+  "teardown.warning": "সতর্কতা"
 }

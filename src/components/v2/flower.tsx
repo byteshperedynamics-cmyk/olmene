@@ -30,7 +30,7 @@ export function Flower({
       aria-hidden
       focusable="false"
       className={cn(
-        "shrink-0 text-primary",
+        "shrink-0 text-brand",
         variant === "breathe" && "animate-logo-breathe",
         variant === "bloom-once" && "o-bloom-once",
         className,

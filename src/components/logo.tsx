@@ -14,8 +14,8 @@ export function Logo({ className }: { className?: string }) {
           no image request. The pre-rebrand wordmark raster (which read
           "Marketwise") was regenerated; the file now carries this brand
           and remains only as the JSON-LD/OG asset. */}
-      <BrandMark size={26} className="text-primary" />
-      <span className="font-display text-[1.4rem] font-semibold leading-none tracking-tight">
+      <BrandMark size={26} className="text-brand" />
+      <span translate="no" className="font-display text-[1.4rem] font-semibold leading-none tracking-tight text-brand-ink">
         olmene
       </span>
     </Link>

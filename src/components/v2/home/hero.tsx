@@ -31,7 +31,7 @@ export function HomeHero() {
               <Tx k="hero.title" />
             </h1>
             <p
-              className="hero-in mt-5 max-w-[34rem] text-[17px] leading-relaxed text-muted-foreground"
+              className="hero-in mt-5 max-w-[64ch] text-[17px] leading-relaxed text-muted-foreground"
               style={{ animationDelay: "0.12s" }}
             >
               {t("hero.subtitle")}
@@ -39,10 +39,10 @@ export function HomeHero() {
             <div id="free-diagnosis" className="hero-in mt-8 scroll-mt-24" style={{ animationDelay: "0.2s" }}>
               <FreeAuditInput variant="hero" />
             </div>
-            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-[11px] text-faint">
+            <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-faint">
               {["hero.trust1", "hero.trust2", "hero.trust3"].map((k) => (
                 <li key={k} className="flex items-center gap-2">
-                  <span aria-hidden className="size-1 rounded-full bg-primary/70" />
+                  <span aria-hidden className="size-1 rounded-full bg-faint" />
                   {t(k)}
                 </li>
               ))}
@@ -52,8 +52,6 @@ export function HomeHero() {
           <InView className="min-w-0 lg:ps-4">
             <ScanPreview
               pins={[t("scan.pin1"), t("scan.pin2"), t("scan.pin3")]}
-              toastTitle={t("scan.toast")}
-              toastMeta={`${t("scan.toastMeta")} →`}
               previewLabel={t("scan.preview")}
               scoreLabel={t("scores.readiness")}
             />

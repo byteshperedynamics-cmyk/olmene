@@ -591,5 +591,19 @@
   "footer.about": "Σχετικά",
   "footer.contact": "Επικοινωνία",
   "footer.connect": "Σύνδεση",
-  "footer.operated": "Το Olmene δημιουργήθηκε και λειτουργεί από την {studio}."
+  "footer.operated": "Το Olmene δημιουργήθηκε και λειτουργεί από την {studio}.",
+  "hero.trySample": "Δοκιμάστε με",
+  "loop.merged": "Συγχωνεύτηκε στο main",
+  "review.opened": "Το PR {pr} άνοιξε στο {branch}",
+  "review.declined": "Απορρίφθηκε. Τίποτα δεν άλλαξε.",
+  "review.approved": "Εγκρίθηκαν {n} αλλαγές",
+  "review.reset": "Επαναφορά demo",
+  "teardown.b1": "Μετα-περιγραφή πολύ μεγάλη: 181 χαρακτήρες",
+  "teardown.b2": "Δεν υπάρχει κανονικό URL",
+  "teardown.b5": "Καμία εικόνα, οπότε ο έλεγχος alt κειμένου δεν είχε τι να μετρήσει",
+  "teardown.lessonTitle": "Το σφάλμα που βρήκαμε στον δικό μας αναλυτή",
+  "teardown.engineTag": "Αναβάθμιση μηχανής: 18 → 21 έλεγχοι",
+  "teardown.engine18": "Μετρήθηκε από τη μηχανή 18 ελέγχων",
+  "teardown.verified": "επαληθεύτηκε",
+  "teardown.warning": "προειδοποίηση"
 }

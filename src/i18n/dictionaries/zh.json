@@ -591,5 +591,19 @@
   "footer.about": "关于我们",
   "footer.contact": "联系我们",
   "footer.connect": "关注我们",
-  "footer.operated": "Olmene 由 {studio} 构建并运营。"
+  "footer.operated": "Olmene 由 {studio} 构建并运营。",
+  "hero.trySample": "试试扫描",
+  "loop.merged": "已合并到 main",
+  "review.opened": "已在 {branch} 上打开 PR {pr}",
+  "review.declined": "已拒绝。没有任何更改。",
+  "review.approved": "已批准 {n} 项更改",
+  "review.reset": "重置演示",
+  "teardown.b1": "元描述过长:181 个字符",
+  "teardown.b2": "没有规范 URL",
+  "teardown.b5": "没有图片,替代文本检查无从测量",
+  "teardown.lessonTitle": "我们在自己的解析器里发现的 bug",
+  "teardown.engineTag": "引擎已升级:18 → 21 项检查",
+  "teardown.engine18": "由 18 项检查的引擎测得",
+  "teardown.verified": "已验证",
+  "teardown.warning": "警告"
 }

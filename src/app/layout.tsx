@@ -39,8 +39,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Tint the mobile browser chrome (Chrome Android toolbar, Safari 15+ tab bar)
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafaf8" },
-    { media: "(prefers-color-scheme: dark)", color: "#292927" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
   ],
 };
 

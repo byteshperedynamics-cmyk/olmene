@@ -591,5 +591,19 @@
   "footer.about": "حول",
   "footer.contact": "الاتصال",
   "footer.connect": "التواصل",
-  "footer.operated": "تم بناء Olmene وتطويره بواسطة {studio}."
+  "footer.operated": "تم بناء Olmene وتطويره بواسطة {studio}.",
+  "hero.trySample": "جرّبه على",
+  "loop.merged": "دُمج في main",
+  "review.opened": "فُتح PR {pr} على {branch}",
+  "review.declined": "تم الرفض. لم يتغيّر شيء.",
+  "review.approved": "تمت الموافقة على {n} تغييرات",
+  "review.reset": "إعادة العرض",
+  "teardown.b1": "الوصف التعريفي طويل جدًا: 181 حرفًا",
+  "teardown.b2": "لا يوجد رابط أساسي (canonical)",
+  "teardown.b5": "لا توجد صور، فلم يجد فحص النص البديل ما يقيسه",
+  "teardown.lessonTitle": "الخلل الذي وجدناه في محللنا الخاص",
+  "teardown.engineTag": "تمت ترقية المحرك: 18 ← 21 فحصًا",
+  "teardown.engine18": "قيس بمحرك الفحوص الـ18",
+  "teardown.verified": "تم التحقق",
+  "teardown.warning": "تحذير"
 }

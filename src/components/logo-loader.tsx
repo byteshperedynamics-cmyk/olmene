@@ -19,7 +19,7 @@ export function LogoLoader({
     <AnimatedFlower
       size={size}
       glow={glow}
-      className={cn("text-primary", className)}
+      className={cn("text-brand", className)}
     />
   );
 }

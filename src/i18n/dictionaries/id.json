@@ -591,5 +591,19 @@
   "footer.about": "Tentang",
   "footer.contact": "Kontak",
   "footer.connect": "Hubungkan",
-  "footer.operated": "Olmene dibangun dan dioperasikan oleh {studio}."
+  "footer.operated": "Olmene dibangun dan dioperasikan oleh {studio}.",
+  "hero.trySample": "Coba di",
+  "loop.merged": "Digabung ke main",
+  "review.opened": "PR {pr} dibuka di {branch}",
+  "review.declined": "Ditolak. Tidak ada yang berubah.",
+  "review.approved": "{n} perubahan disetujui",
+  "review.reset": "Ulangi demo",
+  "teardown.b1": "Deskripsi meta terlalu panjang: 181 karakter",
+  "teardown.b2": "Tidak ada URL kanonis",
+  "teardown.b5": "Tidak ada gambar, jadi pemeriksaan teks alt tidak punya apa pun untuk diukur",
+  "teardown.lessonTitle": "Bug yang kami temukan di parser kami sendiri",
+  "teardown.engineTag": "Mesin ditingkatkan: 18 → 21 pemeriksaan",
+  "teardown.engine18": "Diukur oleh mesin 18 pemeriksaan",
+  "teardown.verified": "terverifikasi",
+  "teardown.warning": "peringatan"
 }

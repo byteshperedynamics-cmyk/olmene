@@ -591,5 +591,19 @@
   "footer.about": "हमारे बारे में",
   "footer.contact": "संपर्क",
   "footer.connect": "जुड़ें",
-  "footer.operated": "Olmene का निर्माण और संचालन {studio} द्वारा किया जाता है।"
+  "footer.operated": "Olmene का निर्माण और संचालन {studio} द्वारा किया जाता है।",
+  "hero.trySample": "आज़माकर देखें:",
+  "loop.merged": "main में मर्ज किया गया",
+  "review.opened": "{branch} पर PR {pr} खोला गया",
+  "review.declined": "अस्वीकार किया। कुछ नहीं बदला।",
+  "review.approved": "{n} बदलाव स्वीकृत",
+  "review.reset": "डेमो रीसेट करें",
+  "teardown.b1": "मेटा विवरण बहुत लंबा: 181 अक्षर",
+  "teardown.b2": "कोई कैनोनिकल URL नहीं",
+  "teardown.b5": "कोई इमेज नहीं, इसलिए alt-टेक्स्ट जाँच के पास मापने को कुछ नहीं था",
+  "teardown.lessonTitle": "हमारे अपने पार्सर में मिला बग",
+  "teardown.engineTag": "इंजन अपग्रेड: 18 → 21 जाँच",
+  "teardown.engine18": "18-जाँच वाले इंजन से मापा गया",
+  "teardown.verified": "सत्यापित",
+  "teardown.warning": "चेतावनी"
 }

@@ -34,10 +34,10 @@ export function StepRail({
             aria-current={s.state === "now" ? "step" : undefined}
             className={cn(
               "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs",
-              s.state === "done" && "border-primary/40 text-foreground",
-              s.state === "now" && "border-primary bg-leaf-soft font-medium text-foreground",
+              s.state === "done" && "border-tel-emerald/40 text-foreground",
+              s.state === "now" && "border-foreground/60 bg-chip font-medium text-foreground",
               s.state === "pending" && "text-muted-foreground",
-              s.state === "failed" && "border-signal-rust/50 text-signal-rust",
+              s.state === "failed" && "border-tel-rose/50 text-tel-rose",
             )}
           >
             <Node state={s.state} small />
@@ -60,7 +60,7 @@ export function StepRail({
               "relative flex items-center gap-2.5 py-[7px] text-[13px]",
               s.state === "pending" ? "text-muted-foreground" : "text-foreground",
               s.state === "now" && "font-medium",
-              s.state === "failed" && "text-signal-rust",
+              s.state === "failed" && "text-tel-rose",
             )}
           >
             {!last && (
@@ -68,13 +68,13 @@ export function StepRail({
                 aria-hidden
                 className={cn(
                   "absolute start-[7px] top-[24px] bottom-[-8px] w-px",
-                  s.state === "done" ? "bg-primary" : "bg-line-strong",
+                  s.state === "done" ? "bg-tel-emerald/70" : "bg-line-strong",
                 )}
               />
             )}
             <Node state={s.state} />
             <span className="min-w-0 flex-1">{s.label}</span>
-            {s.meta && <span className="font-mono text-[11px] text-faint">{s.meta}</span>}
+            {s.meta && <span className="shrink-0 ps-2 font-mono text-[11px] tabular-nums text-faint">{s.meta}</span>}
           </li>
         );
       })}
@@ -86,14 +86,14 @@ function Node({ state, small }: { state: StepState; small?: boolean }) {
   const size = small ? "size-3" : "size-[15px]";
   if (state === "done") {
     return (
-      <span className={cn("relative z-[1] grid shrink-0 place-items-center rounded-full bg-primary text-primary-foreground", size)}>
+      <span className={cn("relative z-[1] grid shrink-0 place-items-center rounded-full bg-tel-emerald text-background transition-colors duration-[var(--dur-state)]", size)}>
         <Check className="size-2.5" strokeWidth={3} aria-hidden />
       </span>
     );
   }
   if (state === "failed") {
     return (
-      <span className={cn("relative z-[1] grid shrink-0 place-items-center rounded-full bg-signal-rust text-background", size)}>
+      <span className={cn("relative z-[1] grid shrink-0 place-items-center rounded-full bg-tel-rose text-background", size)}>
         <X className="size-2.5" strokeWidth={3} aria-hidden />
       </span>
     );
@@ -103,7 +103,7 @@ function Node({ state, small }: { state: StepState; small?: boolean }) {
       className={cn(
         "relative z-[1] shrink-0 rounded-full border bg-card",
         size,
-        state === "now" ? "border-primary animate-[o-pulse-dot_1.8s_ease-out_infinite] o-anim" : "border-line-strong",
+        state === "now" ? "border-foreground animate-[o-pulse-dot_1.8s_ease-out_infinite] o-anim" : "border-line-strong",
       )}
     />
   );

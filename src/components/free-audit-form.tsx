@@ -196,6 +196,9 @@ function useFreeAudit(): FreeAuditState {
 /** Sample domains typed into the empty field's placeholder (stops on focus/input). */
 const SAMPLE_DOMAINS = ["acme-analytics.com", "launchkit.dev", "fernbooks.io"];
 
+/** A real site the sample chip types in (acme-analytics.com in the illustrations doesn't exist). */
+const SAMPLE_SITE = "olmene.com";
+
 function useTypedPlaceholder(base: string, active: boolean) {
   const [text, setText] = useState(base);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -238,14 +241,44 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
   const { url, setUrl, loading, progress, error, origin, submit } = useFreeAudit();
   const mine = origin === variant;
   const [focused, setFocused] = useState(false);
-  const placeholder = useTypedPlaceholder(t("form.placeholder"), variant === "hero" && !focused && !url);
+  const [typing, setTyping] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const placeholder = useTypedPlaceholder(t("form.placeholder"), variant === "hero" && !focused && !url && !typing);
+
+  // "Try it on olmene.com": types a real, scannable URL into the command bar
+  // (a sample that exists, so the scan that follows works). The visitor still
+  // presses Scan; nothing is submitted for them.
+  const trySample = () => {
+    const sample = SAMPLE_SITE;
+    if (loading || typing) return;
+    const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setUrl(sample);
+      inputRef.current?.focus();
+      return;
+    }
+    setTyping(true);
+    setUrl("");
+    let i = 0;
+    const tick = () => {
+      i += 1;
+      setUrl(sample.slice(0, i));
+      if (i < sample.length) window.setTimeout(tick, 42 + Math.random() * 38);
+      else {
+        setTyping(false);
+        inputRef.current?.focus();
+      }
+    };
+    window.setTimeout(tick, 120);
+  };
 
   return (
     <form onSubmit={(e) => submit(e, variant)} className={`w-full max-w-xl ${className ?? ""}`} aria-label={t("form.aria")}>
-      <div className="flex w-full flex-col gap-2 rounded-2xl border border-line-strong bg-card p-1.5 shadow-[0_0_0_4px_var(--leaf-soft)] transition-[border-color,box-shadow] duration-[var(--dur-state)] focus-within:border-primary/60 focus-within:shadow-[0_0_0_5px_var(--leaf-soft),0_20px_50px_-24px_var(--glow)] min-[480px]:flex-row min-[480px]:items-center">
+      <div className="o-beam-border flex w-full flex-col gap-2 rounded-2xl p-1.5 shadow-[inset_0_1px_0_var(--edge-top),0_18px_44px_-22px_rgb(0_0_0/0.8)] min-[480px]:flex-row min-[480px]:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-faint" aria-hidden />
           <Input
+            ref={inputRef}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onFocus={() => setFocused(true)}
@@ -258,16 +291,10 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
             disabled={loading}
           />
         </div>
-        <Button
-          type="submit"
-          variant={variant === "hero" ? "sheen" : "default"}
-          size="xl"
-          className="w-full shrink-0 min-[480px]:w-auto"
-          disabled={loading}
-        >
+        <Button type="submit" size="xl" className="w-full shrink-0 min-[480px]:w-auto" disabled={loading || typing}>
           {loading ? (
             <>
-              <LogoLoader size={16} /> {t("form.analyzing")}
+              <LogoLoader size={16} className="text-primary-foreground" /> {t("form.analyzing")}
             </>
           ) : (
             <>
@@ -276,6 +303,16 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
           )}
         </Button>
       </div>
+      {variant === "hero" && !loading && (
+        <button
+          type="button"
+          onClick={trySample}
+          className="o-chip mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors duration-[var(--dur-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="text-faint">{t("hero.trySample")}</span>
+          <span dir="ltr" className="font-mono text-foreground">{SAMPLE_SITE}</span>
+        </button>
+      )}
       {loading && mine && <ScanProgress progress={progress ?? EMPTY_PROGRESS} />}
       {!loading && error && mine && (
         <div

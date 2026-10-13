@@ -12,12 +12,15 @@ import { useI18n } from "@/i18n/provider";
 export function CountUp({
   value,
   duration = 1400,
+  fromRatio = 0,
   prefix = "",
   suffix = "",
   className,
 }: {
   value: number;
   duration?: number;
+  /** Count only the last part: 0.85 starts at 85% of the value (instrument-style settle). */
+  fromRatio?: number;
   prefix?: string;
   suffix?: string;
   className?: string;
@@ -39,8 +42,10 @@ export function CountUp({
     const step = (t: number) => {
       if (!t0) t0 = t;
       const p = Math.min((t - t0) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setShown(Math.round(value * eased));
+      // exponential ease-out: fast start, long precise settle
+      const eased = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+      const from = value * fromRatio;
+      setShown(Math.round(from + (value - from) * eased));
       if (p < 1) raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
