@@ -84,6 +84,12 @@ export interface ReportData {
     pageExcerpt?: string;
     /** Unscored site checks from the free scan (AI search, links…) when the plan came from a scan. */
     extras?: Array<{ id: string; status: "pass" | "warn" | "fail"; detail: string }>;
+    /** engine v2: kind of business detected by the free scan (local, restaurant, ecommerce, saas…). */
+    category?: { id: string; label: string } | null;
+    /** engine v2: App Store app id linked from the homepage (smart app banner fix). */
+    appStoreId?: string | null;
+    /** engine v2: what the site is built with (free scan platform id), for guided fixes. */
+    platformId?: string | null;
   };
   executiveSummary: {
     headline: string;
