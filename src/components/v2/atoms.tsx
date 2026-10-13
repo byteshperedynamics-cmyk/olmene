@@ -46,7 +46,7 @@ export function ExampleBadge({ label, className }: { label: string; className?: 
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-tel-amber",
+        "inline-flex items-center whitespace-nowrap rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-tel-amber",
         className,
       )}
     >

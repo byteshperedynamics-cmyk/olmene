@@ -307,7 +307,7 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
         <button
           type="button"
           onClick={trySample}
-          className="o-chip mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors duration-[var(--dur-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="o-chip o-hit mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors duration-[var(--dur-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="text-faint">{t("hero.trySample")}</span>
           <span dir="ltr" className="font-mono text-foreground">{SAMPLE_SITE}</span>
@@ -360,7 +360,7 @@ function ScanProgress({ progress }: { progress: ScanLiveProgress }) {
         <LogoLoader size={18} glow />
         <ShimmerText className="text-[13px] font-medium">{t("form.reading", { n: CHECK_COUNT })}</ShimmerText>
         {progress.platform && progress.platform.id !== "unknown" && (
-          <span className="rounded-full border border-line-strong bg-background px-2 py-0.5 font-mono text-[10.5px] text-muted-foreground">
+          <span className="rounded-full border border-line-strong bg-background px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
             {progress.platform.label}
           </span>
         )}
@@ -566,7 +566,7 @@ export function FreeAuditResult() {
                       if (rows.length === 0) return null;
                       return (
                         <div key={group}>
-                          <p className="mb-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">{group}</p>
+                          <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.1em] text-faint">{group}</p>
                           <ul>
                             {rows.map((e) => (
                               <CheckRow key={e.id} c={e} />

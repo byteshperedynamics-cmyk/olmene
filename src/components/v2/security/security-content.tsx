@@ -240,7 +240,7 @@ function TrustBoundary() {
     >
       <span className="flex items-center justify-between gap-2">
         <span className="o-readout-strong text-[11px] text-faint">{String(i + 1).padStart(2, "0")}</span>{" "}
-        <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[10px]", you ? "border-foreground/40 text-foreground" : "border-rim text-muted-foreground")}>
+        <span className={cn("rounded-full border px-2 py-0.5 font-mono text-[11px]", you ? "border-foreground/40 text-foreground" : "border-rim text-muted-foreground")}>
           {t(you ? "sec.flow.you" : "sec.flow.olmene")}
         </span>
       </span>{" "}

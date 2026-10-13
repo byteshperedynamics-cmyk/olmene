@@ -89,7 +89,7 @@ export function ReviewShowcase() {
                     )}
                     {phase === "declined" && <LivePill tone="neutral">{t("review.declined")}</LivePill>}
                   </div>
-                  <p className="mt-1.5 truncate font-mono text-[10.5px] text-tel-sky" dir="ltr">
+                  <p className="mt-1.5 truncate font-mono text-[11px] text-tel-sky" dir="ltr">
                     {phase === "verifying" ? "olmene/fix-7f3a → main" : "acme/site · main"}
                   </p>
                 </div>
@@ -126,14 +126,14 @@ export function ReviewShowcase() {
                       <button
                         type="button"
                         onClick={() => setPhase("declined")}
-                        className="inline-flex h-8 items-center rounded-lg border border-rim px-3 text-[12.5px] transition-colors hover:bg-chip focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="inline-flex h-8 items-center rounded-lg border border-rim px-3 pointer-coarse:h-11 text-[12.5px] transition-colors hover:bg-chip focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         {t("review.decline")}
                       </button>
                       <button
                         type="button"
                         onClick={approve}
-                        className="relative inline-flex h-8 items-center overflow-hidden rounded-lg bg-primary px-3 text-[12.5px] font-medium text-primary-foreground transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="relative inline-flex h-8 items-center overflow-hidden rounded-lg bg-primary px-3 pointer-coarse:h-11 text-[12.5px] font-medium text-primary-foreground transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
                         {t("review.approve", { n: changes.length })}
                       </button>
@@ -141,7 +141,7 @@ export function ReviewShowcase() {
                   ) : (
                     <div className="flex items-center gap-3">
                       {phase !== "declined" && (
-                        <span className="relative inline-flex h-8 items-center gap-1.5 overflow-hidden rounded-lg border border-tel-emerald/35 bg-tel-emerald/10 px-3 text-[12.5px] font-medium text-tel-emerald">
+                        <span className="relative inline-flex h-8 items-center gap-1.5 overflow-hidden rounded-lg border border-tel-emerald/35 pointer-coarse:h-11 bg-tel-emerald/10 px-3 text-[12.5px] font-medium text-tel-emerald">
                           {ripple && (
                             <span
                               key={ripple.k}
@@ -156,7 +156,7 @@ export function ReviewShowcase() {
                       <button
                         type="button"
                         onClick={reset}
-                        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[12px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-[12px] text-muted-foreground pointer-coarse:h-11 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <RotateCcw className="size-3.5" aria-hidden /> {t("review.reset")}
                       </button>

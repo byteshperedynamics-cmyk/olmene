@@ -17,7 +17,7 @@ import { SEVERITY_KEYS, STATUS_KEYS, EFFORT_KEYS, IMPACT_KEYS, CONFIDENCE_KEYS, 
 function SourceRefs({ ids, sources }: { ids?: string[]; sources: ReportData["sources"] }) {
   if (!ids?.length) return null;
   return (
-    <span className="ms-1 inline-flex flex-wrap gap-1 align-middle font-mono text-[10.5px] text-tel-sky">
+    <span className="ms-1 inline-flex flex-wrap gap-1 align-middle font-mono text-[11px] text-tel-sky">
       {ids.map((id) => {
         const s = sources.find((x) => x.id === id);
         return s ? (
@@ -36,7 +36,7 @@ function SourceRefs({ ids, sources }: { ids?: string[]; sources: ReportData["sou
 function Unverified() {
   const { t } = useI18n();
   return (
-    <span className="ms-2 inline-flex items-center gap-1 rounded-full border border-tel-amber/40 bg-tel-amber/10 px-2 py-0.5 align-middle font-mono text-[10.5px] font-normal text-tel-amber">
+    <span className="ms-2 inline-flex items-center gap-1 rounded-full border border-tel-amber/40 bg-tel-amber/10 px-2 py-0.5 align-middle font-mono text-[11px] font-normal text-tel-amber">
       <TriangleAlert className="size-3" aria-hidden /> {t("rv.unverified")}
     </span>
   );
@@ -103,7 +103,7 @@ function SeoCheckRow({ c }: { c: SeoCheck }) {
         <p className="text-xs text-muted-foreground">{c.detail}</p>
       </div>
       <span
-        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+        className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase ${
           c.status === "pass" ? "sev-pass" : c.status === "warn" ? "sev-warn" : "sev-fail"
         }`}
       >
@@ -149,7 +149,7 @@ export function ConversionDiffSection({ diff }: { diff: ConversionDiff }) {
       {diff.fields.map((f) => (
         <div key={f.kind} className="o-artifact rounded-xl p-4 print-block">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded border border-rim bg-chip px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
+            <span className="rounded border border-rim bg-chip px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
               {COPY_KIND_LABEL[f.kind]}
             </span>
             <span className="font-mono text-[11px] text-muted-foreground" dir="ltr">
@@ -177,7 +177,7 @@ export function ConversionDiffSection({ diff }: { diff: ConversionDiff }) {
           </p>
           <div className="o-well mt-3 overflow-hidden rounded-lg" dir="ltr">
             <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
-              <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">HTML</span>
+              <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-faint">HTML</span>
               <div className="flex gap-1">
                 <button
                   type="button"

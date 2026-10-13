@@ -138,7 +138,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
                   </div>
                   <span
                     className={cn(
-                      "rounded-full border px-2 py-0.5 font-mono text-[10.5px]",
+                      "rounded-full border px-2 py-0.5 font-mono text-[11px]",
                       c.threat === "high" ? "border-tel-rose/35 bg-tel-rose/10 text-tel-rose" : c.threat === "medium" ? "border-tel-amber/40 bg-tel-amber/10 text-tel-amber" : "border-rim text-muted-foreground",
                     )}
                   >
@@ -287,7 +287,7 @@ function Cites({ ids }: { ids: string[] }) {
   return (
     <p className="flex flex-wrap gap-1.5">
       {ids.map((id) => (
-        <a key={id} href={`#src-${id}`} className="rounded border border-tel-sky/35 px-1.5 font-mono text-[10.5px] leading-5 text-tel-sky hover:bg-tel-sky/10">
+        <a key={id} href={`#src-${id}`} className="rounded border border-tel-sky/35 px-1.5 font-mono text-[11px] leading-5 text-tel-sky hover:bg-tel-sky/10">
           {id}
         </a>
       ))}
@@ -302,7 +302,7 @@ function FindingCard({ f, evidence, fix }: { f: AuditFinding; evidence: string; 
     <article className="o-artifact overflow-hidden rounded-2xl">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-edge px-5 py-3.5">
         <h4 className="min-w-0 text-[15px] font-medium leading-snug">{f.title}</h4>{" "}
-        <span className={cn("shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10.5px]", sev)}>{t(SEVERITY_KEYS[f.severity] ?? f.severity)}</span>
+        <span className={cn("shrink-0 rounded-full border px-2 py-0.5 font-mono text-[11px]", sev)}>{t(SEVERITY_KEYS[f.severity] ?? f.severity)}</span>
       </header>
       <div className="grid md:grid-cols-2">
         <div className="grid content-start gap-2 border-b border-edge p-5 md:border-b-0 md:border-e">
@@ -329,12 +329,12 @@ function Action({ a }: { a: RoadmapAction }) {
     <div className="o-artifact flex min-w-0 flex-col overflow-hidden rounded-xl">
       <div className="grid flex-1 content-start gap-2.5 p-4">
         <div className="flex flex-wrap gap-1.5">
-          <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+          <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
             {t(EFFORT_KEYS[(a.effort ?? "").toLowerCase()] ?? `${a.effort}`)}
           </span>{" "}
           <span
             className={cn(
-              "rounded-full border px-2 py-0.5 font-mono text-[10px]",
+              "rounded-full border px-2 py-0.5 font-mono text-[11px]",
               impact === "high" ? "border-tel-emerald/40 bg-tel-emerald/10 text-tel-emerald" : impact === "medium" ? "border-tel-amber/40 bg-tel-amber/10 text-tel-amber" : "border-rim text-muted-foreground",
             )}
           >

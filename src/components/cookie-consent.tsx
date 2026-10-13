@@ -55,7 +55,7 @@ export function CookieConsent() {
       aria-describedby="cookie-consent-desc"
       className="fixed bottom-3 end-3 z-50 w-[calc(100%-1.5rem)] max-w-[340px] pb-[env(safe-area-inset-bottom)] print:hidden motion-safe:animate-in fade-in slide-in-from-bottom-2 duration-300 sm:bottom-4 sm:end-4"
     >
-      <div className="o-artifact rounded-xl p-4 backdrop-blur">
+      <div className="o-artifact o-glass rounded-xl p-4 backdrop-blur">
         <div className="flex flex-col gap-3">
           <div className="min-w-0 space-y-1">
             <h2 id="cookie-consent-title" className="text-[13px] font-semibold text-foreground">

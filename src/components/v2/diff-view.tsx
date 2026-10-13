@@ -97,7 +97,7 @@ export function DiffView({
               aria-selected={i === active}
               onClick={() => setActive(i)}
               className={cn(
-                "relative shrink-0 rounded-md px-2 py-1 font-mono text-[11.5px] transition-colors duration-[var(--dur-hover)]",
+                "relative shrink-0 rounded-md px-2 py-1 font-mono text-[11.5px] transition-colors duration-[var(--dur-hover)] pointer-coarse:min-h-11",
                 i === active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >

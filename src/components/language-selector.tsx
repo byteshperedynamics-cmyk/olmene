@@ -246,7 +246,7 @@ export function LanguageSelector({
         type="button"
         ref={triggerRef}
         className={`${compact ? "inline-flex" : "lang-select-custom inline-flex"} group cursor-pointer items-center gap-1.5 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-rim hover:bg-chip hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-          compact ? "h-8 px-2.5 text-xs" : size === "sm" ? "h-8 ps-3 pe-2.5 text-xs" : "h-9 ps-3.5 pe-3 text-sm"
+          compact ? "h-8 px-2.5 text-xs pointer-coarse:h-11" : size === "sm" ? "h-8 ps-3 pe-2.5 text-xs pointer-coarse:h-11" : "h-9 ps-3.5 pe-3 text-sm pointer-coarse:h-11"
         }`}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -280,7 +280,7 @@ export function LanguageSelector({
           value={lang}
           onChange={(e) => setLang(e.target.value as LangCode)}
           className={`cursor-pointer appearance-none rounded-full border border-border/70 bg-card/70 text-muted-foreground backdrop-blur transition-colors hover:border-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 dark:bg-card/50 ${
-            size === "sm" ? "h-8 ps-7 pe-7 text-xs" : "h-9 ps-8 pe-7 text-sm"
+            size === "sm" ? "h-8 ps-7 pe-7 text-xs pointer-coarse:h-11" : "h-9 ps-8 pe-7 text-sm pointer-coarse:h-11"
           }`}
         >
           {LANGUAGES.map((l) => (
@@ -317,7 +317,7 @@ export function LanguageSelector({
               ? { left: pos.left, ...(pos.dir === "up" ? { bottom: pos.bottom } : { top: pos.top }) }
               : undefined
           }
-          className="lang-panel absolute z-50 w-72 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl shadow-foreground/10 backdrop-blur-md"
+          className="lang-panel o-glass absolute z-50 w-72 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl shadow-foreground/10 backdrop-blur-md"
         >
           <ul
             ref={listRef}

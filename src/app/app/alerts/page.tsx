@@ -220,11 +220,11 @@ function ChannelRow({ ch, onChanged }: { ch: AlertChannel; onChanged: () => void
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className="text-[14px] font-medium">{ch.label ?? hint.label}</span>
-            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
+            <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
               {ch.kind}
             </span>
             {!ch.active && (
-              <span className="flex items-center gap-1 rounded bg-diff-del px-1.5 py-0.5 font-mono text-[10.5px] text-signal-rust">
+              <span className="flex items-center gap-1 rounded bg-diff-del px-1.5 py-0.5 font-mono text-[11px] text-signal-rust">
                 <PauseCircle className="size-3" aria-hidden /> paused after {ch.failures} failures
               </span>
             )}

@@ -93,7 +93,7 @@ function ScanStage({ stage }: { stage: Stage }) {
           </span>
           <span className={`truncate ${n.ok === false ? "text-foreground" : "text-muted-foreground"}`}>{n.code}</span>
           {n.ok === false && (
-            <span className="o-node-mark ms-auto shrink-0 rounded border border-tel-rose/35 px-1.5 text-[9.5px] leading-4 text-tel-rose">missing</span>
+            <span className="o-node-mark ms-auto shrink-0 rounded border border-tel-rose/35 px-1.5 text-[11px] leading-4 text-tel-rose">missing</span>
           )}
         </div>
       ))}
@@ -131,7 +131,7 @@ function FixStage({ stage }: { stage: Stage }) {
   return (
     <div dir="ltr" className="grid h-full content-between p-3.5 font-mono text-[11px] leading-[1.75]">
       <div className="grid gap-2">
-        <div className="flex items-center justify-between text-[10.5px] text-faint">
+        <div className="flex items-center justify-between text-[11px] text-faint">
           <span>app/layout.tsx</span>
           <span>
             <span className="text-tel-emerald">+1</span> <span className="text-tel-rose">−1</span>
@@ -148,9 +148,9 @@ function FixStage({ stage }: { stage: Stage }) {
         </div>
       </div>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[10.5px] text-faint">acme/site</span>
+        <span className="text-[11px] text-faint">acme/site</span>
         <span
-          className="inline-flex items-center gap-1.5 rounded-full border border-tel-sky/40 bg-chip px-2.5 py-1 text-[10.5px] text-tel-sky transition-[opacity,transform] duration-300 ease-[var(--ease-out-expo)]"
+          className="inline-flex items-center gap-1.5 rounded-full border border-tel-sky/40 bg-chip px-2.5 py-1 text-[11px] text-tel-sky transition-[opacity,transform] duration-300 ease-[var(--ease-out-expo)]"
           style={done ? undefined : { opacity: 0, transform: "translateY(6px) scale(0.92)" }}
         >
           <GitBranch className="size-3" aria-hidden /> olmene/fix-14
@@ -211,7 +211,7 @@ function VerifyStage({ stage }: { stage: Stage }) {
   return (
     <div className="grid h-full content-between justify-items-center p-3.5">
       <span
-        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10.5px] transition-colors duration-300 ${
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[11px] transition-colors duration-300 ${
           merged ? "border-tel-emerald/40 bg-tel-emerald/10 text-tel-emerald" : "border-edge text-faint"
         }`}
       >
@@ -238,7 +238,7 @@ function VerifyStage({ stage }: { stage: Stage }) {
         <span className={good ? "text-tel-emerald" : "text-foreground"} style={{ fontSize: 24 }}>
           {Math.round(score)}
         </span>{" "}
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em]">{t("scores.readiness")}</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em]">{t("scores.readiness")}</span>
       </span>
     </div>
   );

@@ -372,6 +372,30 @@
   --grid-line: rgb(255 255 255 / 0.025);
 }
 
+/* Increase Contrast (Apple HIG, accessibility.md › Vision; liquid-glass.md
+   checklist 5): stronger borders and edges, secondary text one step closer
+   to the foreground. Applies in both appearances. */
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: #3F3F46;
+    --faint: #52525B;
+    --border: rgb(9 9 11 / 0.22);
+    --edge: rgb(9 9 11 / 0.22);
+    --rim: rgb(9 9 11 / 0.42);
+    --line-strong: rgb(9 9 11 / 0.36);
+    --input: rgb(9 9 11 / 0.7);
+  }
+  .dark {
+    --muted-foreground: #D4D4D8;
+    --faint: #B4B4BC;
+    --border: rgb(255 255 255 / 0.22);
+    --edge: rgb(255 255 255 / 0.2);
+    --rim: rgb(255 255 255 / 0.4);
+    --line-strong: rgb(255 255 255 / 0.32);
+    --input: rgb(255 255 255 / 0.6);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -1299,3 +1323,34 @@
 }
 .o-boundary[data-stage="armed"] .o-step { opacity: 0.25; }
 .o-boundary[data-stage="run"] .o-step { animation: o-step-in 420ms var(--ease-out-expo) var(--d) both; }
+
+/* ── Apple HIG pass (2026-10-13) ───────────────────────────────────────────
+   Unlayered on purpose: these win over Tailwind utilities.
+
+   Touch targets (accessibility.md › Mobility: 44x44 pt default, 28x28 pt
+   minimum): on touch screens a small control's hit region grows to 44 px
+   without changing how it looks. Buttons grow for real (button.tsx). */
+@media (pointer: coarse) {
+  .o-hit {
+    position: relative;
+  }
+  .o-hit::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Reduce Transparency (liquid-glass.md checklist 5): the floating layer
+   (header, menus, cookie notice, sticky action bars) turns opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  .o-glass {
+    background-color: var(--background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

@@ -50,11 +50,11 @@ export function ScanPreview({
           <i className="size-2 rounded-full bg-line-strong" />
           <i className="size-2 rounded-full bg-line-strong" />
         </div>
-        <div dir="ltr" className="o-well flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-[10.5px] text-muted-foreground">
+        <div dir="ltr" className="o-well flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
           <i className="size-1.5 shrink-0 rounded-full bg-faint" />
           <span className="truncate">{url}</span>
         </div>
-        <span className="shrink-0 rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-tel-amber">
+        <span className="shrink-0 rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-tel-amber">
           {previewLabel}
         </span>
       </div>
@@ -123,7 +123,7 @@ export function ScanPreview({
           <div
             key={label}
             className={cn(
-              "o-chip absolute flex max-w-[62%] items-center gap-1.5 rounded-lg py-1 pe-2.5 ps-1.5 font-mono text-[10.5px] text-foreground",
+              "o-chip absolute flex max-w-[62%] items-center gap-1.5 rounded-lg py-1 pe-2.5 ps-1.5 font-mono text-[11px] text-foreground",
               `o-hp-pin o-hp-pin-${i + 1}`,
             )}
             style={PINS[i].side === "start" ? { insetInlineStart: `${PINS[i].x}%`, top: `${PINS[i].y}%` } : { insetInlineEnd: `${PINS[i].x}%`, top: `${PINS[i].y}%` }}
@@ -137,7 +137,7 @@ export function ScanPreview({
         ))}
 
         {/* The fix: three added lines in a recessed diff well */}
-        <div dir="ltr" className="o-well absolute inset-x-[5%] top-[56%] h-[25.5%] overflow-hidden rounded-xl font-mono text-[10px] leading-none sm:text-[10.5px]">
+        <div dir="ltr" className="o-well absolute inset-x-[5%] top-[56%] h-[25.5%] overflow-hidden rounded-xl font-mono text-[11px] leading-none sm:text-[11px]">
           <div className="flex items-center justify-between border-b border-edge px-2.5 py-[2.2%] text-faint">
             <span className="truncate">app/layout.tsx</span>
             <span className="shrink-0">
@@ -163,20 +163,20 @@ export function ScanPreview({
         <div className="absolute inset-x-[5%] bottom-[3.5%] flex items-center gap-2">
           <span className="o-readout-strong inline-flex shrink-0 items-baseline gap-1 rounded-lg border border-tel-rose/35 bg-tel-rose/10 px-2.5 py-1.5 text-tel-rose">
             <span className="text-[20px] leading-none">61</span>
-            <span className="text-[10px] opacity-80">/ 100</span>
+            <span className="text-[11px] opacity-80">/ 100</span>
           </span>
           <div className="relative h-6 min-w-0 flex-1">
             <svg className="absolute inset-0 size-full" viewBox="0 0 100 24" preserveAspectRatio="none">
               <path d="M 0 12 L 100 12" stroke="var(--line-strong)" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray="2 3" />
               <path d="M 0 12 L 100 12" stroke="var(--tel-sky)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" pathLength={1} strokeDasharray="1" className="o-hp-bridge" />
             </svg>
-            <span className="o-hp-pr absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-tel-sky/40 bg-chip px-2 py-0.5 font-mono text-[9.5px] text-tel-sky">
+            <span className="o-hp-pr absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-tel-sky/40 bg-chip px-2 py-0.5 font-mono text-[11px] text-tel-sky">
               PR #14
             </span>
           </div>
           <span className="o-hp-score o-readout-strong inline-flex shrink-0 items-baseline gap-1 rounded-lg border border-tel-emerald/40 bg-tel-emerald/10 px-2.5 py-1.5 text-tel-emerald">
             <span className="text-[20px] leading-none">94</span>
-            <span className="text-[10px] opacity-80">/ 100</span>
+            <span className="text-[11px] opacity-80">/ 100</span>
           </span>
         </div>
       </div>

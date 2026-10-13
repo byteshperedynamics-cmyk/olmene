@@ -77,7 +77,7 @@ function GuidedValueRow({ v }: { v: GuidedValue }) {
       </div>
       {v.current && (
         <p className="mt-2 break-words text-[12.5px] leading-relaxed text-muted-foreground">
-          <span className="me-1.5 inline-block rounded bg-surface-2 px-1 font-mono text-[10px] uppercase tracking-wide">current</span>
+          <span className="me-1.5 inline-block rounded bg-surface-2 px-1 font-mono text-[11px] uppercase tracking-wide">current</span>
           <span className="line-through decoration-muted-foreground/50">{v.current}</span>
         </p>
       )}
@@ -379,7 +379,7 @@ export default function GuidedRunPage() {
         ))}
       </div>
 
-      <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.5)] backdrop-blur sm:px-5">
+      <div className="o-glass sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.5)] backdrop-blur sm:px-5">
         <p className="min-w-0 text-[12.5px] text-muted-foreground">
           {live}/{total} confirmed live
           {appliedNotLive.length > 0 ? ` · ${appliedNotLive.length} applied, waiting for your deploy` : ""}

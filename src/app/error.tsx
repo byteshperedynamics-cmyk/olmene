@@ -24,7 +24,7 @@ export default function RouteError({ error, retry }: { error: Error & { digest?:
         <p className="o-readout text-faint">error</p>
         <h1 className="o-display text-[32px] leading-[1.1] sm:text-[40px]">This page hit a problem.</h1>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
-          It has been reported to us. Trying again usually works; if it doesn&apos;t, the rest of the site is fine.
+          Olmene logged the error. Trying again usually works; if it doesn&apos;t, the rest of the site still does.
         </p>
         <div className="mt-2 flex flex-wrap justify-center gap-3">
           <Button size="lg" onClick={() => retry()}>

@@ -228,7 +228,7 @@ function RunsTable({ jobs }: { jobs: AgentJob[] }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13.5px]">
             <thead>
-              <tr className="border-b text-start font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">
+              <tr className="border-b text-start font-mono text-[11px] uppercase tracking-[0.1em] text-faint">
                 <th className="px-5 py-2.5 text-start font-medium">Repository</th>
                 <th className="px-5 py-2.5 text-start font-medium">Status</th>
                 <th className="px-5 py-2.5 text-start font-medium">Started</th>

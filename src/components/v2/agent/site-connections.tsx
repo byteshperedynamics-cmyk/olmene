@@ -103,7 +103,7 @@ export function SiteConnectionsPanel({ defaultOpen = false }: { defaultOpen?: bo
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-medium">
                   <span className="font-mono">{c.host}</span>
-                  <span className="ms-2 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
+                  <span className="ms-2 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
                     {c.provider}
                   </span>
                 </span>

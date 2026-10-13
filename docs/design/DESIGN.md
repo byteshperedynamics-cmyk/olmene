@@ -28,7 +28,7 @@ Colour exists only as telemetry inside product artifacts (diffs, checks, scores,
 
 Colour never carries meaning alone: every coloured state also has a word, a sign (+/−) or an icon.
 
-## 4. Surfaces (dark theme is the default)
+## 4. Surfaces (designed dark-first; the site follows the system setting)
 
 | Level | Role | Dark value | Edge |
 |---|---|---|---|
@@ -87,3 +87,16 @@ The owner's spec asks for these, overriding the generic do-not-use defaults in o
 - monospace for telemetry numbers and status capsules;
 - pill-shaped status chips;
 - gradient text on the headline accent only.
+
+## 10. Apple HIG pass (2026-10-13)
+
+The owner asked for a review against Apple's Human Interface Guidelines (the `apple-design` skill in `.agents/skills/`). The web gets the principles and the foundations (accessibility, colour, type, layout, writing), not Apple's platform conventions. What changed, with the guideline each comes from:
+
+- **Light or dark follows the system** (`dark-mode.md › Best practices`: "Avoid offering an app-specific appearance setting"). The theme toggle is gone from both headers; next-themes uses `defaultTheme="system"` with a new storage key, so an old toggle choice doesn't pin anyone. The visual identity is still designed dark-first, and the light theme is its full counterpart. To force dark again for brand reasons, set `defaultTheme="dark"` in `providers.tsx`.
+- **Text floor 11 px** (`typography.md › Ensuring legibility`, mobile minimum 11 pt). No `text-[9px]`…`text-[10.5px]` anywhere outside `/dev`.
+- **Touch targets 44 px on touch screens** (`accessibility.md › Mobility`: 44×44 pt default, 28×28 pt minimum). `pointer-coarse:` raises every `Button` size to `h-11`/`size-11`; `.o-hit` grows the hit region of small chips and standalone links without changing how they look; footer links become 44 px rows. Mouse and trackpad keep the compact desktop sizes (28 pt default).
+- **Increase Contrast** (`accessibility.md › Vision`, `liquid-glass.md` checklist 5): under `prefers-contrast: more`, borders, rims and edges get stronger and secondary text moves one step towards the foreground, in both appearances.
+- **Reduce Transparency**: the floating layer (`.o-glass`: header pill, app header, language menu, cookie notice, sticky action bars) turns opaque under `prefers-reduced-transparency: reduce`. Blur stays on that layer only, never on content (`liquid-glass.md › Where the material belongs`).
+- **One colour, one meaning** (`color.md › Best practices`): sky marks links, URLs, ids, branches and pull requests only, so decorative heading icons are neutral now.
+- **Writing** (`writing.md › Best practices`: avoid "we"): the error pages say "Olmene logged the error".
+

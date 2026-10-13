@@ -45,7 +45,7 @@ export function PrChecksPanel({ repos, defaultSiteUrl }: { repos: string[]; defa
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="o-display flex items-center gap-2 text-2xl">
-            <GitPullRequest className="size-5 text-tel-sky" aria-hidden /> Checks on every pull request
+            <GitPullRequest className="size-5 text-muted-foreground" aria-hidden /> Checks on every pull request
           </h2>
           <p className="mt-1 max-w-2xl text-[14px] text-muted-foreground">
             When a pull request has a preview deployment, Olmene runs its checks on the preview, compares them with your
@@ -158,7 +158,7 @@ function RepoRow({
 function ChecksTable({ checks }: { checks: PrCheck[] }) {
   return (
     <div className="overflow-hidden rounded-xl border border-edge">
-      <p className="border-b border-edge px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">Recent checks</p>
+      <p className="border-b border-edge px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-faint">Recent checks</p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] text-[13px]">
           <tbody>

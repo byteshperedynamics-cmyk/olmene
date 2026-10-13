@@ -72,7 +72,7 @@ export function Teardown() {
                 role="tab"
                 aria-selected={view === v}
                 onClick={() => setView(v)}
-                className={`relative z-[1] flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`relative z-[1] flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   view === v ? "text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -88,7 +88,7 @@ export function Teardown() {
             <Dial value={s.readiness} good={view === "after"} />
             <div className="grid min-w-0 gap-2">
               <p className="o-readout-strong text-[15px] text-foreground">{t("form.checksPassed", { a: s.passed, b: s.total })}</p>
-              <span className="inline-flex w-fit items-center rounded-full border border-rim bg-chip px-2.5 py-1 font-mono text-[10.5px] text-muted-foreground">
+              <span className="inline-flex w-fit items-center rounded-full border border-rim bg-chip px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
                 {view === "before" ? t("teardown.engine18") : t("teardown.engineTag")}
               </span>
               <p className="text-[12.5px] text-faint">{t("scores.readiness")}</p>
@@ -99,11 +99,11 @@ export function Teardown() {
             {ITEMS.map((it) => (
               <li key={it.after} className="flex items-start gap-2.5">
                 {view === "after" ? (
-                  <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-tel-emerald/35 bg-tel-emerald/10 px-1.5 py-0.5 font-mono text-[10px] text-tel-emerald">
+                  <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-tel-emerald/35 bg-tel-emerald/10 px-1.5 py-0.5 font-mono text-[11px] text-tel-emerald">
                     <CheckCircle2 className="size-3" aria-hidden /> {t("teardown.verified")}
                   </span>
                 ) : (
-                  <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-tel-rose/35 bg-tel-rose/10 px-1.5 py-0.5 font-mono text-[10px] text-tel-rose">
+                  <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-tel-rose/35 bg-tel-rose/10 px-1.5 py-0.5 font-mono text-[11px] text-tel-rose">
                     <TriangleAlert className="size-3" aria-hidden /> {t("teardown.warning")}
                   </span>
                 )}{" "}
@@ -144,7 +144,7 @@ export function Teardown() {
       <div className="o-artifact mt-10 rounded-2xl p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-3">
           <Eyebrow>{t("teardown.quotesLabel")}</Eyebrow>
-          <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[10px] text-faint">{t("teardown.engineTag")}</span>
+          <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[11px] text-faint">{t("teardown.engineTag")}</span>
         </div>
         <ul className="mt-5 grid gap-4 text-[14.5px] leading-relaxed">
           {[

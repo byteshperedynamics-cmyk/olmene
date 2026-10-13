@@ -375,7 +375,7 @@ function ApproveBar({
   onReject: () => void;
 }) {
   return (
-    <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.5)] backdrop-blur sm:px-5">
+    <div className="o-glass sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.5)] backdrop-blur sm:px-5">
       <p className="min-w-0 text-[12.5px] text-muted-foreground">
         Opens a pull request on{" "}
         <code className="font-mono text-[11.5px] text-foreground" dir="ltr">
@@ -461,7 +461,7 @@ function AuditLog({ audit }: { audit: AuditRow[] }) {
           <li key={row.id} className="flex items-start gap-3 border-b py-2 last:border-0">
             <span
               className={cn(
-                "mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10.5px]",
+                "mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px]",
                 row.result === "success"
                   ? "bg-tel-emerald/10 text-tel-emerald"
                   : row.result === "blocked" || row.result === "failure"

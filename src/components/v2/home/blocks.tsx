@@ -44,7 +44,7 @@ export function CanCannot() {
         </div>
       </div>
       <p className="mt-6 text-sm">
-        <Link href="/security/#github" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
+        <Link href="/security/#github" className="o-hit font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
           {t("cc.more")}
         </Link>
       </p>
@@ -72,7 +72,7 @@ export function AboutStudio() {
               LinkedIn
             </a>
           </p>
-          <Link href="/security/" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
+          <Link href="/security/" className="o-hit font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
             {t("about.security")}
           </Link>
         </div>

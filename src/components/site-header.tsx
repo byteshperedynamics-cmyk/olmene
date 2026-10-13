@@ -5,14 +5,14 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSelector } from "@/components/language-selector";
 import { useSession } from "@/lib/session";
 import { useI18n } from "@/i18n/provider";
 
 /**
  * Floating header pill (DESIGN.md): four links, a globe popover for the 15
- * languages (the list only exists while it is open), theme, sign-in.
+ * languages (the list only exists while it is open), sign-in. Light or dark
+ * follows the system setting, so there is no theme switch here.
  * Anchor hrefs ("/#…") work from every route.
  */
 const NAV = [
@@ -39,7 +39,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-40 px-3 pt-3 print:hidden">
-      <div className="mx-auto max-w-5xl rounded-2xl border border-rim bg-background/75 shadow-[inset_0_1px_0_var(--edge-top),0_12px_40px_-18px_rgb(0_0_0/0.7)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="o-glass mx-auto max-w-5xl rounded-2xl border border-rim bg-background/75 shadow-[inset_0_1px_0_var(--edge-top),0_12px_40px_-18px_rgb(0_0_0/0.7)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 w-full items-center justify-between gap-4 ps-4 pe-2.5">
         <Logo />
         <nav className="hidden items-center gap-1 lg:flex" aria-label={t("nav.main")}>
@@ -57,7 +57,6 @@ export function SiteHeader() {
           <div className="hidden md:block">
             <LanguageSelector size="sm" compact />
           </div>
-          <ThemeToggle />
           {loading ? null : loggedIn ? (
             <>
               <Button asChild size="sm">

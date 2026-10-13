@@ -7,7 +7,8 @@ import { LanguageSelector } from "@/components/language-selector";
 import { useI18n } from "@/i18n/provider";
 import { FOUNDER_LINKEDIN, STUDIO_GITHUB, STUDIO_NAME, SUPPORT_EMAIL } from "@/lib/config";
 
-const linkClass = "inline-block py-1 hover:text-foreground";
+// Touch screens: each link is a 44 px row (Apple HIG minimum target).
+const linkClass = "inline-block py-1 hover:text-foreground pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:py-0";
 
 function External({ href, children }: { href: string; children: React.ReactNode }) {
   return (

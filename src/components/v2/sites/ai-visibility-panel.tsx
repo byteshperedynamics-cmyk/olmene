@@ -50,7 +50,7 @@ export function AiVisibilityPanel({ siteId }: { siteId: string }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="o-display flex items-center gap-2 text-2xl">
-              <Sparkles className="size-5 text-tel-sky" aria-hidden /> AI search visibility
+              <Sparkles className="size-5 text-muted-foreground" aria-hidden /> AI search visibility
             </h2>
             <p className="mt-1 max-w-2xl text-[14px] text-muted-foreground">
               Every week Olmene asks an AI assistant with Google Search (Gemini) the questions your buyers ask, and checks
@@ -112,7 +112,7 @@ function Trend({ runs }: { runs: AiVisibilityRun[] }) {
   const weeks = [...runs].reverse();
   return (
     <figure className="grid gap-2">
-      <figcaption className="flex flex-wrap items-center gap-4 font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">
+      <figcaption className="flex flex-wrap items-center gap-4 font-mono text-[11px] uppercase tracking-[0.1em] text-faint">
         <span>Weekly trend</span>
         <span className="inline-flex items-center gap-1.5">
           <i className="inline-block size-2 rounded-sm bg-foreground/35" aria-hidden /> mentioned
@@ -133,7 +133,7 @@ function Trend({ runs }: { runs: AiVisibilityRun[] }) {
           </li>
         ))}
       </ol>
-      <div className="flex justify-between font-mono text-[10.5px] text-faint">
+      <div className="flex justify-between font-mono text-[11px] text-faint">
         <span>{fmtDate(weeks[0].checked_at)}</span>
         <span>{fmtDate(weeks[weeks.length - 1].checked_at)}</span>
       </div>
@@ -182,7 +182,7 @@ function Answers({ run }: { run: AiVisibilityRun }) {
                 <Flag on={r.mentioned} label="mentioned" />{" "}
                 <Flag on={r.cited} label="linked" />
                 {r.rank != null && r.mentioned && (
-                  <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[10.5px] text-muted-foreground">#{r.rank} named</span>
+                  <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[11px] text-muted-foreground">#{r.rank} named</span>
                 )}
               </div>
             </div>
@@ -216,7 +216,7 @@ function Flag({ on, label }: { on: boolean; label: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10.5px]",
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[11px]",
         on ? "border-tel-emerald/35 bg-tel-emerald/10 text-tel-emerald" : "border-rim text-faint",
       )}
     >
