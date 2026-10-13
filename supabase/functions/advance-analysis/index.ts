@@ -10,6 +10,9 @@ import { z } from "npm:zod@4.6.5";
 import * as cheerio from "npm:cheerio@1.2.0";
 import { enqueueNotification, recordOps, recordUsage, tokensFromUsage } from "../_shared/ledger.ts";
 import { looksLikeJsShell, renderPage } from "../_shared/render.ts";
+import { analyzeBusiness } from "../free-audit/business.ts";
+import { detectPlatform } from "../free-audit/extras.ts";
+import { labSpeed } from "../_shared/speed.ts";
 
 // ───────────── inlined: _shared/cors.ts ─────────────
 /**
@@ -2399,7 +2402,13 @@ const Report = z.object({
     generatedAt: z.string(),
     language: z.string(),
     modelsUsed: z.array(z.string()).default([]),
-    schemaVersion: z.literal(1)
+    schemaVersion: z.literal(1),
+    // engine v2: what the crawl found deterministically (fix routing, business checks)
+    category: z.object({ id: z.string(), label: z.string() }).nullable().optional(),
+    platformId: z.string().nullable().optional(),
+    appStoreId: z.string().nullable().optional(),
+    extras: z.array(z.object({ id: z.string(), status: z.enum(["pass", "warn", "fail"]), detail: z.string() })).optional(),
+    speed: z.object({ source: z.string(), performance: z.number().nullable(), lcpMs: z.number().nullable(), cls: z.number().nullable(), tbtMs: z.number().nullable() }).nullable().optional()
   }),
   executiveSummary: StrategyOut.shape.executiveSummary,
   product: z.object({
@@ -2538,7 +2547,10 @@ function sourcesBlock(sources) {
   return wrapUntrusted(sources.map((s)=>`${s.id} | ${clip(s.title, 160)} | ${s.url}${s.publishedDate ? ` | published ${s.publishedDate}` : ""}\n  snippet: ${clip(s.snippet, 600)}`).join("\n"));
 }
 // ── Step 2: profile ────────────────────────────────────────────────────
-function profilePrompt(input, pages) {
+function profilePrompt(input, pages, siteFacts = null) {
+  const hint = siteFacts?.category && siteFacts.category.id !== "other"
+    ? `\nDETECTED FROM THE PAGE (structured data, links, wording): ${siteFacts.category.label} (${siteFacts.category.confidence} confidence: ${siteFacts.category.signals.join(", ")}). Use it unless the content clearly says otherwise.\n`
+    : "";
   return `TASK: Analyze the product sold on this website. Identify what it is, who it
 is for, how it is priced and how it talks about itself. Base everything on the
 website content only. If the site is unclear about something, say so in the
@@ -2550,7 +2562,7 @@ studio), "agency" (a services firm, consultancy or freelancer), "content"
 sellers) or "other".
 
 ${inputBlock(input)}
-
+${hint}
 WEBSITE CONTENT (homepage + key pages):
 ${pagesBlock(pages, 16000)}
 
@@ -3116,7 +3128,14 @@ function assembleReport(parts) {
       generatedAt: new Date().toISOString(),
       language: parts.language,
       modelsUsed: parts.modelsUsed,
-      schemaVersion: 1
+      schemaVersion: 1,
+      ...parts.siteFacts ? {
+        category: parts.siteFacts.category ? { id: parts.siteFacts.category.id, label: parts.siteFacts.category.label } : null,
+        platformId: parts.siteFacts.platform?.id ?? null,
+        appStoreId: parts.siteFacts.appStoreId ?? null,
+        extras: (parts.siteFacts.checks ?? []).map((c)=>({ id: c.id, status: c.status, detail: c.detail })),
+        speed: parts.siteFacts.speed ?? null
+      } : {}
     },
     executiveSummary: {
       headline: exec.headline,
@@ -3275,9 +3294,14 @@ async function runCrawl(job, supabase, env) {
     }
   }
   const origin = startUrl.origin;
-  const [crawlFiles, faviconIcoOk] = await Promise.all([
+  const [crawlFiles, faviconIcoOk, speed] = await Promise.all([
     discoverCrawlFiles(origin),
-    probeOk(`${origin}/favicon.ico`)
+    probeOk(`${origin}/favicon.ico`),
+    // Lab speed (PageSpeed Insights, mobile) for sites without real-user data.
+    labSpeed(home.url).then(async (r)=>{
+      if (r) await recordUsage(supabase, { kind: "render", source: "analysis", job_id: job.id, step: "crawl-speed", units: 0, latency_ms: r.ms, provider: "pagespeed" });
+      return r?.speed ?? null;
+    }).catch(()=>null)
   ]);
   const signalExtras = {
     robotsTxtOk: crawlFiles.robotsTxtOk,
@@ -3303,12 +3327,27 @@ async function runCrawl(job, supabase, env) {
   const hero = extractHero(renderedHtml ?? home.html);
   if (usedFallbackExtract) hero.skippedReason = "js-rendered site — hero markup unavailable";
   if (renderedHtml) hero.rendered = true;
+  // engine v2: kind of business, platform and the business checks (deterministic).
+  let siteFacts = null;
+  try {
+    const business = analyzeBusiness({
+      html: renderedHtml ?? home.html,
+      pageUrl: home.url,
+      jsonLdTypes: seoSignals.jsonLdTypes ?? [],
+      isStore: !!seoSignals.isStore,
+      hasPricingPage: !!seoSignals.hasPricingPage,
+      ctaButtons: seoSignals.ctaButtons ?? [],
+      trustSignals: seoSignals.trustSignals ?? []
+    });
+    siteFacts = { category: business.category, checks: usedFallbackExtract ? [] : business.checks, appStoreId: business.appStoreId, platform: detectPlatform(home.html), speed };
+  } catch { /* optional facts */ }
   const output = {
     pages,
     seoSignals,
     usedFallbackExtract,
     rendered: !!renderedHtml,
-    hero
+    hero,
+    siteFacts
   };
   return {
     output,
@@ -3647,7 +3686,7 @@ async function runCompetitorsExtract(job, supabase, env, picks) {
 async function runProfile(job, supabase, env, crawl) {
   const input = safeInput(job);
   const models = [];
-  const data = await llm(supabase, env, "profile", ProductProfile, profilePrompt(input, crawl.pages), input.language, models, job);
+  const data = await llm(supabase, env, "profile", ProductProfile, profilePrompt(input, crawl.pages, crawl.siteFacts ?? null), input.language, models, job);
   return { profile: data, models };
 }
 async function runCompetitorsAnalyze(job, supabase, env, profile, pages, research) {
@@ -3733,6 +3772,7 @@ async function runAssemble(job, modelsUsed) {
     seoChecklist: crawl.seoSignals.checklist,
     strategy,
     conversionDiff: gitdiff?.conversionDiff ?? null,
+    siteFacts: crawl.siteFacts ?? null,
     sources: research.sources.map((s)=>({
         id: s.id,
         url: s.url,
