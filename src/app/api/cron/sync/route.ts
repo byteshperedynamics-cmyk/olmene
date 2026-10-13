@@ -12,6 +12,7 @@ import { recordOpsEvent } from "@/lib/agent/ops";
 import { decryptSecret, masterKeyFromEnv } from "@/lib/agent/crypto";
 import { googleClient, measureEnabled } from "@/lib/measure/google";
 import { syncMeasure, type MeasureDbPort } from "@/lib/measure/sync";
+import { syncGuidedRuns } from "@/lib/agent/guided/service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -66,7 +67,9 @@ export async function POST(req: Request) {
         decrypt: (ct) => decryptSecret(masterKey, ct),
       });
     }
-    return NextResponse.json({ ok: true, prs, live, measure });
+    // Guided fixes (no repository): re-check the live site daily until everything is live.
+    const guided = await syncGuidedRuns(db, (input, init) => fetch(input, init)).catch(() => null);
+    return NextResponse.json({ ok: true, prs, live, measure, guided });
   } catch (e) {
     const detail = (e instanceof Error ? e.message : String(e)).slice(0, 200);
     agentLog("error", "cron sync failed", { detail });

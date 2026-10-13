@@ -12,7 +12,9 @@ export type NotificationKind =
   | "fix_regression"
   | "site_regression"
   | "competitor_change"
-  | "weekly_digest";
+  | "weekly_digest"
+  | "guided_live"
+  | "ai_visibility_change";
 
 export async function enqueueNotification(
   db: SupabaseClient,

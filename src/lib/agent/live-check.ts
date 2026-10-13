@@ -62,6 +62,8 @@ const LABELS: Record<string, string> = {
   "hero-copy": "Hero subheadline and button copy",
   "lang-attribute": "Page language",
   "llms-txt": "llms.txt",
+  "local-business-schema": "LocalBusiness structured data",
+  "app-banner": "iPhone app banner",
 };
 
 /** Timing policy (minutes / days) — exported for tests. */
@@ -298,6 +300,15 @@ async function checkFix(fix: AppliedFix, html: string, origin: string, fetchFn: 
       const code = await status(fetchFn, `${origin}/llms.txt`);
       return res(code === 200, `/llms.txt → ${code || "unreachable"}.`);
     }
+    case "local-business-schema": {
+      const blocks = html.match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) ?? [];
+      const hit = blocks.some((b) => /"@type"\s*:\s*"(?:LocalBusiness|Restaurant|[A-Za-z]*(?:Business|Store|Service|Clinic|Agency|Contractor|Salon))"/.test(b));
+      return hit ? res(true, "LocalBusiness structured data is live.") : res(false, "No LocalBusiness structured data on the live homepage yet.");
+    }
+    case "app-banner": {
+      const live = metaContent(html, "apple-itunes-app");
+      return live ? res(/app-id=\d+/.test(live), `Live: apple-itunes-app “${live.slice(0, 60)}”.`) : res(false, "No apple-itunes-app tag on the live homepage yet.");
+    }
     case "hero-copy": {
       // Every text the PR added must be on the live page.
       const added = addedTexts(fix.preview);
@@ -310,6 +321,16 @@ async function checkFix(fix: AppliedFix, html: string, origin: string, fetchFn: 
     }
     default:
       return res(true, "Not checkable on the live page (recorded only).");
+  }
+}
+
+/** The public homepage's HTML (≤3 MB), or null when it can't be fetched. */
+export async function fetchLiveHtml(siteUrl: string, fetchFn: FetchLike): Promise<{ html: string; url: string } | null> {
+  try {
+    const page = await fetchText(fetchFn, siteUrl);
+    return page.status === 200 ? { html: page.text, url: page.url } : null;
+  } catch {
+    return null;
   }
 }
 

@@ -54,6 +54,15 @@ export function render(kind: string, p: Payload, appUrl: string, footer: string)
         optional: false,
       };
     }
+    case "guided_live": {
+      const url = `${app}/app/agent/guided/${encodeURIComponent(p.runId ?? "")}`;
+      return {
+        subject: `All ${p.total} of your changes are live on ${p.site}`,
+        text: `Olmene checked ${p.site}: all ${p.total} changes from your guided fix list are live. Nice work.\n\n${url}`,
+        html: html(`Your changes are live on ${p.site}`, [`Olmene checked your live site: <strong>all ${e(p.total)}</strong> changes from your guided fix list are live${p.platform ? ` on ${e(p.platform)}` : ""}.`], { label: "See the check", url }),
+        optional: false,
+      };
+    }
     case "fix_regression": {
       const url = `${app}/app/agent/job/${encodeURIComponent(p.jobId ?? "")}`;
       const items = (p.regressed as string[] | undefined) ?? [];
