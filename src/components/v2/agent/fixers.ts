@@ -17,6 +17,8 @@ export const FIXER_META: Record<string, { label: string; impact: "high" | "mediu
   "hero-copy": { label: "Hero subheadline and button copy", impact: "high" },
   "lang-attribute": { label: "Page language", impact: "medium" },
   "llms-txt": { label: "llms.txt for AI assistants", impact: "medium" },
+  "local-business-schema": { label: "Local business details for Google", impact: "high" },
+  "app-banner": { label: "iPhone app banner", impact: "medium" },
 };
 
 export function fixerLabel(id: string): string {

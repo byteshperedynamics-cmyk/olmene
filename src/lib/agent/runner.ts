@@ -224,6 +224,31 @@ async function buildFixerContext(
       }
     }
   }
+  if (detection.repoType === "nextjs-pages" && detection.pagesIndexPath) {
+    const index = await read(detection.pagesIndexPath);
+    const doc = detection.pagesDocumentPath ? await read(detection.pagesDocumentPath) : null;
+    if (index !== null) {
+      framework = doc !== null && detection.pagesDocumentPath
+        ? { kind: "nextjs-pages", headPath: detection.pagesDocumentPath, headContent: doc, pagePath: detection.pagesIndexPath, pageContent: index }
+        : { kind: "nextjs-pages", headPath: detection.pagesIndexPath, headContent: index, pagePath: detection.pagesIndexPath, pageContent: index };
+    }
+  } else if (detection.repoType === "nuxt" && detection.nuxtConfigPath) {
+    const config = await read(detection.nuxtConfigPath);
+    if (config !== null) framework = { kind: "nuxt", headPath: detection.nuxtConfigPath, headContent: config };
+  }
+  // SvelteKit pages set head tags in <svelte:head>; app.html must not duplicate them.
+  let managed: Array<"title" | "description" | "og" | "jsonld"> | undefined;
+  if (detection.spaKind === "sveltekit") {
+    const heads = (await Promise.all(["src/routes/+layout.svelte", "src/routes/+page.svelte"].filter((p) => paths.includes(p)).map(read)))
+      .map((src) => src?.match(/<svelte:head>([\s\S]*?)<\/svelte:head>/)?.[1] ?? "")
+      .join("\n");
+    managed = [
+      ...(/<title>/.test(heads) ? ["title" as const] : []),
+      ...(/name=["']description["']/.test(heads) ? ["description" as const] : []),
+      ...(/property=["']og:/.test(heads) ? ["og" as const] : []),
+      ...(/application\/ld\+json/.test(heads) ? ["jsonld" as const] : []),
+    ];
+  }
   const packageJson = paths.includes("package.json") ? await read("package.json") : null;
   return {
     ctx: {
@@ -236,7 +261,7 @@ async function buildFixerContext(
       repo: { owner: allow.owner, name: allow.repo, defaultBranch },
       copy,
       framework,
-      spa: detection.repoType === "spa" && detection.spaKind ? { kind: detection.spaKind } : null,
+      spa: detection.repoType === "spa" && detection.spaKind ? { kind: detection.spaKind, ...(managed ? { managed } : {}) } : null,
     },
     defaultBranch,
     headSha: branch.commit.sha,

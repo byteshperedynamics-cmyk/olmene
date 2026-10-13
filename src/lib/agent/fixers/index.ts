@@ -29,6 +29,18 @@ import {
   type MetaTagSpec,
 } from "../htmlfile";
 import { addBodyComponent, addMetadataCanonical, findMetadataObject, setMetadataString } from "../jsfile";
+import {
+  jsxHasMeta,
+  jsxHeadInsert,
+  jsxHeadText,
+  jsxJsonLd,
+  jsxMeta,
+  jsxSetHtmlLang,
+  jsxSetTitle,
+  nuxtHeadEdit,
+  nuxtHeadHas,
+  type NuxtHeadChange,
+} from "../frameworks";
 
 // ───────────────────────────────────────────────────────────────────────────
 // Types
@@ -54,15 +66,31 @@ export interface CopyDrafts {
   altTexts?: Record<string, string>;
   h1?: string;
   cta?: { current: string; next: string };
+  /** Local business facts, each one found verbatim in the page text (planner verifies). */
+  localBusiness?: LocalBusinessFacts;
+}
+
+export interface LocalBusinessFacts {
+  name: string;
+  telephone?: string;
+  streetAddress?: string;
+  addressLocality?: string;
+  postalCode?: string;
+  addressCountry?: string;
+  openingHours?: string[];
 }
 
 /** A framework repo's editable entry files (loaded by the runner). */
 export interface FrameworkTarget {
-  kind: "nextjs-app" | "astro";
-  /** Next.js: root layout. Astro: the file that owns <head> (layout or index). */
+  kind: "nextjs-app" | "astro" | "nextjs-pages" | "nuxt";
+  /**
+   * Next.js App Router: root layout. Astro: the file that owns <head> (layout
+   * or index). Pages Router: pages/_document (or the homepage when there is
+   * no _document). Nuxt: nuxt.config.
+   */
   headPath: string;
   headContent: string;
-  /** Astro: the homepage page file (for H1 edits). */
+  /** Astro / Pages Router: the homepage page file. */
   pagePath?: string;
   pageContent?: string;
 }
@@ -83,7 +111,7 @@ export interface FixerContext {
    * Single-page apps (Vite / Create React App): homepagePath is the index.html
    * that is the <head> of every route; page content lives in components.
    */
-  spa?: { kind: "vite" | "cra" } | null;
+  spa?: { kind: "vite" | "cra" | "vue" | "angular" | "sveltekit"; managed?: Array<"title" | "description" | "og" | "jsonld"> } | null;
 }
 
 const COMPONENT_CODE_SKIP =
@@ -240,42 +268,35 @@ const canonicalFixer: Fixer = {
 // 3. json-ld-org (Organization + WebApplication/WebSite, appended as its own script)
 // ───────────────────────────────────────────────────────────────────────────
 
+/** Organization + WebApplication/WebSite structured data from the report's product profile. */
+function orgJsonLd(ctx: FixerContext): { payload: Record<string, unknown>; nodesLabel: string } {
+  const url = normalizeSiteUrl(ctx.siteUrl);
+  const org = {
+    "@type": "Organization",
+    name: ctx.report.product.name,
+    url,
+    description: ctx.report.product.oneLiner,
+  };
+  // Software gets a WebApplication node; every other site (store, agency,
+  // bakery, blog) a WebSite node — declaring a shop an "application" is
+  // wrong data. No Offer: a price-less Offer is flagged as incomplete.
+  const kind = `${ctx.report.product.category ?? ""} ${ctx.report.product.oneLiner ?? ""}`;
+  const isSoftware = /\b(software|saas|apps?|applications?|platform|api|sdk|analytics|developer|plugin|extension|crm|erp|tool(?:s|kit)?)\b/i.test(kind);
+  const second = isSoftware
+    ? { "@type": "WebApplication", name: ctx.report.product.name, url, applicationCategory: "BusinessApplication", description: ctx.report.product.oneLiner }
+    : { "@type": "WebSite", name: ctx.report.product.name, url, description: ctx.report.product.oneLiner };
+  // One @context on the @graph wrapper (nodes inherit it). Multiple
+  // <script type="application/ld+json"> blocks are valid and are merged by
+  // search engines — safer than rewriting an existing @graph.
+  return { payload: { "@context": "https://schema.org", "@graph": [org, second] }, nodesLabel: isSoftware ? "Organization + WebApplication" : "Organization + WebSite" };
+}
+
 const jsonLdFixer: Fixer = {
   id: "json-ld-org",
   title: "Organization JSON-LD",
   detect: (report) => triggeredBy(check(report, "Structured data (JSON-LD)")),
   build: (ctx) => {
-    const url = normalizeSiteUrl(ctx.siteUrl);
-    const org = {
-      "@type": "Organization",
-      name: ctx.report.product.name,
-      url,
-      description: ctx.report.product.oneLiner,
-    };
-    // Software gets a WebApplication node; every other site (store, agency,
-    // bakery, blog) a WebSite node — declaring a shop an "application" is
-    // wrong data. No Offer: a price-less Offer is flagged as incomplete.
-    const kind = `${ctx.report.product.category ?? ""} ${ctx.report.product.oneLiner ?? ""}`;
-    const isSoftware = /\b(software|saas|apps?|applications?|platform|api|sdk|analytics|developer|plugin|extension|crm|erp|tool(?:s|kit)?)\b/i.test(kind);
-    const second = isSoftware
-      ? {
-          "@type": "WebApplication",
-          name: ctx.report.product.name,
-          url,
-          applicationCategory: "BusinessApplication",
-          description: ctx.report.product.oneLiner,
-        }
-      : {
-          "@type": "WebSite",
-          name: ctx.report.product.name,
-          url,
-          description: ctx.report.product.oneLiner,
-        };
-    const nodesLabel = isSoftware ? "Organization + WebApplication" : "Organization + WebSite";
-    // One @context on the @graph wrapper (nodes inherit it). Multiple
-    // <script type="application/ld+json"> blocks are valid and are merged by
-    // search engines — safer than rewriting an existing @graph.
-    const payload = { "@context": "https://schema.org", "@graph": [org, second] };
+    const { payload, nodesLabel } = orgJsonLd(ctx);
     const fw = ctx.framework;
     if (fw) return buildFrameworkJsonLd(ctx, fw, payload);
     if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
@@ -870,9 +891,16 @@ const langFixer: Fixer = {
 // Framework helpers (Next.js App Router, Astro)
 // ───────────────────────────────────────────────────────────────────────────
 
-function buildFrameworkJsonLd(ctx: FixerContext, fw: FrameworkTarget, payload: unknown): BuildOutcome {
+function buildFrameworkJsonLd(
+  ctx: FixerContext,
+  fw: FrameworkTarget,
+  payload: unknown,
+  opts: { component?: string; file?: string; allowExisting?: boolean } = {},
+): BuildOutcome {
   const evidence = `Report check "Structured data (JSON-LD)" flagged: ${check(ctx.report, "Structured data (JSON-LD)")?.detail ?? "missing"}.`;
-  if (/application\/ld\+json/i.test(fw.headContent)) {
+  const component = opts.component ?? "OlmeneJsonLd";
+  const file = opts.file ?? "olmene-jsonld";
+  if (!opts.allowExisting && /application\/ld\+json/i.test(fw.headContent)) {
     return { skip: "The layout already emits JSON-LD — not adding a second, possibly conflicting block." };
   }
   const json = JSON.stringify(payload, null, 2);
@@ -898,16 +926,16 @@ function buildFrameworkJsonLd(ctx: FixerContext, fw: FrameworkTarget, payload: u
   // Next.js: a small component + one import + one element in <body>
   const srcDir = fw.headPath.startsWith("src/");
   const ext = /\.(tsx|ts)$/.test(fw.headPath) ? "tsx" : "jsx";
-  const compPath = `${srcDir ? "src/" : ""}components/olmene-jsonld.${ext}`;
-  if (ctx.treePaths.some((p) => /(^|\/)components\/olmene-jsonld\.(tsx|jsx)$/.test(p))) {
-    return { skip: "components/olmene-jsonld already exists — not overwriting it." };
+  const compPath = `${srcDir ? "src/" : ""}components/${file}.${ext}`;
+  if (ctx.treePaths.some((p) => new RegExp(`(^|/)components/${file}\\.(tsx|jsx)$`).test(p))) {
+    return { skip: `components/${file} already exists — not overwriting it.` };
   }
-  const component = [
+  const componentSource = [
     "/**",
-    " * Added by Olmene: Organization structured data (JSON-LD), so search",
-    " * engines and AI answers can identify the product behind this site.",
+    ` * Added by Olmene: ${component === "OlmeneJsonLd" ? "Organization" : "LocalBusiness"} structured data (JSON-LD), so search`,
+    " * engines and AI answers can identify the business behind this site.",
     " */",
-    "export function OlmeneJsonLd() {",
+    `export function ${component}() {`,
     `  const data = ${json.split("\n").join("\n  ")};`,
     "  return (",
     "    <script",
@@ -918,11 +946,11 @@ function buildFrameworkJsonLd(ctx: FixerContext, fw: FrameworkTarget, payload: u
     "}",
     "",
   ].join("\n");
-  const r = addBodyComponent(fw.headContent, "OlmeneJsonLd", "../components/olmene-jsonld");
+  const r = addBodyComponent(fw.headContent, component, `../components/${file}`);
   if (!r.ok) return { skip: r.reason };
   return {
     edits: [
-      { path: compPath, before: null, after: component },
+      { path: compPath, before: null, after: componentSource },
       { path: fw.headPath, before: fw.headContent, after: r.content },
     ],
     explanation: `Adds ${compPath} (Organization JSON-LD built from the report's product profile) and renders it once at the top of <body> in the root layout.`,
@@ -972,6 +1000,374 @@ function buildFrameworkSitemapRobots(ctx: FixerContext): BuildOutcome {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+// 14. app-banner: iPhone smart app banner (apple-itunes-app)
+// ───────────────────────────────────────────────────────────────────────────
+
+const appBannerFixer: Fixer = {
+  id: "app-banner",
+  title: "iPhone smart app banner",
+  // Engine v2: the free scan found an App Store link (meta.appStoreId) and no
+  // apple-itunes-app tag (Business check "biz-smart-banner").
+  detect: (report) => {
+    const id = report.meta?.appStoreId;
+    const c = report.meta?.extras?.find((e) => e.id === "biz-smart-banner");
+    return id && /^\d{6,12}$/.test(id) && c && c.status !== "pass"
+      ? { triggered: true, ref: { extra: "biz-smart-banner", appStoreId: id } }
+      : { triggered: false, ref: {} };
+  },
+  build: (ctx) => {
+    const id = ctx.report.meta.appStoreId!;
+    const spec: MetaTagSpec = { attr: "name", key: "apple-itunes-app", content: `app-id=${id}` };
+    const explanation = `Adds <meta name="apple-itunes-app" content="app-id=${id}">: Safari on iPhone then shows an "Open / Get" banner for your app at the top of the page.`;
+    const evidence = `Your homepage links to App Store app ${id} but has no smart app banner tag.`;
+    const fw = ctx.framework;
+    let path: string | null;
+    let html: string | null;
+    let selfClosing = false;
+    if (fw) {
+      if (fw.kind === "nextjs-app") {
+        const r = setMetadataNested(fw.headContent, "itunes", `{ appId: ${JSON.stringify(id)} }`);
+        if (!r.ok) return { skip: r.reason };
+        return { edits: [{ path: fw.headPath, before: fw.headContent, after: r.content }], explanation: `${explanation} Set through metadata.itunes in the root layout.`, evidence, expectedScoreChange: "Business check: smart app banner warn → pass (not part of the 21-check score)", revertSteps: ["Close the PR without merging", `Or remove itunes from the metadata in ${fw.headPath}`] };
+      }
+      if (SEO_COMPONENT.test(fw.headContent) && fw.kind === "astro") return { skip: SEO_COMPONENT_SKIP };
+      path = fw.headPath;
+      html = fw.headContent;
+      selfClosing = true;
+    } else {
+      path = ctx.homepagePath;
+      html = ctx.homepageHtml;
+    }
+    if (!path || !html) return { skip: "Homepage file not confidently identified." };
+    const r = insertMetaTags(html, [spec], selfClosing);
+    if (r === null) return { skip: "No </head> found to add the tag to." };
+    if (r.added.length === 0) return { skip: "The page already has a smart app banner tag." };
+    return { edits: [{ path, before: html, after: r.html }], explanation, evidence, expectedScoreChange: "Business check: smart app banner warn → pass (not part of the 21-check score)", revertSteps: ["Close the PR without merging", `Or remove the apple-itunes-app line in ${path}`] };
+  },
+};
+
+/** Add `key: <code>` to the App Router metadata object only when absent. */
+function setMetadataNested(src: string, key: string, code: string): { ok: true; content: string } | { ok: false; reason: string } {
+  const obj = findMetadataObject(src);
+  if ("reason" in obj) return { ok: false, reason: obj.reason };
+  if (obj.props.some((p) => p.key === key)) return { ok: false, reason: `metadata.${key} is already set.` };
+  const insertAt = obj.open + 1;
+  const next = obj.multiline || obj.props.length === 0
+    ? `${src.slice(0, insertAt)}\n${obj.indent}${key}: ${code},${src.slice(insertAt)}`
+    : `${src.slice(0, insertAt)} ${key}: ${code},${src.slice(insertAt)}`;
+  const again = findMetadataObject(next);
+  if ("reason" in again || !again.props.some((p) => p.key === key)) return { ok: false, reason: "Edit could not be verified." };
+  return { ok: true, content: next };
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// 15. local-business-schema: LocalBusiness / Restaurant JSON-LD from facts
+//     found verbatim on the page (name, phone, address, hours)
+// ───────────────────────────────────────────────────────────────────────────
+
+const LOCAL_CATEGORIES = new Set(["local", "restaurant"]);
+
+/** Keep only facts that appear on the page (phone digits, address text, times). */
+export function verifyLocalBusiness(raw: unknown, pageText: string, fallbackName: string): LocalBusinessFacts | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const text = pageText.replace(/\s+/g, " ");
+  const low = text.toLowerCase();
+  const digits = text.replace(/\D/g, "");
+  const s = (v: unknown, max = 120) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const onPage = (v: string) => v.length >= 2 && low.includes(v.toLowerCase());
+  const out: LocalBusinessFacts = { name: s(r.name, 100) || fallbackName };
+  const tel = s(r.telephone, 40);
+  const telDigits = tel.replace(/\D/g, "");
+  if (telDigits.length >= 7 && digits.includes(telDigits.slice(-7))) out.telephone = tel;
+  const street = s(r.streetAddress);
+  if (street && onPage(street)) out.streetAddress = street;
+  const locality = s(r.addressLocality, 60);
+  if (locality && onPage(locality)) out.addressLocality = locality;
+  const postal = s(r.postalCode, 12);
+  if (postal && onPage(postal)) out.postalCode = postal;
+  const country = s(r.addressCountry, 2).toUpperCase();
+  if (/^[A-Z]{2}$/.test(country) && out.streetAddress) out.addressCountry = country;
+  const hours = Array.isArray(r.openingHours) ? r.openingHours.map((h) => s(h, 40)).filter(Boolean).slice(0, 7) : [];
+  // schema.org format "Mo-Fr 09:00-18:00": every time in it must be on the page (9:00, 09:00, 9.00 or 9am).
+  const timeOnPage = (t: string) => {
+    const [hh, mm] = t.split(":").map(Number);
+    const h12 = ((hh + 11) % 12) + 1;
+    const ampm = hh < 12 ? "am" : "pm";
+    return [`${hh}:${String(mm).padStart(2, "0")}`, `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`, `${hh}.${String(mm).padStart(2, "0")}`, `${h12}${mm ? `:${String(mm).padStart(2, "0")}` : ""}${ampm}`, `${h12}${mm ? `:${String(mm).padStart(2, "0")}` : ""} ${ampm}`, `${hh}h${mm ? String(mm).padStart(2, "0") : ""}`]
+      .some((v) => low.includes(v));
+  };
+  const verifiedHours = hours.filter((h) => /^(Mo|Tu|We|Th|Fr|Sa|Su)(-(Mo|Tu|We|Th|Fr|Sa|Su))?(,(Mo|Tu|We|Th|Fr|Sa|Su))* \d{2}:\d{2}-\d{2}:\d{2}$/.test(h) && (h.match(/\d{2}:\d{2}/g) ?? []).every(timeOnPage));
+  if (verifiedHours.length) out.openingHours = verifiedHours;
+  // Google needs a name plus an address or a phone to use LocalBusiness data.
+  if (!out.streetAddress && !out.telephone) return null;
+  return out;
+}
+
+export function localBusinessJsonLd(facts: LocalBusinessFacts, siteUrl: string, restaurant: boolean): Record<string, unknown> {
+  const address = facts.streetAddress
+    ? {
+        "@type": "PostalAddress",
+        streetAddress: facts.streetAddress,
+        ...(facts.addressLocality ? { addressLocality: facts.addressLocality } : {}),
+        ...(facts.postalCode ? { postalCode: facts.postalCode } : {}),
+        ...(facts.addressCountry ? { addressCountry: facts.addressCountry } : {}),
+      }
+    : undefined;
+  return {
+    "@context": "https://schema.org",
+    "@type": restaurant ? "Restaurant" : "LocalBusiness",
+    name: facts.name,
+    url: `${normalizeSiteUrl(siteUrl)}/`,
+    ...(facts.telephone ? { telephone: facts.telephone } : {}),
+    ...(address ? { address } : {}),
+    ...(facts.openingHours?.length ? { openingHours: facts.openingHours } : {}),
+  };
+}
+
+const localBusinessFixer: Fixer = {
+  id: "local-business-schema",
+  title: "LocalBusiness structured data",
+  detect: (report) => {
+    const cat = report.meta?.category?.id;
+    const c = report.meta?.extras?.find((e) => e.id === "biz-schema");
+    return cat && LOCAL_CATEGORIES.has(cat) && c && c.status !== "pass"
+      ? { triggered: true, ref: { extra: "biz-schema", category: cat } }
+      : { triggered: false, ref: {} };
+  },
+  build: (ctx) => {
+    const facts = ctx.copy.localBusiness;
+    if (!facts) return { skip: "Your phone number or address couldn't be confirmed from the page text — not publishing business details we can't verify." };
+    const restaurant = ctx.report.meta.category?.id === "restaurant";
+    const payload = localBusinessJsonLd(facts, ctx.siteUrl, restaurant);
+    const label = restaurant ? "Restaurant" : "LocalBusiness";
+    const facts1 = [facts.telephone && "phone", facts.streetAddress && "address", facts.openingHours?.length && "opening hours"].filter(Boolean).join(", ");
+    const explanation = `Adds ${label} structured data (name, ${facts1}) taken word for word from your homepage, so Google, Maps and AI assistants can confirm where you are and when you're open.`;
+    const evidence = `The free scan's "${label} structured data" check flagged it as missing; every value was found on your homepage.`;
+    const fw = ctx.framework;
+    if (fw && (fw.kind === "nextjs-app" || fw.kind === "astro")) {
+      if (/"@type":\s*"(LocalBusiness|Restaurant)/.test(fw.headContent)) return { skip: "The layout already emits LocalBusiness data." };
+      const r = buildFrameworkJsonLd(ctx, fw, payload, { component: "OlmeneLocalBusiness", file: "olmene-local-business", allowExisting: true });
+      if ("skip" in r) return r;
+      return { ...r, explanation, evidence, expectedScoreChange: "Business check: LocalBusiness structured data warn → pass (not part of the 21-check score)" };
+    }
+    if (fw) return { skip: "Handled by the framework editor." };
+    if (!ctx.homepagePath || !ctx.homepageHtml) return { skip: "Homepage file not confidently identified." };
+    if (/"@type":\s*"(LocalBusiness|Restaurant)/.test(ctx.homepageHtml)) return { skip: "The homepage already has LocalBusiness data." };
+    const after = insertJsonLd(ctx.homepageHtml, payload);
+    if (after === null) return { skip: "No </head> anchor found for the JSON-LD script." };
+    return {
+      edits: [{ path: ctx.homepagePath, before: ctx.homepageHtml, after }],
+      explanation,
+      evidence,
+      expectedScoreChange: "Business check: LocalBusiness structured data warn → pass (not part of the 21-check score)",
+      revertSteps: ["Close the PR without merging", "Or delete the added <script type=\"application/ld+json\"> block"],
+    };
+  },
+};
+
+// ───────────────────────────────────────────────────────────────────────────
+// More frameworks (engine v2): Next.js Pages Router and Nuxt
+// ───────────────────────────────────────────────────────────────────────────
+
+const PAGES_COMPONENT_SKIP = "In the Pages Router this lives in your React components — Olmene edits <Head> blocks only, so it is left for you.";
+const NUXT_COMPONENT_SKIP = "In Nuxt this lives in your Vue components — Olmene edits nuxt.config's head defaults only, so it is left for you.";
+
+function done(path: string, before: string, after: string, explanation: string, evidence: string, expectedScoreChange: string): FixerBuildResult {
+  return { edits: [{ path, before, after }], explanation, evidence, expectedScoreChange, revertSteps: ["Close the PR without merging", `Or undo the change in ${path} shown in the diff`] };
+}
+
+function pageLanguage(ctx: FixerContext, html = ""): string | null {
+  const bodyText = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<[^>]+>/gi, " ");
+  return guessLanguage(`${bodyText} ${ctx.report.meta.pageExcerpt ?? ""}`) ?? guessLanguage(`${ctx.report.product.oneLiner} ${(ctx.report.product.valueProps ?? []).join(" ")}`);
+}
+
+function socialValues(ctx: FixerContext, title: string | null | undefined, description: string | null | undefined): Array<{ attr: "name" | "property"; key: string; content: string }> {
+  const t = title?.trim() || ctx.report.product.name;
+  const d = description?.trim() || ctx.copy.metaDescription?.trim();
+  return [
+    { attr: "property", key: "og:type", content: "website" },
+    { attr: "property", key: "og:title", content: t },
+    ...(d ? [{ attr: "property" as const, key: "og:description", content: d }] : []),
+    { attr: "property", key: "og:site_name", content: ctx.report.product.name || t },
+    { attr: "name", key: "twitter:card", content: "summary" },
+  ];
+}
+
+function buildNextPages(id: string, ctx: FixerContext, fw: FrameworkTarget, original: Fixer): BuildOutcome {
+  const page = fw.pagePath && fw.pageContent !== undefined ? { path: fw.pagePath, src: fw.pageContent } : null;
+  const doc = fw.headPath !== fw.pagePath ? { path: fw.headPath, src: fw.headContent } : null;
+  const c = (label: string) => check(ctx.report, label);
+  switch (id) {
+    case "title-tag": {
+      const draft = ctx.copy.title?.trim();
+      if (!draft || draft.length < 15 || draft.length > 60) return { skip: "No page title of 15–60 characters could be drafted with confidence." };
+      if (!page) return { skip: "pages/index not found." };
+      const r = jsxSetTitle(page.src, draft);
+      if (!r.ok) return { skip: r.reason };
+      return done(page.path, page.src, r.content, `Sets the homepage <title> in its next/head block to “${draft}” (${draft.length} characters).`, `Report check "Title tag" flagged: ${c("Title tag")?.detail ?? "missing"}.`, "SEO checklist: Title tag → pass");
+    }
+    case "meta-description": {
+      const desc = ctx.copy.metaDescription?.trim();
+      if (!desc || desc.length < 50 || desc.length > 160) return { skip: "No meta description of 50–160 characters could be drafted with confidence." };
+      if (!page) return { skip: "pages/index not found." };
+      if (jsxHasMeta(page.src, "next/head", "name", "description")) return { skip: "The homepage already sets a description in next/head." };
+      const r = jsxHeadInsert(page.src, "next/head", [jsxMeta("name", "description", desc)]);
+      if (!r.ok) return { skip: r.reason };
+      return done(page.path, page.src, r.content, `Adds a ${desc.length}-character meta description to the homepage's next/head block.`, `Report check "Meta description" failed: ${c("Meta description")?.detail ?? "missing"}.`, "SEO checklist: Meta description fail → pass (+1 of 21 checks)");
+    }
+    case "canonical-url": {
+      if (!page) return { skip: "pages/index not found." };
+      const inner = jsxHeadText(page.src, "next/head") ?? "";
+      if (/rel=["']canonical["']/.test(inner)) return { skip: "The homepage already sets a canonical link." };
+      const href = `${normalizeSiteUrl(ctx.siteUrl)}/`;
+      const r = jsxHeadInsert(page.src, "next/head", [`<link rel="canonical" href="${href}" />`]);
+      if (!r.ok) return { skip: r.reason };
+      return done(page.path, page.src, r.content, `Adds <link rel="canonical" href="${href}"> to the homepage's next/head block (this page only).`, `Report check "Canonical URL" flagged: ${c("Canonical URL")?.detail ?? "missing"}.`, "SEO checklist: Canonical URL warn → pass");
+    }
+    case "json-ld-org":
+    case "local-business-schema": {
+      let payload: unknown;
+      let what: string;
+      if (id === "local-business-schema") {
+        const facts = ctx.copy.localBusiness;
+        if (!facts) return { skip: "Your phone number or address couldn't be confirmed from the page text — not publishing business details we can't verify." };
+        payload = localBusinessJsonLd(facts, ctx.siteUrl, ctx.report.meta.category?.id === "restaurant");
+        what = "LocalBusiness structured data (facts found word for word on your homepage)";
+      } else {
+        payload = orgJsonLd(ctx).payload;
+        what = "Organization structured data built from the report's product profile";
+      }
+      const target = doc ?? page;
+      if (!target) return { skip: "pages/_document and pages/index not found." };
+      const module = doc ? "next/document" : "next/head";
+      if (/application\/ld\+json/.test(target.src)) return { skip: "This file already emits JSON-LD — not adding a second, possibly conflicting block." };
+      const r = jsxHeadInsert(target.src, module, [jsxJsonLd(payload)]);
+      if (!r.ok) return { skip: r.reason };
+      return done(target.path, target.src, r.content, `Adds ${what} to the <Head> in ${target.path}.`, `Structured data was flagged as missing by the scan.`, id === "json-ld-org" ? "SEO checklist: Structured data warn → pass" : "Business check: LocalBusiness structured data warn → pass");
+    }
+    case "social-meta": {
+      if (!page) return { skip: "pages/index not found." };
+      const inner = jsxHeadText(page.src, "next/head");
+      if (inner === null) return { skip: "The homepage doesn't use next/head — add a <Head> to pages/index first." };
+      const literalTitle = inner.match(/<title>([^<{}]+)<\/title>/)?.[1]?.trim();
+      const literalDesc = inner.match(/name="description"\s+content="([^"{}]+)"/)?.[1]?.trim();
+      const tags = socialValues(ctx, literalTitle ?? ctx.copy.title, literalDesc).filter((t) => !jsxHasMeta(page.src, "next/head", t.attr, t.key));
+      if (!tags.length) return { skip: "The homepage already has these social tags." };
+      const r = jsxHeadInsert(page.src, "next/head", tags.map((t) => jsxMeta(t.attr, t.key, t.content)));
+      if (!r.ok) return { skip: r.reason };
+      return done(page.path, page.src, r.content, `Adds ${tags.length} social preview tags (${tags.map((t) => t.key).join(", ")}) to the homepage's next/head block.`, "Open Graph / Twitter card tags were flagged by the scan.", "SEO checklist: Open Graph tags and Twitter card warn → pass");
+    }
+    case "lang-attribute": {
+      if (!doc) return { skip: "There's no pages/_document — the <html lang> attribute is set there in the Pages Router." };
+      const lang = pageLanguage(ctx);
+      if (!lang) return { skip: "The page's language couldn't be determined with confidence — not guessing." };
+      const r = jsxSetHtmlLang(doc.src, lang);
+      if (!r.ok) return { skip: r.reason };
+      return done(doc.path, doc.src, r.content, `Adds lang="${lang}" to <Html> in pages/_document.`, `Report check "Language attribute" flagged: ${c("Language attribute")?.detail ?? "missing"}.`, "SEO checklist: Language attribute warn → pass");
+    }
+    case "app-banner": {
+      const appId = ctx.report.meta.appStoreId;
+      const target = doc ?? page;
+      if (!appId || !target) return { skip: "No App Store app id or head file." };
+      const module = doc ? "next/document" : "next/head";
+      if (jsxHasMeta(target.src, module, "name", "apple-itunes-app")) return { skip: "The page already has a smart app banner tag." };
+      const r = jsxHeadInsert(target.src, module, [jsxMeta("name", "apple-itunes-app", `app-id=${appId}`)]);
+      if (!r.ok) return { skip: r.reason };
+      return done(target.path, target.src, r.content, `Adds the iPhone smart app banner tag for App Store app ${appId}.`, "The homepage links to the App Store but has no apple-itunes-app tag.", "Business check: smart app banner warn → pass");
+    }
+    case "viewport-meta":
+      return { skip: "Next.js adds the viewport tag itself — if it's missing live, check for a custom <meta name=\"viewport\"> override." };
+    case "sitemap-robots":
+    case "llms-txt":
+      return original.build(ctx);
+    default:
+      return { skip: PAGES_COMPONENT_SKIP };
+  }
+}
+
+function buildNuxt(id: string, ctx: FixerContext, fw: FrameworkTarget, original: Fixer): BuildOutcome {
+  const src = fw.headContent;
+  const c = (label: string) => check(ctx.report, label);
+  const apply = (change: NuxtHeadChange, explanation: string, evidence: string, score: string): BuildOutcome => {
+    const r = nuxtHeadEdit(src, change);
+    if (!r.ok) return { skip: r.reason };
+    return done(fw.headPath, src, r.content, explanation, evidence, score);
+  };
+  switch (id) {
+    case "title-tag": {
+      const draft = ctx.copy.title?.trim();
+      if (!draft || draft.length < 15 || draft.length > 60) return { skip: "No page title of 15–60 characters could be drafted with confidence." };
+      return apply({ title: draft }, `Sets the default title in nuxt.config (app.head.title) to “${draft}”. Pages that call useHead keep their own.`, `Report check "Title tag" flagged: ${c("Title tag")?.detail ?? "missing"}.`, "SEO checklist: Title tag → pass");
+    }
+    case "meta-description": {
+      const desc = ctx.copy.metaDescription?.trim();
+      if (!desc || desc.length < 50 || desc.length > 160) return { skip: "No meta description of 50–160 characters could be drafted with confidence." };
+      if (nuxtHeadHas(src, "description")) return { skip: "nuxt.config already sets a description." };
+      return apply({ meta: [{ attr: "name", key: "description", content: desc }] }, `Adds a default ${desc.length}-character description to nuxt.config (app.head.meta). Pages that call useSeoMeta keep their own.`, `Report check "Meta description" failed: ${c("Meta description")?.detail ?? "missing"}.`, "SEO checklist: Meta description fail → pass (+1 of 21 checks)");
+    }
+    case "json-ld-org":
+      if (/application\/ld\+json/.test(src)) return { skip: "nuxt.config already adds structured data." };
+      return apply({ jsonLd: orgJsonLd(ctx).payload }, "Adds Organization structured data to nuxt.config (app.head.script), built from the report's product profile.", "Structured data was flagged as missing by the scan.", "SEO checklist: Structured data warn → pass");
+    case "local-business-schema": {
+      const facts = ctx.copy.localBusiness;
+      if (!facts) return { skip: "Your phone number or address couldn't be confirmed from the page text — not publishing business details we can't verify." };
+      if (/application\/ld\+json/.test(src)) return { skip: "nuxt.config already adds structured data." };
+      return apply({ jsonLd: localBusinessJsonLd(facts, ctx.siteUrl, ctx.report.meta.category?.id === "restaurant") }, "Adds LocalBusiness structured data (facts found word for word on your homepage) to nuxt.config.", "The scan flagged LocalBusiness data as missing.", "Business check: LocalBusiness structured data warn → pass");
+    }
+    case "social-meta": {
+      if (nuxtHeadHas(src, "og")) return { skip: "nuxt.config already sets social tags." };
+      return apply({ meta: socialValues(ctx, ctx.copy.title, ctx.copy.metaDescription) }, "Adds default social preview tags (og:*, twitter:card) to nuxt.config.", "Open Graph / Twitter card tags were flagged by the scan.", "SEO checklist: Open Graph tags and Twitter card warn → pass");
+    }
+    case "lang-attribute": {
+      if (nuxtHeadHas(src, "lang")) return { skip: "nuxt.config already sets lang." };
+      const lang = pageLanguage(ctx);
+      if (!lang) return { skip: "The page's language couldn't be determined with confidence — not guessing." };
+      return apply({ lang }, `Sets <html lang="${lang}"> through nuxt.config (app.head.htmlAttrs).`, `Report check "Language attribute" flagged: ${c("Language attribute")?.detail ?? "missing"}.`, "SEO checklist: Language attribute warn → pass");
+    }
+    case "viewport-meta":
+      return { skip: "Nuxt adds the viewport tag itself." };
+    case "app-banner": {
+      const appId = ctx.report.meta.appStoreId;
+      if (!appId) return { skip: "No App Store app id." };
+      if (/apple-itunes-app/.test(src)) return { skip: "nuxt.config already has a smart app banner tag." };
+      return apply({ meta: [{ attr: "name", key: "apple-itunes-app", content: `app-id=${appId}` }] }, `Adds the iPhone smart app banner tag for App Store app ${appId} to nuxt.config.`, "The homepage links to the App Store but has no apple-itunes-app tag.", "Business check: smart app banner warn → pass");
+    }
+    case "canonical-url":
+      return { skip: "A canonical set in nuxt.config would apply to every page — set it per page with useHead, or the @nuxtjs/seo module." };
+    case "sitemap-robots":
+    case "llms-txt":
+      return original.build(ctx);
+    default:
+      return { skip: NUXT_COMPONENT_SKIP };
+  }
+}
+
+/** Tags a SvelteKit page or layout already sets in <svelte:head>: don't add a second copy in app.html. */
+const SPA_MANAGED: Record<string, "title" | "description" | "og" | "jsonld"> = {
+  "title-tag": "title",
+  "meta-description": "description",
+  "social-meta": "og",
+  "json-ld-org": "jsonld",
+};
+
+function withFrameworks(f: Fixer): Fixer {
+  return {
+    ...f,
+    build: (ctx) => {
+      const fw = ctx.framework;
+      if (fw?.kind === "nextjs-pages") return buildNextPages(f.id, ctx, fw, f);
+      if (fw?.kind === "nuxt") return buildNuxt(f.id, ctx, fw, f);
+      const managed = SPA_MANAGED[f.id];
+      if (managed && ctx.spa?.managed?.includes(managed)) {
+        return { skip: "Your pages set this themselves (in <svelte:head>), so adding it to src/app.html would create a duplicate." };
+      }
+      return f.build(ctx);
+    },
+  };
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 // Registry
 // ───────────────────────────────────────────────────────────────────────────
 
@@ -989,7 +1385,9 @@ export const FIXERS: Fixer[] = [
   heroCopyFixer,
   langFixer,
   llmsTxtFixer,
-];
+  localBusinessFixer,
+  appBannerFixer,
+].map(withFrameworks);
 
 export const FIXER_IDS = new Set(FIXERS.map((f) => f.id));
 
@@ -1011,6 +1409,9 @@ export const FIXER_ORDER: Record<string, number> = {
   "h1-rewrite": 60,
   "hero-copy": 62,
   "lang-attribute": 25,
+  // Before json-ld-org: a local business's LocalBusiness data is its Organization data.
+  "local-business-schema": 28,
+  "app-banner": 38,
   "sitemap-robots": 70,
   "llms-txt": 80,
 };

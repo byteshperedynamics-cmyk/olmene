@@ -91,7 +91,9 @@ export const ALLOWED_FILE_EXTENSIONS = [".html", ".htm", ".txt", ".xml"];
  */
 export const FRAMEWORK_EDIT_PATHS: RegExp[] = [
   /^(src\/)?app\/layout\.(tsx|jsx|ts|js)$/, // Next.js root layout (metadata + <body>)
-  /^(src\/)?components\/olmene-jsonld\.(tsx|jsx)$/, // the JSON-LD component Olmene adds
+  /^(src\/)?components\/olmene-(jsonld|local-business)\.(tsx|jsx)$/, // the JSON-LD components Olmene adds
+  /^(src\/)?pages\/(index|_document)\.(tsx|jsx|ts|js)$/, // Next.js Pages Router: homepage <Head>, _document
+  /^nuxt\.config\.(ts|js|mjs)$/, // Nuxt: app.head defaults
   /^src\/layouts\/[A-Za-z0-9_-]+\.astro$/, // Astro layouts (<head>)
   /^src\/pages\/index\.astro$/, // Astro homepage
 ];

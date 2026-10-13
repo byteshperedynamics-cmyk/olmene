@@ -14,8 +14,10 @@ export interface ScanRow {
     siteUrl?: string;
     fetchedAt?: string;
     checklist?: SeoCheck[];
-    stats?: { title?: string | null; h1?: string | null; metaDescription?: string | null };
+    stats?: { title?: string | null; h1?: string | null; metaDescription?: string | null; appStoreId?: string | null };
     extras?: Array<{ id: string; status: "pass" | "warn" | "fail"; detail: string }>;
+    category?: { id: string; label: string } | null;
+    platform?: { id: string } | null;
   } | null;
   page_text: string | null;
   profile: Partial<ReportData["product"]> & { positioning?: string } | null;
@@ -68,6 +70,9 @@ export function liteReportFromScan(scan: ScanRow): ReportData {
       lite: true,
       pageExcerpt: (scan.page_text ?? "").slice(0, 4000),
       extras: (scan.result?.extras ?? []).map((e) => ({ id: e.id, status: e.status, detail: e.detail })),
+      category: scan.result?.category ? { id: scan.result.category.id, label: scan.result.category.label } : null,
+      appStoreId: stats.appStoreId ?? null,
+      platformId: scan.result?.platform?.id ?? null,
     },
     executiveSummary: { headline: "", scores: { overall: 0, messaging: 0, positioning: 0, conversion: 0, seo: 0, trust: 0 }, topFindings: [], biggestOpportunity: "" },
     product,

@@ -7,22 +7,32 @@
  *  - "Preserve CSS classes/style": edits insert/replace the smallest possible
  *    fragment; surrounding markup is byte-preserved.
  *  - Supported targets: static HTML, Next.js App Router (root layout),
- *    Astro (pages/index.astro + its layout) and single-page apps whose
- *    <head> lives in one index.html (Vite: Lovable/Bolt exports; Create
- *    React App: public/index.html) — head tags only, content lives in
+ *    Next.js Pages Router (next/head + pages/_document), Nuxt (nuxt.config
+ *    app.head), Astro (pages/index.astro + its layout) and apps whose
+ *    <head> lives in one HTML shell (Vite: Lovable/Bolt exports; Create
+ *    React App and Vue CLI: public/index.html; Angular: src/index.html;
+ *    SvelteKit: src/app.html) — head tags only, content lives in
  *    components. Other frameworks are detected and skipped with a reason.
  */
 
 export interface TargetDetection {
   homepagePath: string | null;
   reason?: string;
-  repoType: "static-html" | "nextjs-app" | "astro" | "spa" | "framework" | "unknown";
-  /** Single-page apps: which toolchain serves index.html (and public/ at the site root). */
-  spaKind?: "vite" | "cra";
+  repoType: "static-html" | "nextjs-app" | "nextjs-pages" | "nuxt" | "astro" | "spa" | "framework" | "unknown";
+  /**
+   * Single-page apps and shell templates: which toolchain serves the one
+   * HTML file that is the <head> of every route (and public/ at the root).
+   */
+  spaKind?: "vite" | "cra" | "vue" | "angular" | "sveltekit";
   /** Next.js: the root layout file (app/layout.* or src/app/layout.*). */
   nextLayoutPath?: string;
   /** Astro: the homepage page file. */
   astroIndexPath?: string;
+  /** Next.js Pages Router: the homepage page and pages/_document (when present). */
+  pagesIndexPath?: string;
+  pagesDocumentPath?: string;
+  /** Nuxt: the config file that holds app.head. */
+  nuxtConfigPath?: string;
 }
 
 const NEXT_LAYOUTS = ["app/layout.tsx", "app/layout.jsx", "app/layout.ts", "app/layout.js"];
@@ -65,6 +75,31 @@ export function detectTarget(paths: string[]): TargetDetection {
     return { homepagePath: null, repoType: "astro", astroIndexPath: "src/pages/index.astro" };
   }
 
+  // Next.js Pages Router: pages/index.* is the homepage, pages/_document.* owns <Html>/<Head>.
+  const hasNextConfig = [...set].some((p) => /^next\.config\.(c|m)?(js|ts)$/.test(p));
+  if (hasNextConfig && nextLayouts.length === 0) {
+    const pageExts = ["tsx", "jsx", "js", "ts"];
+    const indexes = ["pages/", "src/pages/"].flatMap((d) => pageExts.map((e) => `${d}index.${e}`)).filter((p) => set.has(p));
+    if (indexes.length === 1) {
+      const dir = indexes[0].replace(/index\.\w+$/, "");
+      const doc = pageExts.map((e) => `${dir}_document.${e}`).find((p) => set.has(p));
+      return { homepagePath: null, repoType: "nextjs-pages", pagesIndexPath: indexes[0], ...(doc ? { pagesDocumentPath: doc } : {}) };
+    }
+  }
+
+  // Nuxt: site-wide head defaults live in nuxt.config (app.head).
+  const nuxtConfigs = ["nuxt.config.ts", "nuxt.config.js", "nuxt.config.mjs"].filter((p) => set.has(p));
+  if (nuxtConfigs.length === 1) return { homepagePath: null, repoType: "nuxt", nuxtConfigPath: nuxtConfigs[0] };
+
+  // SvelteKit: src/app.html is the shell every page renders into (head-only edits).
+  if ([...set].some((p) => /^svelte\.config\.(c|m)?(js|ts)$/.test(p)) && set.has("src/app.html")) {
+    return { homepagePath: "src/app.html", repoType: "spa", spaKind: "sveltekit" };
+  }
+  // Angular: src/index.html is the head of every route.
+  if (set.has("angular.json") && set.has("src/index.html")) {
+    return { homepagePath: "src/index.html", repoType: "spa", spaKind: "angular" };
+  }
+
   // Single-page apps: one index.html is the <head> of every route. Vite keeps
   // it at the root (Lovable, Bolt and most React starters), Create React App
   // in public/. Only when no SSR framework config is present.
@@ -74,6 +109,25 @@ export function detectTarget(paths: string[]): TargetDetection {
   }
   if (!ssrConfig && set.has("public/index.html") && [...set].some((p) => /^src\/index\.(jsx?|tsx?)$/.test(p))) {
     return { homepagePath: "public/index.html", repoType: "spa", spaKind: "cra" };
+  }
+  // Vue CLI: public/index.html + src/main.(js|ts).
+  if (!ssrConfig && set.has("public/index.html") && [...set].some((p) => /^src\/main\.(js|ts)$/.test(p))) {
+    return { homepagePath: "public/index.html", repoType: "spa", spaKind: "vue" };
+  }
+  // Static site generators: templates, not HTML pages — never edit a template as if it were the page.
+  const ssg = set.has("hugo.toml") || set.has("hugo.yaml") || (set.has("config.toml") && [...set].some((p) => p.startsWith("layouts/") || p.startsWith("themes/")))
+    ? "Hugo"
+    : set.has("_config.yml") && [...set].some((p) => p.startsWith("_layouts/") || p.startsWith("_includes/") || p === "Gemfile")
+      ? "Jekyll"
+      : [...set].some((p) => /^(\.eleventy\.js|eleventy\.config\.(c|m)?js)$/.test(p))
+        ? "Eleventy"
+        : null;
+  if (ssg) {
+    return {
+      homepagePath: null,
+      reason: `This is a ${ssg} site: its pages are built from templates Olmene doesn't edit yet. Use guided fixes — Olmene gives you each change ready to paste into your templates and checks your live site.`,
+      repoType: "framework",
+    };
   }
 
   // Other framework repos: code we do not edit yet.
@@ -85,7 +139,7 @@ export function detectTarget(paths: string[]): TargetDetection {
     return {
       homepagePath: null,
       reason:
-        "This repository uses a framework Olmene can't edit yet. Supported today: static HTML sites, Next.js (App Router), Astro and Vite / Create React App single-page apps.",
+        "This repository uses a framework Olmene can't edit yet. Supported today: static HTML, Next.js (App Router and Pages Router), Astro, Nuxt, SvelteKit, Angular, Vue and Vite / Create React App single-page apps. Guided fixes work for every site.",
       repoType: "framework",
     };
   }
