@@ -90,6 +90,11 @@ async function canary(supabase: Db, base: string, now: Date): Promise<string[]> 
   ]);
   if ((stuckReports ?? 0) > 0) problems.push(`${stuckReports} report(s) started over 2 hours ago and haven't finished`);
   if ((stuckFixes ?? 0) > 0) problems.push(`${stuckFixes} fix run(s) haven't moved for 6 hours`);
+  const { data: browser } = await supabase.from("ops_events").select("message").eq("source", "browser").gte("created_at", hours(1)).limit(200);
+  if ((browser?.length ?? 0) >= 10) {
+    const top = Object.entries((browser ?? []).reduce((m: Record<string, number>, b: { message: string }) => ({ ...m, [b.message]: (m[b.message] ?? 0) + 1 }), {})).sort((a, b) => b[1] - a[1])[0];
+    problems.push(`${browser!.length} different browser errors in the last hour (most frequent: ${top?.[0]?.slice(0, 100)})`);
+  }
   const calls = llm ?? [];
   const failed = calls.filter((c: { ok: boolean }) => !c.ok).length;
   if (calls.length >= 10 && failed / calls.length > 0.3) problems.push(`${failed} of ${calls.length} AI calls failed in the last hour`);
