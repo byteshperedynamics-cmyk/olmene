@@ -609,7 +609,8 @@ export function ReportViewer({ data }: { data: ReportData }) {
       {/* Toolbar */}
       <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          {data.meta.siteUrl} · {t("rv.generated", { date })}
+          {data.meta.siteUrl}
+          {data.meta.category ? ` · ${data.meta.category.label}` : ""} · {t("rv.generated", { date })}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={exportMarkdown}>

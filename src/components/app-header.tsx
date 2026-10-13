@@ -12,6 +12,7 @@ const NAV = [
   { href: "/app/billing/", label: "Billing", on: true },
   { href: "/app/agent/", label: "Fix runs", on: featureAgentEnabled() },
   { href: "/app/impact/", label: "Impact", on: featureMeasureEnabled() },
+  { href: "/app/alerts/", label: "Alerts", on: true },
 ].filter((n) => n.on);
 
 // Sub-pages that belong to a nav item without sharing its path prefix.
