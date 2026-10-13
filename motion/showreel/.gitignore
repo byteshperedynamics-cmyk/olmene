@@ -1,0 +1,6 @@
+node_modules/
+# renders are reproducible; only the finished film and its poster are kept
+out/*
+!out/olmene-showreel.mp4
+!out/olmene-showreel-poster.jpg
+__pycache__/

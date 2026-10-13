@@ -1,0 +1,14 @@
+{
+  "name": "olmene-showreel",
+  "private": true,
+  "type": "module",
+  "description": "Olmene 15-second motion showreel: deterministic HTML/CSS/SVG composition rendered frame by frame.",
+  "scripts": {
+    "audio": "python3 audio/synth.py",
+    "render": "node render.mjs",
+    "preview": "node render.mjs --preview"
+  },
+  "dependencies": {
+    "sharp": "^0.34.3"
+  }
+}

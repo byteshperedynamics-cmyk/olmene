@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Olmene Showreel</title>
+<meta name="viewport" content="width=1920, height=1080">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- The five-petal elm flower. Same path as src/components/animated-flower.tsx (PETAL_D). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <path id="petal" d="M-64.4 -63.9 C-67.3 -69.0 -77.2 -85.4 -81.4 -94.4 C-85.6 -103.5 -87.9 -110.7 -89.8 -118.1 C-91.7 -125.5 -92.6 -132.5 -92.8 -138.9 C-93.0 -145.2 -92.3 -150.4 -91.1 -156.2 C-89.9 -162.0 -88.2 -168.0 -85.6 -173.5 C-83.0 -179.1 -79.7 -184.6 -75.7 -189.6 C-71.6 -194.6 -66.8 -199.6 -61.2 -203.5 C-55.7 -207.3 -48.6 -210.5 -42.3 -212.7 C-36.0 -214.8 -30.9 -216.2 -23.7 -216.4 C-16.5 -216.6 -6.2 -215.7 0.9 -213.8 C8.0 -212.0 12.8 -209.5 18.9 -205.3 C25.0 -201.1 33.0 -193.7 37.5 -188.6 C42.1 -183.6 43.6 -180.7 46.1 -175.0 C48.6 -169.3 51.3 -162.1 52.4 -154.3 C53.5 -146.6 53.6 -137.2 52.7 -128.8 C51.8 -120.4 47.9 -108.3 46.9 -104.2 L46.9 -104.2 C37.7 -88.6 14.1 -10.1 -8.2 -10.7 C-30.4 -11.3 -75.3 -95.7 -86.5 -107.8 C-97.7 -119.8 -84.7 -95.8 -75.2 -82.8 C-65.7 -69.8 -31.4 -33.0 -29.6 -29.8 C-27.8 -26.7 -58.6 -58.2 -64.4 -63.9 Z"/>
+  </defs>
+</svg>
+
+<div id="stage">
+<div id="cam" class="layer">
+
+  <!-- ═══════════ dark ground (hook, answer, fix, prove) ═══════════ -->
+  <div id="bg-night" class="layer">
+    <div class="grid grid-d" id="night-grid"></div>
+    <div class="wash" id="night-wash"></div>
+  </div>
+
+  <!-- ═══════════ 1 · HOOK ═══════════ -->
+  <section id="s-hook" class="scene">
+    <div class="ignite">
+      <div class="halo" id="ig-halo"></div>
+      <div class="pulse-ring" id="ig-ring1"></div>
+      <div class="pulse-ring" id="ig-ring2"></div>
+      <div class="dot" id="ig-dot"></div>
+    </div>
+    <div class="headline serif" id="hook-l1"><span class="w m"><span class="i">Your</span></span><span class="w m"><span class="i">site</span></span><span class="w m"><span class="i">is</span></span><span class="w m"><span class="i">losing</span></span></div>
+    <div class="headline serif" id="hook-l2"><span class="w m" id="customers-mask"><span class="i" id="customers">customers.</span></span></div>
+  </section>
+
+  <canvas id="particles" width="1920" height="1080"></canvas>
+
+  <!-- ═══════════ 2 · ANSWER ═══════════ -->
+  <section id="s-answer" class="scene">
+    <div class="headline serif" id="answer-line"><span class="w m"><span class="i">Olmene</span></span><span class="w m"><span class="i"><em>ships</em></span></span><span class="w m"><span class="i"><em>the</em></span></span><span class="w m"><span class="i"><em>fix</em></span></span><span id="dot-slot" style="display:inline-block;width:0.2em;height:0;vertical-align:baseline"></span></div>
+    <div id="answer-dot">
+      <div class="halo" id="ad-halo"></div>
+      <div class="pulse-ring" id="ad-ring"></div>
+      <div class="dot" id="ad-dot"></div>
+    </div>
+  </section>
+
+  <div id="portal-rim"></div>
+
+  <!-- ═══════════ 3 · FIND (light) ═══════════ -->
+  <section id="s-find" class="scene">
+   <div class="fill"></div>
+   <div class="cam" id="find-cam">
+    <div class="grid grid-l" id="find-grid"></div>
+    <div class="wash"></div>
+    <div class="col" id="find-col">
+      <div class="eyebrow"><span class="m"><span class="i">01 · Find</span></span></div>
+      <div class="title"><span class="m"><span class="i">Find it.</span></span></div>
+      <div class="sub"><span class="m"><span class="i"><span class="mono" style="color:var(--elm);font-size:0.92em">21</span> deterministic checks</span></span><br><span class="m"><span class="i">on your live site.</span></span></div>
+    </div>
+    <div class="p3" id="find-p3">
+      <div id="browser">
+        <div class="chrome">
+          <div class="tl" style="left:24px"></div><div class="tl" style="left:44px"></div><div class="tl" style="left:64px"></div>
+          <div class="url"><span class="lock">https://</span><span id="url-text"></span><span class="caret" id="url-caret"></span></div>
+          <div id="scan-chip"><span class="d" id="scan-dot"></span><span id="scan-count">checks 00/21</span></div>
+          <div id="scan-res"><span>3 issues</span><span style="color:var(--faint-l)">· 18 passed</span></div>
+        </div>
+        <div id="page">
+          <!-- nav -->
+          <div class="blk ink" style="left:40px;top:28px;width:28px;height:28px;border-radius:50%"></div>
+          <div class="blk dk" style="left:80px;top:36px;width:76px;height:13px"></div>
+          <div class="blk" style="left:470px;top:37px;width:66px;height:12px"></div>
+          <div class="blk" style="left:556px;top:37px;width:66px;height:12px"></div>
+          <div class="blk" style="left:642px;top:37px;width:66px;height:12px"></div>
+          <div class="blk ink" style="left:896px;top:24px;width:104px;height:36px;border-radius:9px"></div>
+          <!-- hero -->
+          <div class="blk dk pg" style="left:40px;top:112px;width:430px;height:34px"></div>
+          <div class="blk dk pg" style="left:40px;top:158px;width:340px;height:34px"></div>
+          <div class="blk pg" style="left:40px;top:220px;width:400px;height:13px"></div>
+          <div class="blk pg" style="left:40px;top:243px;width:310px;height:13px"></div>
+          <div class="blk ink pg" style="left:40px;top:286px;width:160px;height:48px;border-radius:10px"></div>
+          <div class="blk out pg" style="left:214px;top:286px;width:130px;height:48px;border-radius:10px"></div>
+          <div class="blk s2 pg" style="left:556px;top:104px;width:444px;height:250px;border-radius:14px"></div>
+          <div class="blk dk pg" style="left:600px;top:262px;width:34px;height:60px;border-radius:6px"></div>
+          <div class="blk dk pg" style="left:654px;top:236px;width:34px;height:86px;border-radius:6px"></div>
+          <div class="blk dk pg" style="left:708px;top:250px;width:34px;height:72px;border-radius:6px"></div>
+          <div class="blk dk pg" style="left:762px;top:206px;width:34px;height:116px;border-radius:6px"></div>
+          <div class="blk dk pg" style="left:816px;top:180px;width:34px;height:142px;border-radius:6px"></div>
+          <div class="blk ink pg" style="left:870px;top:150px;width:34px;height:172px;border-radius:6px"></div>
+          <!-- cards -->
+          <div class="blk out pg" style="left:40px;top:396px;width:308px;height:196px;border-radius:14px"></div>
+          <div class="blk out pg" style="left:366px;top:396px;width:308px;height:196px;border-radius:14px"></div>
+          <div class="blk out pg" style="left:692px;top:396px;width:308px;height:196px;border-radius:14px"></div>
+          <div class="blk dk pg" style="left:62px;top:418px;width:38px;height:38px;border-radius:50%"></div>
+          <div class="blk dk pg" style="left:388px;top:418px;width:38px;height:38px;border-radius:50%"></div>
+          <div class="blk dk pg" style="left:714px;top:418px;width:38px;height:38px;border-radius:50%"></div>
+          <div class="blk dk pg" style="left:62px;top:478px;width:200px;height:15px"></div>
+          <div class="blk dk pg" style="left:388px;top:478px;width:172px;height:15px"></div>
+          <div class="blk dk pg" style="left:714px;top:478px;width:214px;height:15px"></div>
+          <div class="blk pg" style="left:62px;top:510px;width:250px;height:11px"></div>
+          <div class="blk pg" style="left:388px;top:510px;width:236px;height:11px"></div>
+          <div class="blk pg" style="left:714px;top:510px;width:254px;height:11px"></div>
+          <div class="blk pg" style="left:62px;top:530px;width:190px;height:11px"></div>
+          <div class="blk pg" style="left:388px;top:530px;width:204px;height:11px"></div>
+          <div class="blk pg" style="left:714px;top:530px;width:170px;height:11px"></div>
+          <!-- findings -->
+          <div class="hl" id="hl2" style="left:456px;top:22px;width:266px;height:42px"></div>
+          <div class="hl" id="hl1" style="left:28px;top:100px;width:456px;height:104px"></div>
+          <div class="hl" id="hl3" style="left:28px;top:384px;width:984px;height:220px"></div>
+          <div id="beam"><div class="trail"></div><div class="line"></div></div>
+        </div>
+        <div class="pin" id="pin2" style="left:612px;top:112px"><span class="d"></span>Pricing hidden</div>
+        <div class="pin" id="pin1" style="left:404px;top:198px"><span class="d" id="pin1-dot"></span>No meta description</div>
+        <div class="pin" id="pin3" style="left:560px;top:420px"><span class="d"></span>Unreadable to AI search</div>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <!-- ═══════════ 4 · FIX (dark) ═══════════ -->
+  <section id="s-fix" class="scene">
+   <div class="cam" id="fix-cam">
+    <div class="col" id="fix-col">
+      <div class="eyebrow"><span class="m"><span class="i">02 · Fix</span></span></div>
+      <div class="title"><span class="m"><span class="i">Fix it.</span></span></div>
+      <div class="sub"><span class="m"><span class="i">A pull request with</span></span><br><span class="m"><span class="i">every change explained.</span></span></div>
+    </div>
+    <div class="p3" id="fix-p3">
+      <div id="panel">
+        <div class="hd">
+          <svg class="fl" id="work-flower" viewBox="-263 -263 526 526" overflow="visible"><g fill="currentColor"><use href="#petal"/><use href="#petal" transform="rotate(72)"/><use href="#petal" transform="rotate(144)"/><use href="#petal" transform="rotate(216)"/><use href="#petal" transform="rotate(288)"/></g></svg>
+          <div class="h1" id="work-title">Olmene is working</div>
+          <div class="h2">acme/site · olmene/fix-meta</div>
+          <div class="steps">
+            <div class="step done" id="st1"><span class="d"></span>Scan</div>
+            <div class="step done" id="st2"><span class="d"></span>Plan</div>
+            <div class="step on" id="st3"><span class="d"></span>Draft</div>
+            <div class="step" id="st4"><span class="d"></span>Review</div>
+            <div class="step" id="st5"><span class="d"></span>PR</div>
+          </div>
+        </div>
+        <div class="fb">app/layout.tsx<span class="st"><span style="color:var(--leaf)">+4</span>&nbsp;&nbsp;<span style="color:var(--rust)">−1</span></span></div>
+        <div id="diff"></div>
+        <div class="ck" id="ck0" style="top:500px"><div class="bx" id="bx0"></div><div class="tx">Descriptive title and meta description</div><div class="imp hi">high impact</div></div>
+        <div class="ck" id="ck1" style="top:558px"><div class="bx" id="bx1"></div><div class="tx">Pricing link in the navigation</div><div class="imp md">medium</div></div>
+        <div class="ck" id="ck2" style="top:616px"><div class="bx" id="bx2"></div><div class="tx">Organization JSON-LD for AI search</div><div class="imp hi">high impact</div></div>
+        <div id="approve"><span id="approve-t">Approve 3 changes</span></div>
+        <div class="note">Nothing merges without you.</div>
+      </div>
+    </div>
+   </div>
+  </section>
+
+  <div id="morph"></div>
+
+  <div id="toast">
+    <svg class="ic" viewBox="0 0 30 30" overflow="visible">
+      <circle id="toast-pulse" cx="15" cy="15" r="7" fill="none" stroke="#9BE3AD" stroke-width="2"/>
+      <circle id="toast-dot" cx="15" cy="15" r="6" fill="#9BE3AD"/>
+      <circle id="toast-ring" cx="15" cy="15" r="13" fill="none" stroke="#9BE3AD" stroke-width="2.5"/>
+      <path id="toast-check" d="M9 15.5 L13.2 19.6 L21.2 10.8" fill="none" stroke="#9BE3AD" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="t1" id="toast-t1">PR #14 opened · 3 fixes</span>
+    <span class="t2" id="toast-t2">view diff →</span>
+  </div>
+
+  <div id="ripple"></div>
+  <svg id="cursor" viewBox="0 0 34 40" overflow="visible"><path d="M4 3 L4 31.5 L11.2 25 L16.4 36.4 L21.6 34.2 L16.6 23.2 L26.4 23.2 Z" fill="#F5F4EF" stroke="#141513" stroke-width="2.2" stroke-linejoin="round"/></svg>
+
+  <!-- ═══════════ 5 · PROVE (dark) ═══════════ -->
+  <section id="s-prove" class="scene">
+   <div class="cam" id="prove-cam">
+    <div class="col" id="prove-col">
+      <div class="eyebrow"><span class="m"><span class="i">03 · Prove</span></span></div>
+      <div class="title"><span class="m"><span class="i">Prove it.</span></span></div>
+      <div class="sub"><span class="m"><span class="i">Re-checks your live site</span></span><br><span class="m"><span class="i">after every merge.</span></span></div>
+    </div>
+    <svg id="ring" viewBox="0 0 1920 1080" overflow="visible">
+      <defs>
+        <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+        <radialGradient id="tip-glow"><stop offset="0" stop-color="#B7F5C6" stop-opacity=".9"/><stop offset=".35" stop-color="#69C27E" stop-opacity=".45"/><stop offset="1" stop-color="#69C27E" stop-opacity="0"/></radialGradient>
+      </defs>
+      <g id="ring-g">
+        <circle id="ring-track" r="200" fill="none" stroke="rgba(245,244,239,.08)" stroke-width="22"/>
+        <circle id="ring-ticks" r="236" fill="none" stroke="rgba(245,244,239,.10)" stroke-width="10" stroke-dasharray="1.5 22.2"/>
+        <circle id="ring-glow" r="200" fill="none" stroke="#69C27E" stroke-width="22" stroke-linecap="round" filter="url(#soft-glow)" opacity=".7"/>
+        <circle id="ring-arc" r="200" fill="none" stroke="#69C27E" stroke-width="22" stroke-linecap="round"/>
+        <circle id="ring-tipglow" r="46" fill="url(#tip-glow)"/>
+        <circle id="ring-tip" r="7" fill="#E8FBEE"/>
+        <path id="ring-check" d="M-6 0.5 L-1.8 4.6 L6.2 -4.2" fill="none" stroke="#9BE3AD" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </svg>
+    <div id="score" class="serif tnum"><span class="odo"><span class="strip" id="odo-t"></span></span><span class="odo"><span class="strip" id="odo-o"></span></span></div>
+    <div id="score-label">READINESS / 100</div>
+    <div id="score-delta"><span class="m"><span class="i">▲ 33 since your merge</span></span></div>
+    <div id="chart">
+      <div class="h1">Clicks from Google</div>
+      <div class="h2">last 60 days</div>
+      <div class="ex">EXAMPLE DATA</div>
+      <div id="kpi" class="serif tnum">+0%</div>
+      <div id="kpi-l">since the first fix</div>
+      <svg id="plot" width="568" height="600" overflow="visible"></svg>
+    </div>
+   </div>
+  </section>
+
+  <div id="travel">
+    <div class="halo" id="tr-halo"></div>
+    <div class="dot" id="tr-dot"></div>
+  </div>
+
+  <!-- ═══════════ 6 · LOGO (light) ═══════════ -->
+  <section id="s-logo" class="scene">
+   <div class="fill"></div>
+   <div class="cam" id="logo-cam">
+    <div class="grid grid-l" id="logo-grid"></div>
+    <div id="shockring"></div>
+    <div class="wash" id="logo-wash"></div>
+    <div id="logo-flower">
+      <svg viewBox="-263 -263 526 526" overflow="visible">
+        <g id="lf-all" fill="currentColor">
+          <g id="lp0"><use href="#petal"/></g>
+          <g id="lp1"><use href="#petal"/></g>
+          <g id="lp2"><use href="#petal"/></g>
+          <g id="lp3"><use href="#petal"/></g>
+          <g id="lp4"><use href="#petal"/></g>
+        </g>
+      </svg>
+    </div>
+    <div id="wordmark"><span class="m"><span class="i">o</span></span><span class="m"><span class="i">l</span></span><span class="m"><span class="i">m</span></span><span class="m"><span class="i">e</span></span><span class="m"><span class="i">n</span></span><span class="m"><span class="i">e</span></span></div>
+    <div id="tagline"><span class="w m"><span class="i">Find it.</span></span><span class="w m"><span class="i">Fix it.</span></span><span class="w m"><span class="i"><em>Prove it.</em></span></span></div>
+    <div id="url"><span class="m"><span class="i"><span class="d" id="url-dot"></span>olmene.com</span></span></div>
+   </div>
+  </section>
+</div>
+</div>
+
+<script src="cues.js"></script>
+<script src="engine.js"></script>
+<script src="scenes.js"></script>
+</body>
+</html>
