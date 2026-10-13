@@ -170,6 +170,48 @@ export const cancelAgentJob = (id: string) => call<{ ok: boolean }>("POST", `/ap
 export const getAgentReceipt = (id: string) =>
   call<{ content: string; createdAt: string }>("GET", `/api/agent/jobs/${id}/receipt/`);
 
+// ── Guided fixes (engine v2): any platform, no repository ────────────────
+
+export interface GuidedValue {
+  label: string;
+  value: string;
+  /** text: paste into a field; code: paste into a code box (render as text, never as HTML); file: offer a download. */
+  kind: "text" | "code" | "file";
+  current?: string | null;
+  filename?: string;
+}
+export interface GuidedFix {
+  id: string;
+  title: string;
+  why: string;
+  values: GuidedValue[];
+  steps: string[];
+  /** Set when the platform can't make this change (show instead of steps). */
+  blocked?: string;
+  status: "todo" | "live" | "not_live" | "blocked";
+  checkDetail?: string | null;
+}
+export interface GuidedRun {
+  id: string;
+  site_url: string;
+  platform_id: string | null;
+  platform: { id: string; label: string; notes?: string };
+  fixes: GuidedFix[];
+  live_count: number;
+  total_count: number;
+  last_checked_at: string | null;
+  created_at: string;
+  scan_id: string | null;
+  report_id: string | null;
+}
+/** From a saved free scan (free, 3/day; 429 rate_limited) or a report (jobId = the analysis job). 422 site_unreachable / nothing_to_fix. */
+export const startGuidedRun = (source: { scanId: string } | { jobId: string }) =>
+  call<{ run: GuidedRun }>("POST", "/api/agent/guided/", source);
+export const getGuidedRuns = () => call<{ runs: Array<Omit<GuidedRun, "fixes" | "platform_id">> }>("GET", "/api/agent/guided/");
+export const getGuidedRun = (id: string) => call<{ run: GuidedRun }>("GET", `/api/agent/guided/${id}/`);
+/** "I've made the changes": re-check the live site now (429 if called within 20 s). */
+export const verifyGuidedRun = (id: string) => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/verify/`);
+
 // ── Measure (Search Console impact) ────────────────────────────────────────
 
 export const featureMeasureEnabled = () =>
