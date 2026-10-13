@@ -18,6 +18,7 @@
     "smoke": "node scripts/smoke.mjs",
     "deploy:gated": "node scripts/gated-deploy.mjs",
     "check:rls": "node scripts/check-rls.mjs",
+    "eval:reports": "bun scripts/eval-reports.ts",
     "test:measure": "bun test src/lib/measure",
     "test": "bun test src/lib"
   },
