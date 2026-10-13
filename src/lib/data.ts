@@ -260,3 +260,52 @@ export async function getPlans(): Promise<Plan[]> {
   const { data } = await supabase.from("plans").select("*").eq("active", true).order("sort_order");
   return (data ?? []) as Plan[];
 }
+
+// ── Sites and activity (engine v1/v2 tables; RLS: own rows) ──────────────
+
+/** A site Olmene watches: created when a report on it completes. */
+export interface SiteRow {
+  id: string;
+  url: string;
+  host: string;
+  monitor: boolean;
+  last_scan_at: string | null;
+  last_score: number | null;
+  next_scan_at: string | null;
+  created_at: string;
+  /** Latest weekly AI search check (null until the first one runs). */
+  ai_last: { mentionShare: number; citeShare: number; checkedAt: string } | null;
+}
+
+export async function listSites(): Promise<SiteRow[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("sites")
+    .select("id, url, host, monitor, last_scan_at, last_score, next_scan_at, created_at, ai_last")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) return [];
+  return (data ?? []) as SiteRow[];
+}
+
+/** Emails and alerts Olmene queued for the user, newest first (the activity feed). */
+export interface NotificationRow {
+  id: number;
+  kind: string;
+  payload: Record<string, unknown>;
+  status: "pending" | "sent" | "skipped" | "failed";
+  created_at: string;
+}
+
+export async function listNotifications(limit = 15): Promise<NotificationRow[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id, kind, payload, status, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return (data ?? []) as NotificationRow[];
+}

@@ -9,6 +9,7 @@ import { featureAgentEnabled, featureMeasureEnabled } from "@/lib/agent-client";
 
 const NAV = [
   { href: "/app/", label: "Analyses", on: true },
+  { href: "/app/sites/", label: "Sites", on: true },
   { href: "/app/billing/", label: "Billing", on: true },
   { href: "/app/agent/", label: "Fix runs", on: featureAgentEnabled() },
   { href: "/app/impact/", label: "Impact", on: featureMeasureEnabled() },

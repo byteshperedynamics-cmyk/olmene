@@ -635,5 +635,14 @@
   "sec.proc.github.data": "Solo los repositorios que eliges, y solo si conectas GitHub.",
   "sec.proc.ga.role": "Analítica",
   "sec.proc.ga.data": "Uso anónimo del sitio, solo si aceptas las cookies.",
-  "review.prOpened": "PR {pr} abierto"
+  "review.prOpened": "PR {pr} abierto",
+  "rv.unverified": "Cifra no encontrada en la fuente citada",
+  "rv.speedTitle": "Velocidad móvil (prueba de laboratorio)",
+  "rv.speedNote": "Medido una vez con PageSpeed Insights en un teléfono de gama media simulado. Las cifras de laboratorio varían entre ejecuciones: tómalas como una tendencia, no como un veredicto.",
+  "rv.speedPerf": "Rendimiento",
+  "rv.speedLcp": "Mayor renderizado (LCP)",
+  "rv.speedCls": "Cambio de diseño (CLS)",
+  "rv.speedTbt": "Tiempo de bloqueo (TBT)",
+  "rv.qualityNote": "Verificación: se compararon {checked} cifras de mercado con sus fuentes citadas; {unverified} no se encontraron allí y están marcadas.",
+  "rv.qualityAll": "Verificación: las {checked} cifras de mercado aparecen en sus fuentes citadas."
 }

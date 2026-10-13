@@ -635,5 +635,14 @@
   "sec.proc.github.data": "仅限你选择的仓库,且仅在你连接 GitHub 时。",
   "sec.proc.ga.role": "分析",
   "sec.proc.ga.data": "网站的匿名使用情况,仅在你接受 Cookie 时。",
-  "review.prOpened": "已打开 PR {pr}"
+  "review.prOpened": "已打开 PR {pr}",
+  "rv.unverified": "引用来源中未找到该数字",
+  "rv.speedTitle": "移动端速度（实验室测试）",
+  "rv.speedNote": "使用 PageSpeed Insights 在模拟中端手机上测量一次。实验室数据每次运行都会波动：请将其视为趋势，而非定论。",
+  "rv.speedPerf": "性能",
+  "rv.speedLcp": "最大内容绘制 (LCP)",
+  "rv.speedCls": "布局偏移 (CLS)",
+  "rv.speedTbt": "阻塞时间 (TBT)",
+  "rv.qualityNote": "数据核查：已将 {checked} 个市场数字与其引用来源进行比对；其中 {unverified} 个未能在来源中找到，已作标记。",
+  "rv.qualityAll": "数据核查：全部 {checked} 个市场数字均在其引用来源中找到。"
 }

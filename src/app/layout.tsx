@@ -5,6 +5,7 @@ import { Providers } from "@/components/providers";
 import { Analytics } from "@/components/analytics";
 import { CookieConsent } from "@/components/cookie-consent";
 import { SkipLink } from "@/components/skip-link";
+import { ErrorReporter } from "@/components/error-reporter";
 import { I18nProvider } from "@/i18n/provider";
 import { APP_NAME, APP_DESCRIPTION, APP_TAGLINE, APP_URL } from "@/lib/config";
 
@@ -131,6 +132,7 @@ export default function RootLayout({
         />
         <I18nProvider>
           <SkipLink />
+          <ErrorReporter />
           <Providers>{children}</Providers>
           <CookieConsent />
         </I18nProvider>

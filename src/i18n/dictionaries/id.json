@@ -635,5 +635,14 @@
   "sec.proc.github.data": "Hanya repositori yang Anda pilih, dan hanya saat Anda menghubungkan GitHub.",
   "sec.proc.ga.role": "Analitik",
   "sec.proc.ga.data": "Penggunaan situs secara anonim, hanya jika Anda menerima cookie.",
-  "review.prOpened": "PR {pr} dibuka"
+  "review.prOpened": "PR {pr} dibuka",
+  "rv.unverified": "Angka tidak ditemukan di sumber yang dikutip",
+  "rv.speedTitle": "Kecepatan seluler (uji lab)",
+  "rv.speedNote": "Diukur sekali dengan PageSpeed Insights pada simulasi ponsel kelas menengah. Angka lab berubah di setiap pengujian: anggap sebagai arah, bukan vonis.",
+  "rv.speedPerf": "Performa",
+  "rv.speedLcp": "Render terbesar (LCP)",
+  "rv.speedCls": "Pergeseran tata letak (CLS)",
+  "rv.speedTbt": "Waktu pemblokiran (TBT)",
+  "rv.qualityNote": "Pemeriksaan klaim: {checked} angka pasar dibandingkan dengan sumber yang dikutip; {unverified} tidak ditemukan di sana dan diberi tanda.",
+  "rv.qualityAll": "Pemeriksaan klaim: semua {checked} angka pasar ditemukan di sumber yang dikutip."
 }

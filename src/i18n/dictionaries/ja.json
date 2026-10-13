@@ -635,5 +635,14 @@
   "sec.proc.github.data": "選択したリポジトリのみ、しかも GitHub を接続したときだけ。",
   "sec.proc.ga.role": "アクセス解析",
   "sec.proc.ga.data": "サイトの匿名の利用状況(Cookie に同意した場合のみ)。",
-  "review.prOpened": "PR {pr} を作成"
+  "review.prOpened": "PR {pr} を作成",
+  "rv.unverified": "引用元にこの数値が見つかりません",
+  "rv.speedTitle": "モバイル速度（ラボテスト）",
+  "rv.speedNote": "PageSpeed Insights でミドルレンジ端末をシミュレートし、1 回計測しました。ラボの数値は計測ごとに変動します。結論ではなく傾向として見てください。",
+  "rv.speedPerf": "パフォーマンス",
+  "rv.speedLcp": "最大コンテンツの描画 (LCP)",
+  "rv.speedCls": "レイアウトのずれ (CLS)",
+  "rv.speedTbt": "ブロック時間 (TBT)",
+  "rv.qualityNote": "主張チェック：市場に関する {checked} 件の数値を引用元と照合しました。うち {unverified} 件は引用元に見つからず、印を付けています。",
+  "rv.qualityAll": "主張チェック：市場に関する {checked} 件の数値はすべて引用元で確認できました。"
 }

@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getEntitlement } from "@/lib/data";
 import { ConnectPanel } from "@/components/v2/agent/connect-panel";
 import { StateMessage } from "@/components/v2/agent/job-view";
+import { PrChecksPanel } from "@/components/v2/agent/pr-checks-panel";
 import { useAgentHub, type DisconnectResult } from "@/components/v2/agent/use-agent-hub";
 import { statusLine } from "@/components/v2/agent/fixers";
 
@@ -140,8 +141,8 @@ export default function AgentPage() {
         <>
           <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-5">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-9 place-items-center rounded-full bg-leaf-soft">
-                <ShieldCheck className="size-4 text-primary" aria-hidden />
+              <span className="grid size-9 place-items-center rounded-full bg-tel-emerald/10">
+                <ShieldCheck className="size-4 text-tel-emerald" aria-hidden />
               </span>
               <div className="min-w-0">
                 <p className="text-[14px] font-medium">
@@ -201,6 +202,8 @@ export default function AgentPage() {
               />
             )}
           </section>
+
+          <PrChecksPanel repos={activeConnection.repos ?? []} defaultSiteUrl={completedReports[0]?.siteUrl} />
         </>
       )}
 

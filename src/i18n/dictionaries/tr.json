@@ -635,5 +635,14 @@
   "sec.proc.github.data": "Yalnızca seçtiğiniz depolar ve yalnızca GitHub'ı bağladığınızda.",
   "sec.proc.ga.role": "Analitik",
   "sec.proc.ga.data": "Sitenin anonim kullanımı; yalnızca çerezleri kabul ederseniz.",
-  "review.prOpened": "PR {pr} açıldı"
+  "review.prOpened": "PR {pr} açıldı",
+  "rv.unverified": "Sayı, belirtilen kaynakta bulunamadı",
+  "rv.speedTitle": "Mobil hız (laboratuvar testi)",
+  "rv.speedNote": "PageSpeed Insights ile simüle edilmiş orta seviye bir telefonda bir kez ölçüldü. Laboratuvar sayıları her ölçümde değişir: bunları bir hüküm değil, bir yön olarak okuyun.",
+  "rv.speedPerf": "Performans",
+  "rv.speedLcp": "En büyük içerik boyaması (LCP)",
+  "rv.speedCls": "Düzen kayması (CLS)",
+  "rv.speedTbt": "Engelleme süresi (TBT)",
+  "rv.qualityNote": "İddia kontrolü: {checked} pazar sayısı, belirtilen kaynaklarıyla karşılaştırıldı; {unverified} tanesi orada bulunamadı ve işaretlendi.",
+  "rv.qualityAll": "İddia kontrolü: {checked} pazar sayısının tümü belirtilen kaynaklarda bulundu."
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Download, ExternalLink, Printer } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, Printer, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,12 +17,12 @@ import { SEVERITY_KEYS, STATUS_KEYS, EFFORT_KEYS, IMPACT_KEYS, CONFIDENCE_KEYS, 
 function SourceRefs({ ids, sources }: { ids?: string[]; sources: ReportData["sources"] }) {
   if (!ids?.length) return null;
   return (
-    <span className="ms-1 font-mono text-xs text-primary">
+    <span className="ms-1 inline-flex flex-wrap gap-1 align-middle font-mono text-[10.5px] text-tel-sky">
       {ids.map((id) => {
         const s = sources.find((x) => x.id === id);
         return s ? (
-          <a key={id} href={s.url} target="_blank" rel="noopener noreferrer" title={s.title} className="hover:underline">
-            [{id}]
+          <a key={id} href={s.url} target="_blank" rel="noopener noreferrer" title={s.title} className="rounded border border-tel-sky/35 px-1 leading-4 hover:bg-tel-sky/10">
+            {id}
           </a>
         ) : (
           <span key={id}>[{id}]</span>
@@ -32,10 +32,46 @@ function SourceRefs({ ids, sources }: { ids?: string[]; sources: ReportData["sou
   );
 }
 
+/** engine v2: a market number that isn't in any of its cited sources. */
+function Unverified() {
+  const { t } = useI18n();
+  return (
+    <span className="ms-2 inline-flex items-center gap-1 rounded-full border border-tel-amber/40 bg-tel-amber/10 px-2 py-0.5 align-middle font-mono text-[10.5px] font-normal text-tel-amber">
+      <TriangleAlert className="size-3" aria-hidden /> {t("rv.unverified")}
+    </span>
+  );
+}
+
+/** engine v2: mobile lab speed from PageSpeed Insights, labelled as a lab test. */
+function SpeedBlock({ speed }: { speed: NonNullable<ReportData["meta"]["speed"]> }) {
+  const { t } = useI18n();
+  const tone = (good: boolean, ok: boolean) => (good ? "text-tel-emerald" : ok ? "text-tel-amber" : "text-tel-rose");
+  const rows: Array<[string, string | null, string]> = [
+    ["rv.speedPerf", speed.performance == null ? null : `${speed.performance}/100`, speed.performance == null ? "" : tone(speed.performance >= 90, speed.performance >= 50)],
+    ["rv.speedLcp", speed.lcpMs == null ? null : `${(speed.lcpMs / 1000).toFixed(1)} s`, speed.lcpMs == null ? "" : tone(speed.lcpMs <= 2500, speed.lcpMs <= 4000)],
+    ["rv.speedCls", speed.cls == null ? null : speed.cls.toFixed(2), speed.cls == null ? "" : tone(speed.cls <= 0.1, speed.cls <= 0.25)],
+    ["rv.speedTbt", speed.tbtMs == null ? null : `${Math.round(speed.tbtMs)} ms`, speed.tbtMs == null ? "" : tone(speed.tbtMs <= 200, speed.tbtMs <= 600)],
+  ];
+  return (
+    <div>
+      <h3 className="font-display text-lg font-semibold">{t("rv.speedTitle")}</h3>
+      <dl className="o-artifact mt-3 grid grid-cols-2 gap-4 rounded-2xl p-5 sm:grid-cols-4 print-block">
+        {rows.map(([k, v, cls]) => (
+          <div key={k} className="grid gap-1">
+            <dt className="text-xs text-muted-foreground">{t(k)}</dt>
+            <dd className={`o-readout-strong text-lg ${v ? cls : "text-faint"}`}>{v ?? "—"}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2 text-xs leading-relaxed text-faint">{t("rv.speedNote")}</p>
+    </div>
+  );
+}
+
 function FindingCard({ f, sources }: { f: AuditFinding; sources: ReportData["sources"] }) {
   const { t } = useI18n();
   return (
-    <div className="rounded-lg border bg-background p-4 print-block">
+    <div className="o-artifact rounded-xl p-4 print-block">
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${severityClass(f.severity)}`}>
           {t(SEVERITY_KEYS[f.severity] ?? f.severity)}
@@ -111,9 +147,9 @@ export function ConversionDiffSection({ diff }: { diff: ConversionDiff }) {
         <p className="mt-1 text-sm text-muted-foreground">{t("rv.copyBody")}</p>
       </div>
       {diff.fields.map((f) => (
-        <div key={f.kind} className="rounded-lg border bg-background p-4 print-block">
+        <div key={f.kind} className="o-artifact rounded-xl p-4 print-block">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+            <span className="rounded border border-rim bg-chip px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wide text-muted-foreground">
               {COPY_KIND_LABEL[f.kind]}
             </span>
             <span className="font-mono text-[11px] text-muted-foreground" dir="ltr">
@@ -131,7 +167,7 @@ export function ConversionDiffSection({ diff }: { diff: ConversionDiff }) {
               <span className="line-through decoration-muted-foreground/50">{f.before}</span>
             </p>
             <p>
-              <span className="me-1.5 inline-block w-12 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-primary">{t("rv.copyAfter")}</span>
+              <span className="me-1.5 inline-block w-12 shrink-0 text-[11px] font-semibold uppercase tracking-wide text-tel-emerald">{t("rv.copyAfter")}</span>
               <span className="font-medium">{f.after}</span>
             </p>
           </div>
@@ -139,7 +175,7 @@ export function ConversionDiffSection({ diff }: { diff: ConversionDiff }) {
             <span className="font-medium text-foreground">{t("rv.copyWhy")}</span>{" "}
             {f.rationale}
           </p>
-          <div className="mt-3 overflow-hidden rounded-md border bg-surface-2/60" dir="ltr">
+          <div className="o-well mt-3 overflow-hidden rounded-lg" dir="ltr">
             <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
               <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">HTML</span>
               <div className="flex gap-1">
@@ -174,7 +210,7 @@ export function SummarySection({ r }: { r: ReportData }) {
   const s = r.executiveSummary.scores;
   return (
     <div className="space-y-6">
-      <div className="grid items-center gap-8 rounded-xl border bg-background p-6 sm:grid-cols-[auto_1fr] print-block">
+      <div className="o-artifact grid items-center gap-8 rounded-2xl p-6 sm:grid-cols-[auto_1fr] print-block">
         <ScoreRing value={s.overall} size={128} label={`${t(scoreLabelKey(s.overall))} · ${t("scores.of100")}`} />
         <div className="grid gap-3">
           <ScoreBar label={t("scores.messagingShort")} value={s.messaging} />
@@ -190,14 +226,14 @@ export function SummarySection({ r }: { r: ReportData }) {
         <ul className="mt-3 space-y-2.5">
           {r.executiveSummary.topFindings.map((f, i) => (
             <li key={i} className="flex items-start gap-2.5 leading-relaxed">
-              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+              <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-faint" aria-hidden />
               <span>{f}</span>
             </li>
           ))}
         </ul>
       </div>
-      <div className="rounded-lg border border-primary/30 bg-primary/5 p-5 print-block">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t("common.biggestOpportunity")}</p>
+      <div className="o-artifact rounded-xl p-5 print-block">
+        <p className="text-xs font-semibold uppercase tracking-wider text-tel-emerald">{t("common.biggestOpportunity")}</p>
         <p className="mt-1.5 leading-relaxed">{r.executiveSummary.biggestOpportunity}</p>
       </div>
       {r.conversionDiff?.fields?.length ? <ConversionDiffSection diff={r.conversionDiff} /> : null}
@@ -213,13 +249,13 @@ export function ProductSection({ r }: { r: ReportData }) {
       <p className="font-display text-lg font-semibold">{p.name} — {p.category}</p>
       <p className="leading-relaxed text-muted-foreground">{p.oneLiner}</p>
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-xl border bg-background p-5 print-block">
+        <div className="o-artifact rounded-2xl p-5 print-block">
           <h3 className="font-semibold">{t("rv.offerings")}</h3>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            {p.offerings.map((o, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" aria-hidden />{o}</li>)}
+            {p.offerings.map((o, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" aria-hidden />{o}</li>)}
           </ul>
         </div>
-        <div className="rounded-xl border bg-background p-5 print-block">
+        <div className="o-artifact rounded-2xl p-5 print-block">
           <h3 className="font-semibold">{t("rv.pricingModel")}</h3>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.pricingModel}</p>
         </div>
@@ -228,14 +264,14 @@ export function ProductSection({ r }: { r: ReportData }) {
         <h3 className="font-semibold">{t("rv.targetCustomers")}</h3>
         <div className="mt-3 flex flex-wrap gap-2">
           {p.targetCustomers.map((tc, i) => (
-            <span key={i} className="rounded-full border bg-background px-3 py-1 text-sm text-muted-foreground">{tc}</span>
+            <span key={i} className="rounded-full border border-rim bg-chip px-3 py-1 text-sm text-muted-foreground">{tc}</span>
           ))}
         </div>
       </div>
       <div>
         <h3 className="font-semibold">{t("rv.valueProps")}</h3>
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-          {p.valueProps.map((v, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" aria-hidden />{v}</li>)}
+          {p.valueProps.map((v, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" aria-hidden />{v}</li>)}
         </ul>
       </div>
     </div>
@@ -248,10 +284,13 @@ export function MarketSection({ r }: { r: ReportData }) {
   return (
     <div className="space-y-6">
       <p className="leading-relaxed">{m.definition}</p>
-      <div className="grid gap-4 rounded-xl border bg-background p-5 sm:grid-cols-3 print-block">
+      <div className="o-artifact grid gap-4 rounded-2xl p-5 sm:grid-cols-3 print-block">
         <div className="sm:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("rv.marketSize")}</p>
-          <p className="mt-1 font-display text-xl font-bold">{m.size.value}</p>
+          <p className="mt-1 font-display text-xl font-bold">
+            {m.size.value}
+            {m.size.verified === false && <Unverified />}
+          </p>
           <p className="mt-1 text-sm text-muted-foreground">{m.size.basis}</p>
         </div>
         <div className="sm:text-end">
@@ -266,8 +305,12 @@ export function MarketSection({ r }: { r: ReportData }) {
         <h3 className="font-display text-lg font-semibold">{t("rv.trends")}</h3>
         <div className="mt-3 space-y-3">
           {m.trends.map((tr, i) => (
-            <div key={i} className="rounded-lg border bg-background p-4 print-block">
-              <p className="font-medium">{tr.trend}<SourceRefs ids={tr.sourceIds} sources={r.sources} /></p>
+            <div key={i} className="o-artifact rounded-xl p-4 print-block">
+              <p className="font-medium">
+                {tr.trend}
+                <SourceRefs ids={tr.sourceIds} sources={r.sources} />
+                {tr.verified === false && <Unverified />}
+              </p>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{tr.implication}</p>
             </div>
           ))}
@@ -277,10 +320,10 @@ export function MarketSection({ r }: { r: ReportData }) {
         <h3 className="font-display text-lg font-semibold">{t("rv.segments")}</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {m.segments.map((s, i) => (
-            <div key={i} className="rounded-lg border bg-background p-4 print-block">
+            <div key={i} className="o-artifact rounded-xl p-4 print-block">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="font-medium">{s.name}</p>
-                <span className="font-mono text-sm text-primary">{t("rv.fit", { n: s.fitScore })}</span>
+                <span className="o-readout-strong text-sm text-muted-foreground">{t("rv.fit", { n: s.fitScore })}</span>
               </div>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{s.why}</p>
               <p className="mt-1.5 text-sm"><span className="font-medium">{t("rv.reach")}</span><span className="text-muted-foreground">{s.howToReach}</span></p>
@@ -288,7 +331,7 @@ export function MarketSection({ r }: { r: ReportData }) {
           ))}
         </div>
       </div>
-      <p className="rounded-lg border bg-secondary/50 p-4 leading-relaxed print-block">{m.potentialAssessment}</p>
+      <p className="o-well rounded-xl p-4 leading-relaxed print-block">{m.potentialAssessment}</p>
     </div>
   );
 }
@@ -298,11 +341,11 @@ export function CompetitorsSection({ r }: { r: ReportData }) {
   return (
     <div className="space-y-4">
       {r.competitors.map((c, i) => (
-        <div key={i} className="rounded-xl border bg-background p-5 print-block">
+        <div key={i} className="o-artifact rounded-2xl p-5 print-block">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <p className="font-display text-lg font-semibold">{c.name}</p>
-              <a href={c.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
+              <a href={c.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-xs text-tel-sky hover:underline">
                 <ExternalLink className="size-3" aria-hidden />{new URL(c.url).hostname}
               </a>
             </div>
@@ -329,8 +372,8 @@ export function CompetitorsSection({ r }: { r: ReportData }) {
               </ul>
             </div>
           </div>
-          <p className="mt-4 rounded-lg bg-primary/5 p-3 text-sm leading-relaxed">
-            <span className="font-semibold text-primary">{t("rv.gap")}</span>
+          <p className="o-well mt-4 rounded-lg p-3 text-sm leading-relaxed">
+            <span className="font-semibold text-tel-emerald">{t("rv.gap")}</span>
             {c.gapToExploit}
           </p>
         </div>
@@ -370,10 +413,11 @@ export function AuditSection({ r }: { r: ReportData }) {
             {t("rv.seoPassed", { a: passed, b: a.seo.checklist.length })}
           </span>
         </div>
-        <div className="mt-3 rounded-xl border bg-background px-4 print-block">
+        <div className="o-well mt-3 rounded-xl px-4 print-block">
           {a.seo.checklist.map((c, i) => <SeoCheckRow key={i} c={c} />)}
         </div>
       </div>
+      {r.meta.speed ? <SpeedBlock speed={r.meta.speed} /> : null}
       <div>
         <h3 className="font-display text-lg font-semibold">{t("rv.seoFindings")}</h3>
         <div className="mt-3 space-y-3">
@@ -393,21 +437,21 @@ export function StrategySection({ r }: { r: ReportData }) {
   const s = r.strategy;
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 print-block">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t("rv.positioning")}</p>
+      <div className="o-artifact rounded-2xl p-5 print-block">
+        <p className="text-xs font-semibold uppercase tracking-wider text-faint">{t("rv.positioning")}</p>
         <p className="mt-2 font-display text-lg font-semibold leading-snug">{s.positioning.statement}</p>
       </div>
       <div>
         <h3 className="font-semibold">{t("rv.differentiators")}</h3>
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-          {s.positioning.differentiators.map((d, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" aria-hidden />{d}</li>)}
+          {s.positioning.differentiators.map((d, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" aria-hidden />{d}</li>)}
         </ul>
       </div>
       <div>
         <h3 className="font-display text-lg font-semibold">{t("rv.icp")}</h3>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {s.icp.map((i, j) => (
-            <div key={j} className="rounded-lg border bg-background p-4 print-block">
+            <div key={j} className="o-artifact rounded-xl p-4 print-block">
               <p className="font-medium">{i.persona}</p>
               <p className="mt-2 text-sm"><span className="font-medium">{t("rv.painPoints")}</span><span className="text-muted-foreground">{i.painPoints.join("; ")}</span></p>
               <p className="mt-1 text-sm"><span className="font-medium">{t("rv.triggers")}</span><span className="text-muted-foreground">{i.triggers.join("; ")}</span></p>
@@ -423,15 +467,15 @@ export function StrategySection({ r }: { r: ReportData }) {
           <h3 className="font-display text-lg font-semibold">{t("rv.channels")}</h3>
           <div className="mt-3 space-y-3">
             {s.channels.map((c, i) => (
-              <div key={i} className="rounded-lg border bg-background p-4 print-block">
+              <div key={i} className="o-artifact rounded-xl p-4 print-block">
                 <div className="flex items-baseline gap-2">
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary">{c.priority}</span>
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full border border-rim bg-chip font-mono text-xs font-medium text-foreground">{c.priority}</span>
                   <p className="font-medium">{c.channel}</p>
                 </div>
                 <p className="mt-1.5 text-sm text-muted-foreground">{c.rationale}</p>
                 {c.firstSteps?.length ? (
                   <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    {c.firstSteps.map((f, k) => <li key={k} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" aria-hidden />{f}</li>)}
+                    {c.firstSteps.map((f, k) => <li key={k} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" aria-hidden />{f}</li>)}
                   </ul>
                 ) : null}
               </div>
@@ -443,7 +487,7 @@ export function StrategySection({ r }: { r: ReportData }) {
         <div>
           <h3 className="font-display text-lg font-semibold">{t("rv.offerIdeas")}</h3>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            {s.offerAndPricingIdeas.map((o, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" aria-hidden />{o}</li>)}
+            {s.offerAndPricingIdeas.map((o, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" aria-hidden />{o}</li>)}
           </ul>
         </div>
       ) : null}
@@ -451,7 +495,7 @@ export function StrategySection({ r }: { r: ReportData }) {
         <div>
           <h3 className="font-display text-lg font-semibold">{t("rv.contentThemes")}</h3>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            {s.contentThemes.map((ct, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" aria-hidden />{ct}</li>)}
+            {s.contentThemes.map((ct, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" aria-hidden />{ct}</li>)}
           </ul>
         </div>
       ) : null}
@@ -472,7 +516,7 @@ export function RoadmapSection({ r }: { r: ReportData }) {
       {phases.map(([days, label, items]) => (
         <div key={days}>
           <div className="flex items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 font-display text-sm font-bold text-primary">
+            <span className="o-readout-strong grid size-9 shrink-0 place-items-center rounded-full border border-rim bg-chip text-sm text-foreground">
               {days}
             </span>
             <h3 className="font-display text-lg font-semibold">{label}</h3>
@@ -480,7 +524,7 @@ export function RoadmapSection({ r }: { r: ReportData }) {
           </div>
           <div className="mt-3 space-y-3">
             {items.map((a, i) => (
-              <div key={i} className="rounded-lg border bg-background p-4 print-block">
+              <div key={i} className="o-artifact rounded-xl p-4 print-block">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <p className="font-medium">{i + 1}. {a.title}</p>
                   <span className="flex shrink-0 gap-1.5 text-xs">
@@ -512,15 +556,15 @@ export function RisksSection({ r }: { r: ReportData }) {
   return (
     <div className="space-y-3">
       {r.risks.map((k, i) => (
-        <div key={i} className="rounded-lg border bg-background p-4 print-block">
+        <div key={i} className="o-artifact rounded-xl p-4 print-block">
           <p className="font-medium">{k.risk}</p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground"><span className="font-medium text-foreground">{t("rv.mitigation")}</span>{k.mitigation}</p>
         </div>
       ))}
-      <div className="rounded-lg border bg-secondary/50 p-4 print-block">
+      <div className="o-well rounded-xl p-4 print-block">
         <h3 className="font-semibold">{t("rv.assumptions")}</h3>
         <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-          {r.assumptions.map((a, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary" aria-hidden />{a}</li>)}
+          {r.assumptions.map((a, i) => <li key={i} className="flex gap-2"><span className="mt-1.5 size-1 shrink-0 rounded-full bg-faint" aria-hidden />{a}</li>)}
         </ul>
       </div>
     </div>
@@ -532,13 +576,20 @@ export function SourcesSection({ r }: { r: ReportData }) {
   return (
     <div className="space-y-2">
       <p className="text-sm text-muted-foreground">{t("rv.sourcesNote")}</p>
+      {r.meta.quality && r.meta.quality.claimsChecked > 0 ? (
+        <p className="text-xs text-faint">
+          {r.meta.quality.claimsUnverified > 0
+            ? t("rv.qualityNote", { checked: r.meta.quality.claimsChecked, unverified: r.meta.quality.claimsUnverified })
+            : t("rv.qualityAll", { checked: r.meta.quality.claimsChecked })}
+        </p>
+      ) : null}
       <ol className="space-y-2">
         {r.sources.map((s) => (
-          <li key={s.id} className="flex items-start gap-3 rounded-lg border bg-background p-3 print-block">
-            <span className="font-mono text-sm font-semibold text-primary">{s.id}</span>
+          <li key={s.id} className="o-well flex items-start gap-3 rounded-xl p-3 print-block">
+            <span className="o-readout-strong w-8 shrink-0 text-sm text-tel-sky">{s.id}</span>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium">{s.title}</p>
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-0.5 block truncate text-xs text-muted-foreground hover:text-primary">
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-0.5 block truncate text-xs text-muted-foreground hover:text-foreground">
                 {s.url}
               </a>
             </div>
@@ -625,7 +676,7 @@ export function ReportViewer({ data }: { data: ReportData }) {
         </div>
       </div>
 
-      <p className="mb-6 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs leading-relaxed text-muted-foreground print-block">
+      <p className="o-well mb-6 rounded-lg px-4 py-2.5 text-xs leading-relaxed text-muted-foreground print-block">
         {t("rv.aiNote")}
       </p>
 
