@@ -12,59 +12,113 @@
 
 export interface ExtraCheck {
   id: string;
-  group: "AI search" | "Performance" | "Security" | "SEO" | "Social";
+  group: "AI search" | "Performance" | "Security" | "SEO" | "Social" | "Business";
   check: string;
   status: "pass" | "warn" | "fail";
   detail: string;
 }
 
+export type FixMode = "pr" | "api" | "guided";
+
 export interface Platform {
   id: string;
   label: string;
-  /** yes: Olmene can open PRs (if the code is on GitHub); partial: head tags only; no: hosted builder. */
+  /** yes: Olmene can open PRs (if the code is on GitHub); partial: head tags only; no: hosted builder. Kept for older clients; prefer fixModes. */
   fixable: "yes" | "partial" | "no" | "unknown";
+  /**
+   * How Olmene can fix this site, best first (engine v2):
+   *  - pr: a pull request to the site's GitHub repository;
+   *  - api: applied through the platform's API after approval (Webflow, WordPress);
+   *  - guided: exact values to paste plus step-by-step clicks for this platform,
+   *    then Olmene re-checks the live site. Every platform has this.
+   */
+  fixModes: FixMode[];
   note: string;
 }
 
 // ─── Platform ────────────────────────────────────────────────────────────
+type Hosted = { id: string; label: string; api?: boolean; test: (low: string, gen: string) => boolean };
+
+/** Hosted builders and CMSs: edited in the platform, not in a repository. Order matters (WooCommerce before WordPress is not needed: both are WordPress). */
+const HOSTED: Hosted[] = [
+  { id: "shopify", label: "Shopify", test: (l) => /cdn\.shopify\.com|shopify\.theme|window\.shopify/.test(l) },
+  { id: "wordpress", label: "WordPress", api: true, test: (l, g) => /wp-content\/|wp-includes\//.test(l) || g.startsWith("wordpress") },
+  { id: "webflow", label: "Webflow", api: true, test: (l, g) => /data-wf-site|webflow\.com|assets\.website-files\.com|cdn\.prod\.website-files\.com/.test(l) || g.includes("webflow") },
+  { id: "wix", label: "Wix", test: (l, g) => /static\.wixstatic\.com|_wixcssimports|wix\.com website builder|parastorage\.com/.test(l) || g.includes("wix") },
+  { id: "squarespace", label: "Squarespace", test: (l, g) => /squarespace\.com|static1\.squarespace|sqs-block/.test(l) || g.includes("squarespace") },
+  { id: "framer", label: "Framer", test: (l, g) => /framerusercontent\.com|framer\.com\/m\/|data-framer-/.test(l) || g.includes("framer") },
+  { id: "ghost", label: "Ghost", test: (l, g) => g.includes("ghost") || /ghost-(?:portal|search)|\/ghost\/api\//.test(l) },
+  { id: "hubspot", label: "HubSpot", test: (l, g) => g.includes("hubspot") || /hs_cos_wrapper|hs-sites\.com/.test(l) },
+  { id: "duda", label: "Duda", test: (l) => /l?irp\.cdn-website\.com/.test(l) },
+  { id: "godaddy", label: "GoDaddy Website Builder", test: (l, g) => /img1\.wsimg\.com|websites\.godaddy|godaddy website builder/.test(l) || g.includes("go daddy") || g.includes("godaddy") },
+  { id: "squareonline", label: "Square Online", test: (l, g) => /editmysite\.com|weebly\.com|square\.site/.test(l) || g.includes("weebly") || g.includes("square online") },
+  { id: "bigcommerce", label: "BigCommerce", test: (l) => /cdn\d*\.bigcommerce\.com|bigcommerce\.com\/s-/.test(l) },
+  { id: "jimdo", label: "Jimdo", test: (l, g) => /jimdo(?:cdn|static|free)?\.com|jimdosite/.test(l) || g.includes("jimdo") },
+  { id: "carrd", label: "Carrd", test: (l, g) => /carrd\.co/.test(l) || g.includes("carrd") },
+  { id: "tilda", label: "Tilda", test: (l, g) => /tildacdn\.com|tilda\.ws|t-records/.test(l) || g.includes("tilda") },
+  { id: "drupal", label: "Drupal", test: (l, g) => g.startsWith("drupal") || /\/sites\/default\/files\/|drupal-settings-json/.test(l) },
+  { id: "joomla", label: "Joomla", test: (l, g) => g.includes("joomla") || /\/media\/jui\/|\/components\/com_/.test(l) },
+  { id: "magento", label: "Adobe Commerce (Magento)", test: (l, g) => g.includes("magento") || /mage\/cookies|\/static\/version\d+\/frontend\//.test(l) },
+  { id: "prestashop", label: "PrestaShop", test: (l, g) => g.includes("prestashop") || /var prestashop\s*=|\/modules\/ps_\w+\//.test(l) },
+  { id: "bubble", label: "Bubble", test: (l) => /bubble_page_load_id|\.cdn\.bubble\.io|bubble_session_uid/.test(l) },
+];
+
+const GUIDED_NOTE = (label: string) =>
+  `${label} sites are edited in ${label}, not in a code repository. Olmene gives you each fix ready to paste, with the exact clicks in ${label}, then checks your live site to confirm it worked.`;
+
 export function detectPlatform(html: string): Platform {
   const low = html.slice(0, 600_000).toLowerCase();
   const gen = low.match(/<meta[^>]+name=["']generator["'][^>]+content=["']([^"']+)["']/)?.[1] ?? "";
-  const hosted = (id: string, label: string): Platform => ({
-    id, label, fixable: "no",
-    note: `${label} sites are edited in ${label}, not in a GitHub repository, so Olmene can't open pull requests. The full report lists every fix to make by hand.`,
+  for (const h of HOSTED) {
+    if (!h.test(low, gen)) continue;
+    return {
+      id: h.id,
+      label: h.label,
+      fixable: "no",
+      fixModes: h.api ? ["api", "guided"] : ["guided"],
+      note: h.api
+        ? `${GUIDED_NOTE(h.label)} Connect ${h.label} and Olmene can apply some fixes for you after you approve them.`
+        : GUIDED_NOTE(h.label),
+    };
+  }
+  const code = (id: string, label: string, fixable: Platform["fixable"], note: string): Platform => ({
+    id, label, fixable, fixModes: fixable === "no" ? ["guided"] : ["pr", "guided"], note,
   });
-  if (/cdn\.shopify\.com|shopify\.theme|window\.shopify/.test(low)) return hosted("shopify", "Shopify");
-  if (/wp-content\/|wp-includes\//.test(low) || gen.startsWith("wordpress")) return hosted("wordpress", "WordPress");
-  if (/data-wf-site|webflow\.com|assets\.website-files\.com/.test(low) || gen.includes("webflow")) return hosted("webflow", "Webflow");
-  if (/static\.wixstatic\.com|_wixcssimports|wix\.com website builder/.test(low) || gen.includes("wix")) return hosted("wix", "Wix");
-  if (/squarespace\.com|static1\.squarespace/.test(low) || gen.includes("squarespace")) return hosted("squarespace", "Squarespace");
-  if (/framerusercontent\.com|framer\.com\/m\//.test(low) || gen.includes("framer")) return hosted("framer", "Framer");
-  if (gen.includes("ghost")) return hosted("ghost", "Ghost");
   if (/self\.__next_f|\/_next\/static\//.test(low)) {
     const pages = low.includes('id="__next_data__"');
     return pages
-      ? { id: "nextjs-pages", label: "Next.js (Pages Router)", fixable: "partial", note: "Olmene edits Next.js App Router layouts today; for the Pages Router it can fix files in public/ only." }
-      : { id: "nextjs-app", label: "Next.js", fixable: "yes", note: "Olmene can open pull requests for Next.js App Router sites on GitHub." };
+      ? code("nextjs-pages", "Next.js (Pages Router)", "yes", "Olmene can open pull requests for Next.js Pages Router sites on GitHub (pages/_document and the homepage's <Head>).")
+      : code("nextjs-app", "Next.js", "yes", "Olmene can open pull requests for Next.js App Router sites on GitHub.");
   }
   if (/\/_astro\/|astro-island|data-astro-cid/.test(low) || gen.startsWith("astro")) {
-    return { id: "astro", label: "Astro", fixable: "yes", note: "Olmene can open pull requests for Astro sites on GitHub." };
+    return code("astro", "Astro", "yes", "Olmene can open pull requests for Astro sites on GitHub.");
   }
-  if (/\/_nuxt\//.test(low)) return { id: "nuxt", label: "Nuxt", fixable: "no", note: "Nuxt isn't supported by the fix agent yet. The full report lists every fix." };
-  if (/___gatsby/.test(low)) return { id: "gatsby", label: "Gatsby", fixable: "no", note: "Gatsby isn't supported by the fix agent yet. The full report lists every fix." };
+  if (/\/_nuxt\/|window\.__nuxt|data-n-head|id="__nuxt"/.test(low)) {
+    return code("nuxt", "Nuxt", "partial", "Olmene can open pull requests for Nuxt sites on GitHub for site-wide head tags (nuxt.config); page content lives in Vue components.");
+  }
+  if (/\/_app\/immutable\/|data-sveltekit|__sveltekit/.test(low)) {
+    return code("sveltekit", "SvelteKit", "partial", "Olmene can open pull requests for SvelteKit sites on GitHub for site-wide head tags (src/app.html); page content lives in Svelte components.");
+  }
+  if (/ng-version=|<app-root/.test(low)) {
+    return code("angular", "Angular", "partial", "Olmene can fix the head of src/index.html (title, description, social and structured data) in a GitHub repo; page content lives in Angular components.");
+  }
+  if (/___gatsby/.test(low)) return code("gatsby", "Gatsby", "no", "Gatsby isn't supported by the fix agent yet. Olmene gives you each fix ready to paste and re-checks your live site.");
   if (gen.startsWith("hugo") || gen.startsWith("jekyll") || gen.startsWith("eleventy")) {
-    const label = gen.split(/\s/)[0].replace(/^./, (c) => c.toUpperCase());
-    return { id: label.toLowerCase(), label, fixable: "no", note: `${label} templates aren't supported by the fix agent yet. The full report lists every fix.` };
+    const label = gen.split(/\s/)[0].replace(/^./, (ch) => ch.toUpperCase());
+    return code(label.toLowerCase(), label, "no", `${label} templates aren't edited by the fix agent yet. Olmene gives you each fix ready to paste into your templates and re-checks your live site.`);
   }
   const viteSpa = /<div[^>]+id=["']root["']/.test(low) && /<script[^>]+type=["']module["'][^>]+src=["'][^"']*\/assets\//.test(low);
   if (viteSpa || /lovable|gptengineer/.test(low)) {
-    return { id: "vite-react", label: "React (Vite)", fixable: "partial", note: "Olmene can fix the head of index.html (title, description, social and structured data) in a GitHub repo; page content lives in React components." };
+    return code("vite-react", "React (Vite)", "partial", "Olmene can fix the head of index.html (title, description, social and structured data) in a GitHub repo; page content lives in React components.");
+  }
+  if (/<div[^>]+id=["']app["']/.test(low) && /\/js\/(?:app|chunk-vendors)\.[a-f0-9]+\.js/.test(low)) {
+    return code("vue", "Vue", "partial", "Olmene can fix the head of public/index.html (title, description, social and structured data) in a GitHub repo; page content lives in Vue components.");
   }
   const bundles = (low.match(/<script\b[^>]*\bsrc=/g) ?? []).length;
   if (bundles <= 3 && !/<div[^>]+id=["'](?:root|app)["']/.test(low)) {
-    return { id: "static", label: "Static HTML", fixable: "yes", note: "Olmene can open pull requests for static HTML sites on GitHub." };
+    return code("static", "Static HTML", "yes", "Olmene can open pull requests for static HTML sites on GitHub.");
   }
-  return { id: "unknown", label: "Unknown", fixable: "unknown", note: "Olmene couldn't tell what the site is built with. The fix agent checks your repository when you connect it." };
+  return { id: "unknown", label: "Unknown", fixable: "unknown", fixModes: ["pr", "guided"], note: "Olmene couldn't tell what the site is built with. Connect your repository and the fix agent checks it, or use guided fixes." };
 }
 
 // ─── robots.txt: AI crawlers ─────────────────────────────────────────────
@@ -178,6 +232,8 @@ export interface ExtraContext {
   robotsTxt: string | null;
   fetch: SafeFetch;
   cruxKey?: string | null;
+  /** Called as each check finishes (the streaming scan sends them one by one). */
+  onCheck?: (check: ExtraCheck) => void;
 }
 
 const withTimeout = <T>(p: Promise<T>, ms: number): Promise<T | null> =>
@@ -332,7 +388,12 @@ export async function runExtraChecks(ctx: ExtraContext, budgetMs = 7_000): Promi
     })());
   }
 
-  const settled = await withTimeout(Promise.all(tasks.map((t) => t.catch(() => null))), budgetMs);
+  const settled = await withTimeout(Promise.all(tasks.map((t) => t.then((x) => {
+    if (x && ctx.onCheck) {
+      try { ctx.onCheck(x); } catch { /* a closed stream never breaks the scan */ }
+    }
+    return x;
+  }).catch(() => null))), budgetMs);
   return (settled ?? []).filter((x): x is ExtraCheck => !!x);
 }
 

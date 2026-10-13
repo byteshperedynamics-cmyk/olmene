@@ -74,3 +74,87 @@ export function looksLikeJsShell(html: string, wordCount: number): boolean {
   const bundles = (low.match(/<script\b[^>]*(?:type=["']module["']|\bsrc=["'][^"']+\.m?js(?:\?[^"']*)?["'])/g) ?? []).length;
   return emptyMount || (anyMount && bundles >= 1 && wordCount < 80) || (bundles >= 1 && wordCount < 25);
 }
+
+// ─── Screenshots and element boxes (engine v2) ───────────────────────────
+// Used by the free scan's "your site, live" view: a screenshot of the first
+// screen plus the boxes of the elements the checks talk about (H1, calls to
+// action, images without alt text), so the UI can pin findings onto the
+// visitor's own page. Two browser sessions (~5 s each, in parallel).
+
+export interface Viewport {
+  width: number;
+  height: number;
+}
+
+async function cfBrowser(endpoint: string, body: Record<string, unknown>, timeoutMs: number): Promise<Response | null> {
+  const account = Deno.env.get("CF_ACCOUNT_ID");
+  const token = Deno.env.get("CF_BROWSER_TOKEN");
+  if (!account || !token) return null;
+  for (const path of PATHS) {
+    try {
+      const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/${path}/${endpoint}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (res.status === 404 && path !== PATHS[PATHS.length - 1]) {
+        await res.body?.cancel().catch(() => {});
+        continue;
+      }
+      if (!res.ok) {
+        await res.body?.cancel().catch(() => {});
+        return null;
+      }
+      return res;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** JPEG of the first screen at the given viewport, or null. */
+export async function screenshotPage(url: string, viewport: Viewport, timeoutMs = 25_000): Promise<{ bytes: Uint8Array; ms: number } | null> {
+  const started = Date.now();
+  const res = await cfBrowser("screenshot", {
+    url,
+    viewport,
+    screenshotOptions: { type: "jpeg", quality: 72, fullPage: false },
+    gotoOptions: { waitUntil: "networkidle2", timeout: Math.max(5_000, timeoutMs - 5_000) },
+  }, timeoutMs);
+  if (!res) return null;
+  const type = res.headers.get("content-type") ?? "";
+  if (!type.startsWith("image/")) {
+    await res.body?.cancel().catch(() => {});
+    return null;
+  }
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.length < 1_000 || bytes.length > 4 * 1024 * 1024) return null;
+  return { bytes, ms: Date.now() - started };
+}
+
+export interface ScrapedElement {
+  text: string;
+  attributes: Array<{ name: string; value: string }>;
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+/** Elements matching each selector, with their boxes in CSS pixels at the viewport. */
+export async function scrapeElements(url: string, selectors: string[], viewport: Viewport, timeoutMs = 25_000): Promise<{ results: Array<{ selector: string; results: ScrapedElement[] }>; ms: number } | null> {
+  const started = Date.now();
+  const res = await cfBrowser("scrape", {
+    url,
+    viewport,
+    elements: selectors.map((selector) => ({ selector })),
+    rejectResourceTypes: ["media", "font"],
+    gotoOptions: { waitUntil: "networkidle2", timeout: Math.max(5_000, timeoutMs - 5_000) },
+  }, timeoutMs);
+  if (!res) return null;
+  const body = (await res.json().catch(() => null)) as { success?: boolean; result?: Array<{ selector: string; results: ScrapedElement[] }> } | null;
+  if (!body?.result || !Array.isArray(body.result)) return null;
+  return { results: body.result, ms: Date.now() - started };
+}

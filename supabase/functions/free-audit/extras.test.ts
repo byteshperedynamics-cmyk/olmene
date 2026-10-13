@@ -19,6 +19,20 @@ const viteShell = `<!doctype html><html lang="en"><head><meta charset="UTF-8" />
 <meta name="description" content="Acme helps small teams ship analytics in a day without a data team."/>
 <script type="module" crossorigin src="/assets/index-DkQ2.js"></script></head><body><div id="root"></div></body></html>`;
 
+Deno.test("platform: fix modes — guided everywhere, API for Webflow/WordPress, PR for code", () => {
+  assertEquals(detectPlatform('<meta name="generator" content="WordPress 6.6">').fixModes, ["api", "guided"]);
+  assertEquals(detectPlatform('<html data-wf-site="abc">').fixModes, ["api", "guided"]);
+  assertEquals(detectPlatform('<link href="https://cdn.shopify.com/s/files/x.css">').fixModes, ["guided"]);
+  assertEquals(detectPlatform('<div class="hs_cos_wrapper"></div>').id, "hubspot");
+  assertEquals(detectPlatform('<script src="https://js.hs-scripts.com/123.js"></script><script src="/_next/static/a.js"></script>').id, "nextjs-app");
+  assertEquals(detectPlatform('<img src="https://irp.cdn-website.com/x.jpg">').id, "duda");
+  assertEquals(detectPlatform('<div class="t-records"></div>').id, "tilda");
+  assertEquals(detectPlatform('<script src="/_nuxt/entry.js"></script>').fixModes, ["pr", "guided"]);
+  assertEquals(detectPlatform('<script>__sveltekit_abc = {}</script><link href="/_app/immutable/a.css">').id, "sveltekit");
+  assertEquals(detectPlatform('<app-root ng-version="18.0.0"></app-root>').id, "angular");
+  assertEquals(detectPlatform('<script id="__NEXT_DATA__" type="application/json">{}</script><script src="/_next/static/a.js"></script>'.toLowerCase()).fixable, "yes");
+});
+
 Deno.test("platform: hosted builders are not fixable by PR", () => {
   assertEquals(detectPlatform('<link href="https://cdn.shopify.com/s/files/x.css">').id, "shopify");
   assertEquals(detectPlatform('<meta name="generator" content="WordPress 6.6">').fixable, "no");
