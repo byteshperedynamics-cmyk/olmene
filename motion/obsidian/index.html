@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Olmene Obsidian</title>
+<meta name="viewport" content="width=1920, height=1080">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- The five-petal flower. Same path as src/components/animated-flower.tsx (PETAL_D). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <path id="petal" d="M-64.4 -63.9 C-67.3 -69.0 -77.2 -85.4 -81.4 -94.4 C-85.6 -103.5 -87.9 -110.7 -89.8 -118.1 C-91.7 -125.5 -92.6 -132.5 -92.8 -138.9 C-93.0 -145.2 -92.3 -150.4 -91.1 -156.2 C-89.9 -162.0 -88.2 -168.0 -85.6 -173.5 C-83.0 -179.1 -79.7 -184.6 -75.7 -189.6 C-71.6 -194.6 -66.8 -199.6 -61.2 -203.5 C-55.7 -207.3 -48.6 -210.5 -42.3 -212.7 C-36.0 -214.8 -30.9 -216.2 -23.7 -216.4 C-16.5 -216.6 -6.2 -215.7 0.9 -213.8 C8.0 -212.0 12.8 -209.5 18.9 -205.3 C25.0 -201.1 33.0 -193.7 37.5 -188.6 C42.1 -183.6 43.6 -180.7 46.1 -175.0 C48.6 -169.3 51.3 -162.1 52.4 -154.3 C53.5 -146.6 53.6 -137.2 52.7 -128.8 C51.8 -120.4 47.9 -108.3 46.9 -104.2 L46.9 -104.2 C37.7 -88.6 14.1 -10.1 -8.2 -10.7 C-30.4 -11.3 -75.3 -95.7 -86.5 -107.8 C-97.7 -119.8 -84.7 -95.8 -75.2 -82.8 C-65.7 -69.8 -31.4 -33.0 -29.6 -29.8 C-27.8 -26.7 -58.6 -58.2 -64.4 -63.9 Z"/>
+    <linearGradient id="petal-metal" x1="0" y1="-263" x2="0" y2="263" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F4F4F5"/><stop offset="1" stop-color="#D4D4D8"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div id="stage">
+  <canvas id="bg" class="layer" width="1920" height="1080"></canvas>
+  <div id="cone"></div>
+
+  <div id="viewport"><div id="world">
+
+    <!-- ═══ S0 · the opening line, written by light ═══ -->
+    <div class="station" id="s0">
+      <div class="line headline" id="lineA"><div class="txt">Your site is losing customers.</div><div class="hot" aria-hidden="true">Your site is losing customers.</div></div>
+      <div class="line headline" id="lineB"><div class="txt">Olmene <span class="metal" id="metalB">ships the fix.</span></div><div class="hot" aria-hidden="true">Olmene ships the fix.</div></div>
+      <div class="lasergroup" id="laser0"><div class="laser" id="laserLine"></div><div class="laser-core"><i id="core1"></i><i id="core2"></i></div></div>
+    </div>
+
+    <!-- ═══ S1 · Find + Fix: the scanned page and the diff that fixes it ═══ -->
+    <div class="station" id="s1" style="height:1700px">
+      <div class="grp" id="findLabel" style="left:150px;top:372px">
+        <div class="eyebrow abs" style="top:0"><span class="m"><span class="i">01 — Find</span></span></div>
+        <div class="title metal abs" style="top:40px;left:-5px" id="findTitle">Find it.</div>
+        <div class="sub abs" style="top:214px"><span class="m"><span class="i">21 deterministic checks</span></span><br><span class="m"><span class="i">on your live site.</span></span></div>
+      </div>
+
+      <div class="artifact" id="browser">
+        <div class="sheen"></div>
+        <div class="chrome">
+          <i class="tl" style="left:26px"></i><i class="tl" style="left:44px"></i><i class="tl" style="left:62px"></i>
+          <div class="url well"><i></i><span id="urlText"></span><span class="caret" id="urlCaret"></span></div>
+          <div id="readout" class="chip"><span class="dot" id="readDot"></span><span id="readText">checks 00/21</span></div>
+          <div class="label-amber preview">Preview</div>
+        </div>
+        <div id="page">
+          <i class="blk d" style="left:40px;top:26px;width:112px;height:18px"></i>
+          <i class="blk l" style="left:600px;top:30px;width:72px;height:12px"></i>
+          <i class="blk l" style="left:690px;top:30px;width:72px;height:12px"></i>
+          <i class="blk l" style="left:780px;top:30px;width:88px;height:12px"></i>
+          <i class="blk w" style="left:950px;top:20px;width:110px;height:34px;border-radius:9px"></i>
+          <i class="blk d" style="left:40px;top:104px;width:520px;height:32px"></i>
+          <i class="blk d" style="left:40px;top:150px;width:380px;height:32px"></i>
+          <i class="blk l" style="left:40px;top:206px;width:470px;height:12px"></i>
+          <i class="blk l" style="left:40px;top:228px;width:380px;height:12px"></i>
+          <i class="blk w" style="left:40px;top:268px;width:150px;height:46px;border-radius:10px"></i>
+          <i class="blk o" style="left:204px;top:268px;width:130px;height:46px;border-radius:10px"></i>
+          <i class="blk o" style="left:640px;top:96px;width:420px;height:236px;border-radius:14px"></i>
+          <i class="blk l" style="left:680px;top:252px;width:36px;height:52px;border-radius:5px"></i>
+          <i class="blk l" style="left:736px;top:228px;width:36px;height:76px;border-radius:5px"></i>
+          <i class="blk l" style="left:792px;top:240px;width:36px;height:64px;border-radius:5px"></i>
+          <i class="blk d" style="left:848px;top:200px;width:36px;height:104px;border-radius:5px"></i>
+          <i class="blk d" style="left:904px;top:170px;width:36px;height:134px;border-radius:5px"></i>
+          <i class="blk w" style="left:960px;top:140px;width:36px;height:164px;border-radius:5px"></i>
+          <i class="blk o" style="left:40px;top:376px;width:320px;height:196px;border-radius:14px"></i>
+          <i class="blk o" style="left:380px;top:376px;width:320px;height:196px;border-radius:14px"></i>
+          <i class="blk o" style="left:720px;top:376px;width:340px;height:196px;border-radius:14px"></i>
+          <i class="blk d" style="left:64px;top:400px;width:32px;height:32px;border-radius:50%"></i>
+          <i class="blk d" style="left:404px;top:400px;width:32px;height:32px;border-radius:50%"></i>
+          <i class="blk d" style="left:744px;top:400px;width:32px;height:32px;border-radius:50%"></i>
+          <i class="blk d" style="left:64px;top:458px;width:200px;height:14px"></i>
+          <i class="blk d" style="left:404px;top:458px;width:180px;height:14px"></i>
+          <i class="blk d" style="left:744px;top:458px;width:220px;height:14px"></i>
+          <i class="blk l" style="left:64px;top:490px;width:250px;height:10px"></i>
+          <i class="blk l" style="left:404px;top:490px;width:240px;height:10px"></i>
+          <i class="blk l" style="left:744px;top:490px;width:260px;height:10px"></i>
+          <i class="blk l" style="left:64px;top:510px;width:190px;height:10px"></i>
+          <i class="blk l" style="left:404px;top:510px;width:200px;height:10px"></i>
+          <i class="blk l" style="left:744px;top:510px;width:180px;height:10px"></i>
+          <div id="scan"><div class="trail"></div><div class="beam"></div></div>
+        </div>
+      </div>
+
+      <div class="pin chip" id="pin2" style="left:1180px;top:302px"><span class="st"><b class="rd"></b><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3.5 9.5 L7.3 13 L14.5 5.2" fill="none" stroke="#10B981" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="20" stroke-dashoffset="20"/></svg></span>Pricing hidden</div>
+      <div class="pin chip" id="pin1" style="left:1004px;top:372px"><span class="st"><b class="rd"></b><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3.5 9.5 L7.3 13 L14.5 5.2" fill="none" stroke="#10B981" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="20" stroke-dashoffset="20"/></svg></span>No meta description</div>
+      <div class="pin chip" id="pin3" style="left:820px;top:598px"><span class="st"><b class="rd"></b><svg width="18" height="18" viewBox="0 0 18 18"><path d="M3.5 9.5 L7.3 13 L14.5 5.2" fill="none" stroke="#10B981" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="20" stroke-dashoffset="20"/></svg></span>Unreadable to AI search</div>
+
+      <div class="grp" id="fixLabel" style="left:150px;top:1052px">
+        <div class="eyebrow abs" style="top:0"><span class="m"><span class="i">02 — Fix</span></span></div>
+        <div class="title metal abs" style="top:40px;left:-5px" id="fixTitle">Fix it.</div>
+        <div class="sub abs" style="top:214px"><span class="m"><span class="i">A pull request with</span></span><br><span class="m"><span class="i">every change explained.</span></span></div>
+      </div>
+
+      <div class="well" id="diff">
+        <div class="hd">app/layout.tsx<span class="ct"><span style="color:var(--emerald)">+3</span>&nbsp;&nbsp;<span style="color:var(--rose)">−1</span></span></div>
+        <div id="lines"></div>
+      </div>
+      <div id="fixrow">
+        <div class="capsule sky" id="branch" style="left:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="7" r="2.2"/><path d="M6 7.2v9.6M18 9.2c0 5-6 4-11.2 8.1"/></svg>olmene/fix-7f3a</div>
+        <div class="capsule sky" id="prchip" style="left:244px">PR #14</div>
+        <div class="label-amber abs" id="example1" style="left:388px;top:13px">Example</div>
+        <div id="approve"><div class="sheen2" id="approveSheen"></div><svg id="approveCheck" width="22" height="22" viewBox="0 0 22 22"><path d="M4.5 11.5 L9 16 L17.5 6.5" fill="none" stroke="#09090B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="22" stroke-dashoffset="22"/></svg><span id="approveText">Approve 3 changes</span></div>
+      </div>
+      <div id="ripple"></div>
+    </div>
+
+    <!-- ═══ S2 · Prove: merged, then the needle springs 61 → 94 ═══ -->
+    <div class="station" id="s2">
+      <div class="grp" id="proveLabel" style="left:150px;top:372px">
+        <div class="eyebrow abs" style="top:0"><span class="m"><span class="i">03 — Prove</span></span></div>
+        <div class="title metal abs" style="top:40px;left:-5px" id="proveTitle">Prove it.</div>
+        <div class="sub abs" style="top:214px"><span class="m"><span class="i">Re-checks your live site</span></span><br><span class="m"><span class="i">after every merge.</span></span></div>
+      </div>
+      <div class="artifact" id="gauge">
+        <div class="sheen"></div>
+        <div class="capsule gray" id="merged"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="2.4"/><circle cx="6" cy="6" r="2.4"/><path d="M6 21V8.4"/><path d="M8.6 6H13a5 5 0 0 1 5 5v4.6"/></svg>Merged to main</div>
+        <div class="label-amber">Example</div>
+        <svg width="1010" height="740" viewBox="0 0 1010 740" id="gaugeSvg"></svg>
+        <div id="score"><span class="odo"><span class="strip" id="odoT"></span></span><span class="odo"><span class="strip" id="odoO"></span></span></div>
+        <div id="score-l">READINESS / 100</div>
+        <div id="bridge">
+          <div class="scorechip rose" style="left:0"><b>61</b><span>/ 100</span></div>
+          <svg id="bridgeSvg" width="890" height="64" viewBox="0 0 890 64" style="position:absolute;left:0;top:0;overflow:visible"></svg>
+          <div class="capsule sky" id="bridgePr" style="left:383px;top:9px">PR #14</div>
+          <div class="scorechip em" id="score94" style="right:0"><b>94</b><span>/ 100</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div></div>
+
+  <canvas id="fg" class="layer" width="1920" height="1080"></canvas>
+
+  <!-- ═══ the finale: the share card, lit by a travelling edge light ═══ -->
+  <div id="finale">
+    <div id="card"><svg width="1400" height="780" viewBox="0 0 1400 780" id="cardSvg"></svg></div>
+    <div id="flower">
+      <svg viewBox="-263 -263 526 526" overflow="visible">
+        <g id="fl-all">
+          <g id="fp0"><use href="#petal" fill="url(#petal-metal)"/></g>
+          <g id="fp1"><use href="#petal" fill="url(#petal-metal)"/></g>
+          <g id="fp2"><use href="#petal" fill="url(#petal-metal)"/></g>
+          <g id="fp3"><use href="#petal" fill="url(#petal-metal)"/></g>
+          <g id="fp4"><use href="#petal" fill="url(#petal-metal)"/></g>
+        </g>
+      </svg>
+    </div>
+    <div id="wordmark"><div class="txt">olmene</div><div class="hot" aria-hidden="true">olmene</div></div>
+    <div id="tagline"><span class="m"><span class="i">Find what is costing you customers. Ship the fix.</span></span></div>
+    <div id="url"><span class="m"><span class="i"><span class="live" id="liveDot"></span>olmene.com</span></span></div>
+  </div>
+
+  <div id="blackout"></div>
+</div>
+
+<script src="cues.js"></script>
+<script src="engine.js"></script>
+<script src="scenes.js"></script>
+</body>
+</html>

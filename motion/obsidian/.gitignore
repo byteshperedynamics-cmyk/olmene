@@ -1,0 +1,6 @@
+node_modules/
+__pycache__/
+# renders are reproducible; only the finished film and its poster are kept
+out/*
+!out/olmene-obsidian.mp4
+!out/olmene-obsidian-poster.jpg
