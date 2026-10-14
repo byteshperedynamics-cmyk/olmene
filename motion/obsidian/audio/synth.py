@@ -510,7 +510,7 @@ def lufs(x):
 
 
 out *= 10 ** ((-14.5 - lufs(out)) / 20)
-ceil = 10 ** (-1.0 / 20)
+ceil = 10 ** (-1.5 / 20)  # leaves room for AAC overshoot: the delivered file stays under -1 dBTP
 up = signal.resample_poly(np.max(np.abs(out), axis=0), 4, 1)
 peakv = up.reshape(-1, 4).max(axis=1)[:N]
 pk = maximum_filter1d(peakv, size=2 * ns(0.002) + 1)

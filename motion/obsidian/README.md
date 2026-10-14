@@ -50,6 +50,6 @@ node render.mjs                  # → out/olmene-obsidian.mp4 (muxes the wav)
 | `engine.js` | Easing, keyframes, noise, and a 3D camera that mirrors CSS exactly: `Cam.css()` is the world transform, `Cam.project()` returns the pixel Chromium draws, so canvas light sits on the DOM panels |
 | `scenes.js` | `Reel.render(t)`: camera rigs blended through each glide (with a lift and a bank), depth of field and focus-driven light falloff, the floor grid and dust on canvas, the emerald wires as projected 3D curves, every reveal |
 | `render.mjs` | Headless Chromium frame by frame, sub-frame motion blur in linear light, vignette and grain, a lossless FFV1 master, then a two-pass H.264 delivery file |
-| `audio/synth.py` | The score: 120 BPM half time, A minor to C major on the bloom; sub impacts tuned to the harmony; leak, fix and needle sounds locked to the cues; −14.5 LUFS, −1 dBFS |
+| `audio/synth.py` | The score: 120 BPM half time, A minor to C major on the bloom; sub impacts tuned to the harmony; leak, fix and needle sounds locked to the cues; −15 LUFS, true peak under −1 dB |
 
 Fonts are under the SIL Open Font License; see `fonts/OFL-*.txt`.
