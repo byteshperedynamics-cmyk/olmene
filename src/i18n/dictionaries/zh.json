@@ -654,5 +654,13 @@
   "stage.play": "播放动画",
   "works.title": "适用于以下平台搭建的网站",
   "works.more": "代码框架会收到拉取请求。托管平台会收到分步修复指南，Webflow 和 WordPress 还可以替你直接应用。另外还支持 20 多个其他平台。",
-  "teardown.more": "查看原始扫描结果以及完整报告补充的内容"
+  "teardown.more": "查看原始扫描结果以及完整报告补充的内容",
+  "film.label": "20 秒版本",
+  "film.title": "看看 Olmene 如何工作。",
+  "film.lede": "从扫描你的线上网站，到合并拉取请求、分数提升，只需二十秒。",
+  "film.aria": "Olmene 品牌短片，20 秒：扫描一个主页并发现三个问题，一个拉取请求修复了它们，合并后就绪度评分从 61 升至 94。",
+  "film.play": "播放短片",
+  "film.pause": "暂停短片",
+  "film.soundOn": "打开声音",
+  "film.soundOff": "关闭声音"
 }

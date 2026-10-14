@@ -654,5 +654,13 @@
   "stage.play": "Animation abspielen",
   "works.title": "Funktioniert mit Websites auf Basis von",
   "works.more": "Code-Frameworks bekommen Pull Requests. Gehostete Plattformen bekommen Schritt-für-Schritt-Korrekturen, die Webflow und WordPress auch für Sie anwenden können. Dazu mehr als 20 weitere.",
-  "teardown.more": "Rohes Scan-Ergebnis und die Ergänzungen des vollständigen Berichts ansehen"
+  "teardown.more": "Rohes Scan-Ergebnis und die Ergänzungen des vollständigen Berichts ansehen",
+  "film.label": "Die 20-Sekunden-Version",
+  "film.title": "Olmene bei der Arbeit.",
+  "film.lede": "Vom Scan Ihrer Live-Website bis zum gemergten Pull Request und einem höheren Wert, in zwanzig Sekunden.",
+  "film.aria": "Olmene-Film, 20 Sekunden: Eine Startseite wird gescannt und drei Probleme werden gefunden, ein Pull Request behebt sie, und nach dem Merge steigt der Bereitschaftswert von 61 auf 94.",
+  "film.play": "Film abspielen",
+  "film.pause": "Film anhalten",
+  "film.soundOn": "Ton einschalten",
+  "film.soundOff": "Ton ausschalten"
 }

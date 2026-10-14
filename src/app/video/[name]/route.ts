@@ -13,6 +13,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const FILES: Record<string, { type: string }> = {
   "olmene-demo.mp4": { type: "video/mp4" },
+  "olmene-film.mp4": { type: "video/mp4" }, // the 20-second brand film on the homepage
 };
 
 function parseRange(header: string | null, total: number): { start: number; end: number } | null {
@@ -57,7 +58,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ name: strin
   const headers = new Headers({
     "Content-Type": meta.type,
     "Accept-Ranges": "bytes",
-    "Cache-Control": "public, max-age=3600",
+    "Cache-Control": "public, max-age=86400",
   });
 
   const range = parseRange(request.headers.get("range"), total);

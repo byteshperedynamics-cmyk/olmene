@@ -654,5 +654,13 @@
   "stage.play": "Play the animation",
   "works.title": "Works on sites built with",
   "works.more": "Code frameworks get pull requests. Hosted platforms get step-by-step fixes, and Webflow and WordPress can apply them for you. Plus more than 20 others.",
-  "teardown.more": "See the raw scan result and what the full report added"
+  "teardown.more": "See the raw scan result and what the full report added",
+  "film.label": "The 20-second version",
+  "film.title": "Watch Olmene work.",
+  "film.lede": "From a scan of your live site to a merged pull request and a higher score, in twenty seconds.",
+  "film.aria": "Olmene brand film, 20 seconds: a homepage is scanned and three problems are found, a pull request fixes them, and after the merge the readiness score rises from 61 to 94.",
+  "film.play": "Play the film",
+  "film.pause": "Pause the film",
+  "film.soundOn": "Turn sound on",
+  "film.soundOff": "Turn sound off"
 }

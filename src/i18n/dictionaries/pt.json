@@ -654,5 +654,13 @@
   "stage.play": "Reproduzir a animação",
   "works.title": "Funciona em sites feitos com",
   "works.more": "Frameworks de código recebem pull requests. Plataformas hospedadas recebem correções passo a passo, e o Webflow e o WordPress podem aplicá-las por você. E mais de 20 outras.",
-  "teardown.more": "Ver o resultado original da análise e o que o relatório completo acrescentou"
+  "teardown.more": "Ver o resultado original da análise e o que o relatório completo acrescentou",
+  "film.label": "A versão de 20 segundos",
+  "film.title": "Veja o Olmene em ação.",
+  "film.lede": "Da análise do seu site no ar a um pull request mesclado e uma pontuação maior, em vinte segundos.",
+  "film.aria": "Filme do Olmene, 20 segundos: uma página inicial é analisada e três problemas são encontrados, um pull request os corrige e, após a mesclagem, a pontuação de prontidão sobe de 61 para 94.",
+  "film.play": "Reproduzir o filme",
+  "film.pause": "Pausar o filme",
+  "film.soundOn": "Ativar o som",
+  "film.soundOff": "Desativar o som"
 }

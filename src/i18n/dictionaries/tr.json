@@ -654,5 +654,13 @@
   "stage.play": "Animasyonu oynat",
   "works.title": "Şunlarla yapılmış sitelerde çalışır",
   "works.more": "Kod çatıları pull request alır. Barındırılan platformlar adım adım düzeltmeler alır; Webflow ve WordPress bunları sizin yerinize uygulayabilir. Ayrıca 20'den fazla başka platform.",
-  "teardown.more": "Ham tarama sonucunu ve tam raporun eklediklerini görün"
+  "teardown.more": "Ham tarama sonucunu ve tam raporun eklediklerini görün",
+  "film.label": "20 saniyelik özet",
+  "film.title": "Olmene'i iş başında izleyin.",
+  "film.lede": "Canlı sitenizin taranmasından birleştirilmiş bir pull request'e ve daha yüksek bir puana, yirmi saniyede.",
+  "film.aria": "Olmene tanıtım filmi, 20 saniye: bir ana sayfa taranır ve üç sorun bulunur, bir pull request bunları düzeltir ve birleştirmeden sonra hazırlık puanı 61'den 94'e yükselir.",
+  "film.play": "Filmi oynat",
+  "film.pause": "Filmi duraklat",
+  "film.soundOn": "Sesi aç",
+  "film.soundOff": "Sesi kapat"
 }

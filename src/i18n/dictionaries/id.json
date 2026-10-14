@@ -654,5 +654,13 @@
   "stage.play": "Putar animasi",
   "works.title": "Bekerja di situs yang dibuat dengan",
   "works.more": "Framework kode mendapat pull request. Platform hosting mendapat perbaikan langkah demi langkah, dan Webflow serta WordPress bisa menerapkannya untuk Anda. Plus lebih dari 20 lainnya.",
-  "teardown.more": "Lihat hasil pindaian asli dan apa yang ditambahkan laporan lengkap"
+  "teardown.more": "Lihat hasil pindaian asli dan apa yang ditambahkan laporan lengkap",
+  "film.label": "Versi 20 detik",
+  "film.title": "Lihat Olmene bekerja.",
+  "film.lede": "Dari pindaian situs live Anda hingga pull request yang di-merge dan skor yang lebih tinggi, dalam dua puluh detik.",
+  "film.aria": "Film Olmene, 20 detik: sebuah beranda dipindai dan tiga masalah ditemukan, pull request memperbaikinya, dan setelah di-merge skor kesiapan naik dari 61 ke 94.",
+  "film.play": "Putar film",
+  "film.pause": "Jeda film",
+  "film.soundOn": "Nyalakan suara",
+  "film.soundOff": "Matikan suara"
 }
