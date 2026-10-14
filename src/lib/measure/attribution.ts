@@ -11,10 +11,17 @@
  *  - merges within GROUP_DAYS of each other are measured together as one
  *    "combined" outcome from the first merge — credit we cannot separate is
  *    never split
+ *  - a growing (or shrinking) site is not a fix effect: when the 28 days
+ *    before the merge show a clear linear trend (slope t > 2), the change is
+ *    measured against that trend projected forward (delta vs expectedAfterMean)
+ *  - daily traffic is autocorrelated (a good day follows a good day), which
+ *    makes plain t-tests overconfident; the standard error is inflated by
+ *    sqrt((1+r)/(1-r)) for the lag-1 autocorrelation r of the pre-period
  */
 
 export const WINDOW = 14;
 export const GROUP_DAYS = 7;
+export const PRE_TREND_DAYS = 28;
 
 export interface DailyPoint {
   /** YYYY-MM-DD */
@@ -42,6 +49,10 @@ export interface Outcome {
   confidence: Confidence | null;
   beforeDays: number;
   afterDays: number;
+  /** What the after-window would have averaged on the pre-merge trend (null when no clear trend). */
+  expectedAfterMean?: number | null;
+  /** True when delta/deltaPct are measured against the projected pre-merge trend. */
+  trendAdjusted?: boolean;
 }
 
 const DAY = 86_400_000;
@@ -98,18 +109,77 @@ export function measureGroup(series: DailyPoint[], group: { ids: string[]; merge
 
   const mb = mean(before);
   const ma = mean(after);
-  const p = welchPValue(before, after);
   const status = after.length < WINDOW ? "early" : group.ids.length > 1 ? "combined" : "measured";
+
+  // Pre-merge trend over up to 28 days (x = days relative to the merge).
+  const pre: Array<[number, number]> = [];
+  for (let i = 1; i <= PRE_TREND_DAYS; i++) {
+    const v = byDay.get(addDays(group.mergeDate, -i));
+    if (v !== undefined) pre.push([-i, v]);
+  }
+  const fit = pre.length >= 14 ? linearFit(pre) : null;
+  const trended = !!fit && Math.abs(fit.tStat) > 2;
+  const afterX: number[] = [];
+  for (let i = 1; i <= WINDOW; i++) {
+    const d = addDays(group.mergeDate, i);
+    if (d <= today && byDay.has(d)) afterX.push(i);
+  }
+  let beforeResid = before.map((v) => v - mb);
+  let afterResid = after.map((v) => v - mb);
+  let expected: number | null = null;
+  if (trended) {
+    const at = (x: number) => fit!.intercept + fit!.slope * x;
+    beforeResid = pre.slice(0, WINDOW).map(([x, v]) => v - at(x));
+    afterResid = afterX.map((x, k) => after[k] - at(x));
+    expected = mean(afterX.map(at));
+  }
+  const r = lag1Autocorrelation(beforeResid);
+  const inflate = r > 0 ? Math.sqrt((1 + Math.min(r, 0.9)) / (1 - Math.min(r, 0.9))) : 1;
+  const p = welchPValue(beforeResid, afterResid, inflate);
+  const baseline = trended && expected !== null ? expected : mb;
   return {
     ...base,
     status,
     beforeMean: round(mb),
     afterMean: round(ma),
-    delta: round(ma - mb),
-    deltaPct: mb > 0 ? round(((ma - mb) / mb) * 100) : null,
+    delta: round(ma - baseline),
+    deltaPct: baseline > 0 ? round(((ma - baseline) / baseline) * 100) : null,
     pValue: p === null ? null : Math.round(p * 1000) / 1000,
     confidence: p === null ? "low" : p < 0.05 ? "high" : p < 0.2 ? "medium" : "low",
+    expectedAfterMean: expected === null ? null : round(expected),
+    trendAdjusted: trended,
   };
+}
+
+/** Least-squares line through (x, y) points, with the slope's t statistic. */
+export function linearFit(points: Array<[number, number]>): { slope: number; intercept: number; tStat: number } {
+  const n = points.length;
+  const mx = mean(points.map((p) => p[0]));
+  const my = mean(points.map((p) => p[1]));
+  let sxx = 0;
+  let sxy = 0;
+  for (const [x, y] of points) {
+    sxx += (x - mx) ** 2;
+    sxy += (x - mx) * (y - my);
+  }
+  const slope = sxx === 0 ? 0 : sxy / sxx;
+  const intercept = my - slope * mx;
+  const sse = points.reduce((acc, [x, y]) => acc + (y - (intercept + slope * x)) ** 2, 0);
+  const se = n > 2 && sxx > 0 ? Math.sqrt(sse / (n - 2) / sxx) : 0;
+  return { slope, intercept, tStat: se > 0 ? slope / se : slope === 0 ? 0 : Infinity };
+}
+
+/** Lag-1 autocorrelation of a series (0 when undefined). */
+export function lag1Autocorrelation(xs: number[]): number {
+  if (xs.length < 4) return 0;
+  const m = mean(xs);
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < xs.length; i++) {
+    den += (xs[i] - m) ** 2;
+    if (i > 0) num += (xs[i] - m) * (xs[i - 1] - m);
+  }
+  return den === 0 ? 0 : num / den;
 }
 
 export function measureAll(series: DailyPoint[], merges: MergeEvent[], today: string): Outcome[] {
@@ -118,14 +188,14 @@ export function measureAll(series: DailyPoint[], merges: MergeEvent[], today: st
 
 const round = (x: number) => Math.round(x * 10) / 10;
 
-/** Two-sided Welch t-test p-value, or null when variance is degenerate. */
-export function welchPValue(a: number[], b: number[]): number | null {
+/** Two-sided Welch t-test p-value, or null when variance is degenerate. `inflate` scales the standard error (autocorrelation). */
+export function welchPValue(a: number[], b: number[], inflate = 1): number | null {
   if (a.length < 2 || b.length < 2) return null;
   const ma = mean(a);
   const mb = mean(b);
   const va = variance(a, ma) / a.length;
   const vb = variance(b, mb) / b.length;
-  const se = Math.sqrt(va + vb);
+  const se = Math.sqrt(va + vb) * inflate;
   if (!Number.isFinite(se) || se === 0) return ma === mb ? 1 : 0;
   const t = (mb - ma) / se;
   const df = (va + vb) ** 2 / (va ** 2 / (a.length - 1) + vb ** 2 / (b.length - 1));

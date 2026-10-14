@@ -41,8 +41,8 @@ export function AnimatedFlower({
     >
       {glow && (
         <>
-          <span className="absolute -inset-[35%] animate-logo-glow rounded-full bg-primary/40 blur-lg" />
-          <span className="absolute -inset-[15%] animate-logo-glow rounded-full bg-primary/25 blur-md [animation-delay:0.45s]" />
+          <span className="absolute -inset-[35%] animate-logo-glow rounded-full bg-brand/25 blur-lg" />
+          <span className="absolute -inset-[15%] animate-logo-glow rounded-full bg-brand/15 blur-md [animation-delay:0.45s]" />
         </>
       )}
       {/* Scale (breathe) and rotation (drift) live on separate layers so the
@@ -50,7 +50,7 @@ export function AnimatedFlower({
       <span className={cn("grid size-full place-items-center", breathe && "animate-logo-breathe")}>
         <svg
           viewBox="-263 -263 526 526"
-          className={cn("size-full text-primary", drift && "animate-flower-drift")}
+          className={cn("size-full text-brand", drift && "animate-flower-drift")}
         >
           {PETALS.map((k) => (
             <g key={k} transform={`rotate(${k * 72})`}>

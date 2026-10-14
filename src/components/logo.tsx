@@ -6,7 +6,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <Link
       href="/"
-      className={`flex items-center gap-2 text-foreground ${className ?? ""}`}
+      className={`o-hit flex items-center gap-2 text-foreground ${className ?? ""}`}
       aria-label={`${APP_NAME} home`}
     >
       {/* Brand lockup — elm flower mark + lowercase serif wordmark.
@@ -14,8 +14,8 @@ export function Logo({ className }: { className?: string }) {
           no image request. The pre-rebrand wordmark raster (which read
           "Marketwise") was regenerated; the file now carries this brand
           and remains only as the JSON-LD/OG asset. */}
-      <BrandMark size={26} className="text-primary" />
-      <span className="font-display text-[1.4rem] font-semibold leading-none tracking-tight">
+      <BrandMark size={26} className="text-brand" />
+      <span translate="no" className="font-display text-[1.4rem] font-semibold leading-none tracking-tight text-brand-ink">
         olmene
       </span>
     </Link>

@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- PROPOSAL (UI lane, 2026-10-13) — replacement for layout() in
+     supabase/functions/_shared/email.ts. Same signature { heading, paragraphs,
+     cta?, footer } plus one optional field, tone: "default" | "attention".
+     paragraphs stay trusted HTML (callers escape user content with escapeHtml,
+     exactly as today). Visual language is the same shell as the auth emails
+     (confirm-signup.html & co.): paper #F6F5F1, white card, hairline #E4E2DC,
+     Georgia wordmark and headings, green #2F6B45 for the wordmark, links and
+     button. "attention" adds one amber eyebrow above the heading — no other
+     structural change, so every existing render() call keeps working. -->
+<html lang="en">
+<body style="margin:0;padding:0;background:#F6F5F1;font-family:Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1C1D1B;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F5F1;padding:40px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border:1px solid #E4E2DC;border-radius:16px;">
+        <tr><td style="padding:32px 32px 8px 32px;">
+          <p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;color:#2F6B45;">&#10047; olmene</p>
+        </td></tr>
+        <tr><td style="padding:16px 32px 0 32px;">
+          <!-- tone === "attention" only (fix_regression, site_regression): -->
+          <!-- <p style="margin:0 0 10px 0;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#946F12;">Needs your attention</p> -->
+          <h1 style="margin:0 0 12px 0;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;font-weight:500;color:#1C1D1B;">{{heading}}</h1>
+          <!-- one <p> per entry of paragraphs -->
+          <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#55534E;">{{paragraphs[]}}</p>
+          <!-- cta, when present -->
+          <a href="{{cta.url}}" style="display:inline-block;background:#2F6B45;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:600;padding:12px 22px;border-radius:10px;">{{cta.label}}</a>
+        </td></tr>
+        <tr><td style="padding:24px 32px 32px 32px;">
+          <p style="margin:0;padding-top:16px;border-top:1px solid #E4E2DC;font-size:12px;line-height:1.6;color:#8A8882;">{{footer}}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

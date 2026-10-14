@@ -55,7 +55,7 @@ export function PricingContent({ initialPlans }: { initialPlans?: Plan[] } = {})
               <ul className="grid gap-3 sm:grid-cols-2">
                 {RISK_REVERSAL.map((r) => (
                   <li key={r} className="flex items-start gap-2.5 text-[14px]">
-                    <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                    <Check className="mt-0.5 size-4 shrink-0 text-tel-emerald" aria-hidden />
                     <span>{t(r)}</span>
                   </li>
                 ))}

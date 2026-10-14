@@ -53,10 +53,17 @@ interface PanelPos {
 export function LanguageSelector({
   size = "default",
   up = false,
+  compact = false,
 }: {
   size?: "default" | "sm";
   /** Prefer opening above the trigger (footer variant). */
   up?: boolean;
+  /**
+   * Header variant: a small globe + language code trigger on every device,
+   * with the language list rendered only while the popover is open (no
+   * 15 inline language names in the navbar DOM).
+   */
+  compact?: boolean;
 }) {
   const { lang, setLang, t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -238,8 +245,8 @@ export function LanguageSelector({
       <button
         type="button"
         ref={triggerRef}
-        className={`lang-select-custom group inline-flex cursor-pointer items-center gap-2 rounded-full border border-border/70 bg-card/70 text-foreground backdrop-blur transition-colors hover:border-primary/40 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:bg-card/50 dark:hover:bg-card/70 ${
-          size === "sm" ? "h-8 ps-3 pe-2.5 text-xs" : "h-9 ps-3.5 pe-3 text-sm"
+        className={`${compact ? "inline-flex" : "lang-select-custom inline-flex"} group cursor-pointer items-center gap-1.5 rounded-full border border-transparent text-muted-foreground transition-colors hover:border-rim hover:bg-chip hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          compact ? "h-8 px-2.5 text-xs pointer-coarse:h-11" : size === "sm" ? "h-8 ps-3 pe-2.5 text-xs pointer-coarse:h-11" : "h-9 ps-3.5 pe-3 text-sm pointer-coarse:h-11"
         }`}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -250,12 +257,12 @@ export function LanguageSelector({
         onKeyDown={onTriggerKeyDown}
       >
         <Globe
-          className={`text-primary transition-transform duration-300 ease-out group-hover:rotate-12 ${
-            size === "sm" ? "size-3" : "size-3.5"
+          className={`transition-transform duration-300 ease-out group-hover:rotate-12 ${
+            size === "sm" || compact ? "size-3.5" : "size-3.5"
           }`}
           aria-hidden
         />
-        <span className="font-medium">{current.native}</span>
+        <span className={compact ? "font-mono uppercase" : "font-medium"}>{compact ? current.code : current.native}</span>
         <ChevronDown
           className={`text-muted-foreground transition-transform duration-200 ${
             open ? "rotate-180" : ""
@@ -264,7 +271,8 @@ export function LanguageSelector({
         />
       </button>
 
-      {/* Native select — touch devices keep the OS picker */}
+      {/* Native select — touch devices keep the OS picker (not in the compact header variant) */}
+      {!compact && (
       <label className="lang-select-native relative inline-flex items-center">
         <select
           aria-label={t("lang.label")}
@@ -272,7 +280,7 @@ export function LanguageSelector({
           value={lang}
           onChange={(e) => setLang(e.target.value as LangCode)}
           className={`cursor-pointer appearance-none rounded-full border border-border/70 bg-card/70 text-muted-foreground backdrop-blur transition-colors hover:border-primary/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 dark:bg-card/50 ${
-            size === "sm" ? "h-8 ps-7 pe-7 text-xs" : "h-9 ps-8 pe-7 text-sm"
+            size === "sm" ? "h-8 ps-7 pe-7 text-xs pointer-coarse:h-11" : "h-9 ps-8 pe-7 text-sm pointer-coarse:h-11"
           }`}
         >
           {LANGUAGES.map((l) => (
@@ -284,7 +292,7 @@ export function LanguageSelector({
         {/* Icons render AFTER the select + z-10: Chrome paints the select
             background over absolutely-positioned icons that precede it. */}
         <Globe
-          className={`pointer-events-none absolute start-3 z-10 text-primary ${
+          className={`pointer-events-none absolute start-3 z-10 text-muted-foreground ${
             size === "sm" ? "size-3" : "size-3.5"
           }`}
           aria-hidden
@@ -296,6 +304,7 @@ export function LanguageSelector({
           aria-hidden
         />
       </label>
+      )}
 
       {/* Popover — mounted only while open / animating out */}
       {panelMounted && (
@@ -308,7 +317,7 @@ export function LanguageSelector({
               ? { left: pos.left, ...(pos.dir === "up" ? { bottom: pos.bottom } : { top: pos.top }) }
               : undefined
           }
-          className="lang-panel absolute z-50 w-72 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl shadow-foreground/10 backdrop-blur-md"
+          className="lang-panel o-glass absolute z-50 w-72 rounded-xl border border-border/70 bg-popover/95 p-1.5 shadow-xl shadow-foreground/10 backdrop-blur-md"
         >
           <ul
             ref={listRef}
@@ -335,7 +344,7 @@ export function LanguageSelector({
                 }`}
               >
                 <span className="grid size-4 shrink-0 place-items-center">
-                  {l.code === lang && <Check className="size-3.5 text-primary" aria-hidden />}
+                  {l.code === lang && <Check className="size-3.5 text-foreground" aria-hidden />}
                 </span>
                 <span
                   className={`truncate text-sm ${

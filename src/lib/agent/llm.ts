@@ -1,7 +1,8 @@
 /**
  * LLM access for agent copy drafting. Reuses the same model routing as the
  * analysis pipeline (llm_models table → vertex/google/* on Vertex AI,
- * google/* on the Gemini API, else GLM) with a
+ * google/* on the Gemini API, mistral/* on Mistral (EU fallback), else GLM)
+ * with a
  * SEPARATE budget namespace (agent:llm:YYYY-MM-DD) so agent usage can never
  * starve report generation (user decision 2026-09-29).
  *
@@ -41,6 +42,8 @@ interface ModelRow {
 }
 
 const GLM_BASE = getEnv("GLM_API_BASE") ?? "https://api.z.ai/api/paas/v4/chat/completions";
+const MISTRAL_BASE = "https://api.mistral.ai/v1/chat/completions";
+const MISTRAL_PREFIX = "mistral/";
 const GEMINI_BASE =
   getEnv("GEMINI_API_BASE") ?? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
@@ -65,16 +68,30 @@ function vertexUrl(): string | null {
   return `https://aiplatform.googleapis.com/v1/projects/${project}/locations/${location}/endpoints/openapi/chat/completions`;
 }
 
-async function callModel(model: string, messages: LlmMessage[], maxTokens: number, timeoutMs = 45_000): Promise<string> {
+/** The env key a model id needs (null when the id names no known provider). */
+export function keyNameFor(model: string): string {
+  if (model.startsWith(VERTEX_PREFIX)) return "VERTEX_API_KEY";
+  if (model.startsWith("google/")) return "GEMINI_API_KEY";
+  if (model.startsWith(MISTRAL_PREFIX)) return "MISTRAL_API_KEY";
+  return "GLM_API_KEY";
+}
+
+interface CallResult {
+  content: string;
+  usage: { prompt_tokens?: number; completion_tokens?: number; completion_tokens_details?: { reasoning_tokens?: number } } | null;
+}
+
+async function callModel(model: string, messages: LlmMessage[], maxTokens: number, timeoutMs = 45_000): Promise<CallResult> {
   const isVertex = model.startsWith(VERTEX_PREFIX);
   const isGemini = model.startsWith("google/") || isVertex;
-  const keyName = isVertex ? "VERTEX_API_KEY" : isGemini ? "GEMINI_API_KEY" : "GLM_API_KEY";
+  const isMistral = model.startsWith(MISTRAL_PREFIX);
+  const keyName = keyNameFor(model);
   const apiKey = getEnv(keyName);
   if (!apiKey) throw new Error(`${keyName} not configured`);
-  const url = isVertex ? vertexUrl() : isGemini ? GEMINI_BASE.replace("{model}", model.replace("google/", "")) : GLM_BASE;
+  const url = isVertex ? vertexUrl() : isGemini ? GEMINI_BASE.replace("{model}", model.replace("google/", "")) : isMistral ? MISTRAL_BASE : GLM_BASE;
   if (!url) throw new Error("VERTEX_PROJECT not configured");
   // Vertex wants "google/<model>"; AI Studio's endpoint wants the bare model name.
-  const apiModel = isVertex ? model.slice(VERTEX_PREFIX.length) : isGemini ? model.replace("google/", "") : model;
+  const apiModel = isVertex ? model.slice(VERTEX_PREFIX.length) : isGemini ? model.replace("google/", "") : isMistral ? model.slice(MISTRAL_PREFIX.length) : model;
 
   // Gemini 3.x flash models think first and the hidden reasoning tokens count
   // against max_tokens, so a 900-token copy request came back empty. Same
@@ -99,17 +116,17 @@ async function callModel(model: string, messages: LlmMessage[], maxTokens: numbe
         max_tokens: maxTokens + (thinking ? 6000 : 0),
         temperature: 0.3,
         ...(thinking ? { reasoning_effort: "low" } : {}),
-        ...(isGemini ? {} : { thinking: { type: "disabled" } }),
+        ...(isGemini || isMistral ? {} : { thinking: { type: "disabled" } }),
       }),
     });
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       throw new Error(`upstream ${res.status}: ${redactString(body.slice(0, 160))}`);
     }
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }>; usage?: CallResult["usage"] };
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("empty completion");
-    return content;
+    return { content, usage: data.usage ?? null };
   } finally {
     clearTimeout(timer);
   }
@@ -132,13 +149,15 @@ export function createLlmPort(db: SupabaseClient): LlmPort {
       if (!(await consumeBudget(db, 1))) {
         throw new LlmBudgetExceeded();
       }
-      const { data: models, error } = await db
+      const { data: rows, error } = await db
         .from("llm_models")
         .select("id, priority, supports_json_schema, active")
         .eq("active", true)
         .order("priority", { ascending: true })
-        .limit(4);
-      if (error || !models || models.length === 0) {
+        .limit(8);
+      // Only models whose provider key is configured on this Worker.
+      const models = ((rows as ModelRow[] | null) ?? []).filter((m) => !!getEnv(keyNameFor(m.id))).slice(0, 4);
+      if (error || models.length === 0) {
         throw new Error("no active models in llm_models");
       }
       const messages: LlmMessage[] = [
@@ -146,17 +165,48 @@ export function createLlmPort(db: SupabaseClient): LlmPort {
         { role: "user", content: userPrompt },
       ];
       let lastErr: unknown = null;
-      for (const m of models as ModelRow[]) {
+      for (const m of models) {
         for (let attempt = 0; attempt < 2; attempt++) {
+          const started = Date.now();
           try {
-            const raw = await callModel(m.id, messages, maxTokens);
-            return extractJson(raw);
+            const { content, usage } = await callModel(m.id, messages, maxTokens);
+            await recordUsage(db, m.id, started, true, usage);
+            return extractJson(content);
           } catch (e) {
             lastErr = e;
+            await recordUsage(db, m.id, started, false, null, e instanceof Error ? e.message : String(e));
           }
         }
       }
       throw lastErr instanceof Error ? lastErr : new Error("all models failed");
     },
   };
+}
+
+/** Usage ledger row (public.engine_usage) for one agent AI call. Best-effort. */
+async function recordUsage(
+  db: SupabaseClient,
+  model: string,
+  started: number,
+  ok: boolean,
+  usage: CallResult["usage"],
+  error?: string,
+): Promise<void> {
+  try {
+    await db.from("engine_usage").insert({
+      kind: "llm",
+      source: "agent",
+      step: "copy",
+      model,
+      provider: model.split("/")[0],
+      prompt_tokens: usage?.prompt_tokens ?? null,
+      completion_tokens: usage?.completion_tokens ?? null,
+      reasoning_tokens: usage?.completion_tokens_details?.reasoning_tokens ?? null,
+      latency_ms: Date.now() - started,
+      ok,
+      error: error ? redactString(error).slice(0, 300) : null,
+    });
+  } catch {
+    /* bookkeeping only */
+  }
 }

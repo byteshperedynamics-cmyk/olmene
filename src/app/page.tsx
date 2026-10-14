@@ -13,12 +13,14 @@ import { CHECK_COUNT } from "@/lib/config";
 import { usePageMeta } from "@/i18n/provider";
 import { usePublicStats } from "@/lib/public-stats";
 
-// Proof strip before the live /api/public/stats response arrives (or if it is
-// unavailable). Counts that change are left blank rather than baked into the
-// static HTML, where they went stale and could overstate the live numbers.
+// Server-rendered floors for the proof strip, shown until the live
+// /api/public/stats response arrives (or if it is unavailable). They are the
+// live values on 2026-10-13; both counters are cumulative (they never go
+// down), so a floor can understate but never overstate. Raise them now and
+// then; never above the live number.
 const STATS: ProofStat[] = [
-  { value: null, label: "stats.audits" },
-  { value: null, label: "stats.sources" },
+  { value: 107, label: "stats.audits" },
+  { value: 222, label: "stats.sources" },
   { value: CHECK_COUNT, label: "stats.checks" },
   { value: 15, label: "stats.languages" },
 ];

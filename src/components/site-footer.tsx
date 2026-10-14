@@ -7,7 +7,8 @@ import { LanguageSelector } from "@/components/language-selector";
 import { useI18n } from "@/i18n/provider";
 import { FOUNDER_LINKEDIN, STUDIO_GITHUB, STUDIO_NAME, SUPPORT_EMAIL } from "@/lib/config";
 
-const linkClass = "inline-block py-1 hover:text-foreground";
+// Touch screens: each link is a 44 px row (Apple HIG minimum target).
+const linkClass = "inline-block py-1 hover:text-foreground pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:py-0";
 
 function External({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -22,7 +23,7 @@ export function SiteFooter() {
   // "Olmene is built and operated by {studio}." — split so the studio name is the link in any word order.
   const [beforeStudio, afterStudio = ""] = t("footer.operated").split("{studio}");
   return (
-    <footer className="border-t border-border/70 bg-secondary/30 print:hidden">
+    <footer className="border-t border-edge print:hidden">
       <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
         <div className="grid gap-10 sm:grid-cols-2 md:grid-cols-[1.6fr_1fr_1fr_1fr_1fr]">
           <div className="space-y-3 sm:col-span-2 md:col-span-1">
@@ -70,7 +71,7 @@ export function SiteFooter() {
           <div className="space-y-1">
             <p>
               {beforeStudio}
-              <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground/80 underline-offset-4 hover:underline">
+              <a translate="no" href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground/80 underline-offset-4 hover:underline">
                 {STUDIO_NAME}
               </a>
               {afterStudio}

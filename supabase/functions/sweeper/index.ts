@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
+import { recordOps } from "../_shared/ledger.ts";
 // ───────────── inlined: _shared/cors.ts ─────────────
 /**
  * CORS + JSON helpers for Edge Functions (spec §7 common rules).
@@ -283,10 +284,16 @@ Deno.serve(async (req)=>{
   }
   try {
     const supabase = serviceClient();
-    // 0. Reconcile Polar subscriptions (entitlement repair path).
+    // 0. Reconcile Polar subscriptions (entitlement repair path). Webhooks are
+    // the primary path, so this runs once per 15-minute window, not on every
+    // sweep (it pages through every subscription in Polar).
     let polarSync = null;
+    const now15 = new Date();
+    const windowKey = `polar-reconcile:${now15.toISOString().slice(0, 13)}:${Math.floor(now15.getUTCMinutes() / 15)}`;
+    const { data: reconcileDue } = await supabase.rpc("consume_budget", { p_key: windowKey, p_amount: 1, p_cap: 1 });
     try {
-      polarSync = await reconcilePolarSubscriptions(env, supabase);
+      if (reconcileDue === true) polarSync = await reconcilePolarSubscriptions(env, supabase);
+      else polarSync = { skipped: "reconciled earlier in this 15-minute window" };
       if (polarSync && typeof polarSync === "object" && "synced" in polarSync && polarSync.synced > 0) {
         console.log(JSON.stringify({
           level: "info",
@@ -320,6 +327,7 @@ Deno.serve(async (req)=>{
     // filtering killed running analyses mid-flight (lease ignored).
     .lt("locked_until", stuckCutoff).is("wait_reason", null).select("id");
     if (stuck && stuck.length) {
+      await recordOps(supabase, "sweeper", `failed ${stuck.length} stalled report(s)`, { jobIds: stuck.map((j)=>j.id) });
       console.log(JSON.stringify({
         level: "info",
         msg: "sweeper failed stuck jobs",
@@ -342,8 +350,11 @@ Deno.serve(async (req)=>{
           "Content-Type": "application/json",
           "x-cron-secret": env.CRON_SECRET
         },
+        // Background mode: advance-analysis claims, answers 202 and runs the
+        // unit itself, so a sweep no longer waits minutes on slow steps.
         body: JSON.stringify({
-          jobId: job.id
+          jobId: job.id,
+          background: true
         }),
         signal: AbortSignal.timeout(130_000)
       })));

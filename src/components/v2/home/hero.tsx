@@ -1,10 +1,7 @@
 "use client";
 
 import { FreeAuditInput, FreeAuditResult } from "@/components/free-audit-form";
-import { featureAgentEnabled } from "@/lib/agent-client";
-import { usePublicStats } from "@/lib/public-stats";
 import { useI18n, Tx } from "@/i18n/provider";
-import { LivePill } from "../atoms";
 import { InView } from "../in-view";
 import { ScanPreview } from "../scan-preview";
 
@@ -15,9 +12,6 @@ import { ScanPreview } from "../scan-preview";
  */
 export function HomeHero() {
   const { t } = useI18n();
-  const agentOn = featureAgentEnabled();
-  const { data: stats } = usePublicStats();
-  const shipped = stats?.prsMerged ?? 0;
 
   return (
     <>
@@ -30,19 +24,14 @@ export function HomeHero() {
 
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 pb-16 pt-12 sm:px-6 md:pb-24 md:pt-20 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
           <div className="min-w-0">
-            {agentOn && (
-              <div className="hero-in" style={{ animationDelay: "0.02s" }}>
-                <LivePill tone="live">{shipped >= 50 ? t("hero.pillCount", { n: shipped }) : t("hero.pill")}</LivePill>
-              </div>
-            )}
             <h1
-              className="hero-in o-display mt-5 text-[40px] leading-[1.03] sm:text-[52px] lg:text-[62px]"
+              className="hero-in o-display text-[40px] leading-[1.03] sm:text-[52px] lg:text-[62px]"
               style={{ animationDelay: "0.05s" }}
             >
               <Tx k="hero.title" />
             </h1>
             <p
-              className="hero-in mt-5 max-w-[34rem] text-[17px] leading-relaxed text-muted-foreground"
+              className="hero-in mt-5 max-w-[64ch] text-[17px] leading-relaxed text-muted-foreground"
               style={{ animationDelay: "0.12s" }}
             >
               {t("hero.subtitle")}
@@ -50,10 +39,10 @@ export function HomeHero() {
             <div id="free-diagnosis" className="hero-in mt-8 scroll-mt-24" style={{ animationDelay: "0.2s" }}>
               <FreeAuditInput variant="hero" />
             </div>
-            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-[11px] text-faint">
+            <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-faint">
               {["hero.trust1", "hero.trust2", "hero.trust3"].map((k) => (
                 <li key={k} className="flex items-center gap-2">
-                  <span aria-hidden className="size-1 rounded-full bg-primary/70" />
+                  <span aria-hidden className="size-1 rounded-full bg-faint" />
                   {t(k)}
                 </li>
               ))}
@@ -63,8 +52,6 @@ export function HomeHero() {
           <InView className="min-w-0 lg:ps-4">
             <ScanPreview
               pins={[t("scan.pin1"), t("scan.pin2"), t("scan.pin3")]}
-              toastTitle={t("scan.toast")}
-              toastMeta={`${t("scan.toastMeta")} →`}
               previewLabel={t("scan.preview")}
               scoreLabel={t("scores.readiness")}
             />

@@ -153,6 +153,9 @@ export const disconnectGithub = (connectionId: string) =>
   );
 export const startAgentJob = (jobId: string, targetRepo: string) =>
   call<{ jobId: string }>("POST", "/api/agent/jobs/", { jobId, targetRepo });
+/** Free fix preview planned from a saved free scan (no report needed); applying still needs a plan. */
+export const startAgentJobFromScan = (scanId: string, targetRepo: string) =>
+  call<{ jobId: string }>("POST", "/api/agent/jobs/", { scanId, targetRepo });
 export const getAgentJobs = () => call<{ jobs: AgentJob[] }>("GET", "/api/agent/jobs/");
 export const getAgentJob = (id: string) => call<JobState>("GET", `/api/agent/jobs/${id}/`);
 export const advanceAgentJob = (id: string) =>
@@ -167,6 +170,81 @@ export const cancelAgentJob = (id: string) => call<{ ok: boolean }>("POST", `/ap
 export const getAgentReceipt = (id: string) =>
   call<{ content: string; createdAt: string }>("GET", `/api/agent/jobs/${id}/receipt/`);
 
+// ── Guided fixes (engine v2): any platform, no repository ────────────────
+
+export interface GuidedValue {
+  label: string;
+  value: string;
+  /** text: paste into a field; code: paste into a code box (render as text, never as HTML); file: offer a download. */
+  kind: "text" | "code" | "file";
+  current?: string | null;
+  filename?: string;
+}
+export interface GuidedFix {
+  id: string;
+  title: string;
+  why: string;
+  values: GuidedValue[];
+  steps: string[];
+  /** Set when the platform can't make this change (show instead of steps). */
+  blocked?: string;
+  status: "todo" | "live" | "not_live" | "blocked";
+  checkDetail?: string | null;
+  /** Webflow / WordPress connected: Olmene can apply this card for you (after approval) and undo it. */
+  auto?: {
+    channel: "webflow" | "wordpress";
+    changes: Array<{ field: string; label: string; before: string | null; after: string }>;
+    applied?: { at: string; ok: boolean; published?: boolean; error?: string };
+    revertedAt?: string;
+  };
+}
+export interface GuidedRun {
+  id: string;
+  site_url: string;
+  platform_id: string | null;
+  platform: { id: string; label: string; notes?: string };
+  fixes: GuidedFix[];
+  live_count: number;
+  total_count: number;
+  last_checked_at: string | null;
+  created_at: string;
+  scan_id: string | null;
+  report_id: string | null;
+}
+/** From a saved free scan (free, 3/day; 429 rate_limited) or a report (jobId = the analysis job). 422 site_unreachable / nothing_to_fix. */
+export const startGuidedRun = (source: { scanId: string } | { jobId: string }) =>
+  call<{ run: GuidedRun }>("POST", "/api/agent/guided/", source);
+export const getGuidedRuns = () => call<{ runs: Array<Omit<GuidedRun, "fixes" | "platform_id">> }>("GET", "/api/agent/guided/");
+export const getGuidedRun = (id: string) => call<{ run: GuidedRun }>("GET", `/api/agent/guided/${id}/`);
+/** "I've made the changes": re-check the live site now (429 if called within 20 s). */
+export const verifyGuidedRun = (id: string) => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/verify/`);
+/** After connecting Webflow/WordPress: mark the cards Olmene can apply (409 not_connected, 422 no_channel). */
+export const planGuidedAuto = (id: string) => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/auto/`);
+/** Apply approved cards on the platform (402 plan_required for free accounts). */
+export const applyGuidedAuto = (id: string, fixIds: string[] | "all") => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/apply/`, { fixIds });
+/** Put back the values Olmene replaced (no plan needed). */
+export const revertGuidedAuto = (id: string, fixIds: string[]) => call<{ run: GuidedRun }>("POST", `/api/agent/guided/${id}/revert/`, { fixIds });
+
+// ── Site connections (engine v2): Webflow token, WordPress application password ──
+
+export interface SiteConnection {
+  id: string;
+  provider: "webflow" | "wordpress";
+  host: string;
+  metadata: Record<string, unknown>;
+  lastVerifiedAt: string | null;
+  createdAt: string;
+}
+export const getSiteConnections = () => call<{ connections: SiteConnection[] }>("GET", "/api/agent/connections/site/");
+/** 422 connect_failed with a plain reason (token refused, site not on this token…). */
+export const connectWebflowSite = (token: string, siteUrl: string) =>
+  call<{ connection: { id: string; provider: "webflow"; host: string; siteName: string | null } }>("POST", "/api/agent/connect/webflow/", { token, siteUrl });
+/** 403 site_not_yours until the site has been scanned by this user; 422 connect_failed. */
+export const connectWordpressSite = (siteUrl: string, username: string, appPassword: string) =>
+  call<{ connection: { id: string; provider: "wordpress"; host: string; user: string } }>("POST", "/api/agent/connect/wordpress/", { siteUrl, username, appPassword });
+export const disconnectSiteConnection = (id: string) =>
+  call<{ ok: boolean; manualSteps: string[] }>("POST", `/api/agent/connections/site/${id}/disconnect/`);
+
 // ── Measure (Search Console impact) ────────────────────────────────────────
 
 export const featureMeasureEnabled = () =>
@@ -177,3 +255,64 @@ export const getMeasureOverview = () =>
   call<import("@/lib/measure/types").MeasureOverview>("GET", "/api/measure/overview/");
 export const connectSearchConsole = () => call<{ url: string }>("POST", "/api/measure/connect/google/");
 
+
+// ── Alert channels (engine v2): Slack, Discord, webhooks ──────────────────
+
+export interface AlertChannel {
+  id: string;
+  kind: "slack" | "discord" | "webhook";
+  /** Masked: host/…tail. */
+  url: string;
+  label: string | null;
+  /** Empty = every event. */
+  kinds: string[];
+  /** false after 10 failed deliveries in a row (PATCH active:true resumes). */
+  active: boolean;
+  failures: number;
+  lastError: string | null;
+  lastSentAt: string | null;
+  createdAt: string;
+}
+export const getAlertChannels = () => call<{ channels: AlertChannel[]; kinds: string[] }>("GET", "/api/alerts/channels/");
+/** Webhooks return signingSecret once: show it, it's not retrievable later. */
+export const addAlertChannel = (input: { kind: AlertChannel["kind"]; url: string; label?: string; kinds?: string[] }) =>
+  call<{ channel: Pick<AlertChannel, "id" | "kind" | "url" | "kinds">; signingSecret?: string }>("POST", "/api/alerts/channels/", input);
+export const updateAlertChannel = (id: string, patch: { kinds?: string[]; active?: boolean; label?: string }) =>
+  call<{ ok: boolean }>("PATCH", `/api/alerts/channels/${id}/`, patch);
+export const deleteAlertChannel = (id: string) => call<{ ok: boolean }>("DELETE", `/api/alerts/channels/${id}/`);
+export const testAlertChannel = (id: string) => call<{ ok: boolean; queued: boolean }>("POST", `/api/alerts/channels/${id}/test/`);
+
+// ── AI search visibility (engine v2) ──────────────────────────────────────
+
+export interface AiVisibilityAnswer {
+  question: string;
+  mentioned: boolean;
+  cited: boolean;
+  rank: number | null;
+  competitors: string[];
+  sources: string[];
+  excerpt: string | null;
+}
+export interface AiVisibilityRun {
+  id: number;
+  engine: string;
+  mention_share: number;
+  cite_share: number;
+  competitor_mentions: Record<string, number>;
+  results: AiVisibilityAnswer[];
+  checked_at: string;
+}
+/** Site ids come from the `sites` table (RLS: own rows). Runs are newest first, weekly. */
+export const getAiVisibility = (siteId: string) =>
+  call<{ site: { id: string; host: string; questions: string[]; nextCheckAt: string; competitors: Array<{ name: string; url: string }> }; runs: AiVisibilityRun[] }>("GET", `/api/sites/${siteId}/ai-visibility/`);
+export const setAiVisibilityQuestions = (siteId: string, questions: string[]) =>
+  call<{ ok: boolean; questions: string[] }>("PUT", `/api/sites/${siteId}/ai-visibility/`, { questions });
+
+// ── Olmene checks on every pull request (engine v2) ──────────────────────
+
+export interface PrCheckRepo { id: string; repo: string; site_url: string; enabled: boolean; last_error: string | null; last_polled_at: string | null; created_at: string }
+export interface PrCheck { repo: string; pr_number: number; head_sha: string; preview_url: string | null; conclusion: "success" | "neutral" | "failure"; regressions: string[]; improvements: string[]; check_run_url: string | null; created_at: string }
+export const getPrChecks = () => call<{ repos: PrCheckRepo[]; checks: PrCheck[] }>("GET", "/api/agent/pr-checks/");
+/** 402 plan_required on free accounts. last_error explains missing GitHub App permissions (Checks: write, Deployments: read). */
+export const setPrChecks = (repo: string, enabled: boolean, siteUrl?: string) =>
+  call<{ ok: boolean; enabled: boolean }>("POST", "/api/agent/pr-checks/", { repo, enabled, siteUrl });

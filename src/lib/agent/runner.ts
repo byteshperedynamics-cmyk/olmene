@@ -35,6 +35,8 @@ export interface AgentJobRow {
   id: string;
   user_id: string;
   report_id: string | null;
+  /** Free preview runs plan from a saved scan (migration 20261017) instead of a report. */
+  scan_id?: string | null;
   connection_id: string | null;
   provider: string;
   status: JobStatus;
@@ -85,6 +87,12 @@ export interface AuditEntryInput {
 
 export interface AgentDbPort {
   getJob(jobId: string): Promise<AgentJobRow | null>;
+  /**
+   * Atomically take the job's lease: true only if no unexpired lease is held.
+   * Optional so in-memory test ports keep working; without it the runner
+   * falls back to a read-then-write lease.
+   */
+  claimJob?(jobId: string, leaseUntil: string, now: string, attempts: number): Promise<boolean>;
   updateJob(jobId: string, patch: Partial<AgentJobRow>): Promise<void>;
   insertPlannedActions(jobId: string, rows: Array<Omit<PlannedActionRow, "id" | "agent_job_id">>): Promise<void>;
   getPlannedActions(jobId: string): Promise<PlannedActionRow[]>;
@@ -98,6 +106,10 @@ export interface AgentDbPort {
   ): Promise<void>;
   audit(entry: AuditEntryInput): Promise<void>;
   getReport(reportId: string): Promise<ReportData | null>;
+  /** The report a job plans from: its report, or a lite report built from its saved scan. */
+  getReportForJob?(job: AgentJobRow): Promise<ReportData | null>;
+  /** Queue a customer notification (outbox; sent by the notify function). */
+  notify?(userId: string, kind: string, payload: Record<string, unknown>, dedupeKey: string): Promise<void>;
   getFlags(): Promise<{ globalKillSwitch: boolean; providerGithubEnabled: boolean }>;
   insertReceipt(jobId: string, userId: string, content: string): Promise<void>;
 }
@@ -212,6 +224,31 @@ async function buildFixerContext(
       }
     }
   }
+  if (detection.repoType === "nextjs-pages" && detection.pagesIndexPath) {
+    const index = await read(detection.pagesIndexPath);
+    const doc = detection.pagesDocumentPath ? await read(detection.pagesDocumentPath) : null;
+    if (index !== null) {
+      framework = doc !== null && detection.pagesDocumentPath
+        ? { kind: "nextjs-pages", headPath: detection.pagesDocumentPath, headContent: doc, pagePath: detection.pagesIndexPath, pageContent: index }
+        : { kind: "nextjs-pages", headPath: detection.pagesIndexPath, headContent: index, pagePath: detection.pagesIndexPath, pageContent: index };
+    }
+  } else if (detection.repoType === "nuxt" && detection.nuxtConfigPath) {
+    const config = await read(detection.nuxtConfigPath);
+    if (config !== null) framework = { kind: "nuxt", headPath: detection.nuxtConfigPath, headContent: config };
+  }
+  // SvelteKit pages set head tags in <svelte:head>; app.html must not duplicate them.
+  let managed: Array<"title" | "description" | "og" | "jsonld"> | undefined;
+  if (detection.spaKind === "sveltekit") {
+    const heads = (await Promise.all(["src/routes/+layout.svelte", "src/routes/+page.svelte"].filter((p) => paths.includes(p)).map(read)))
+      .map((src) => src?.match(/<svelte:head>([\s\S]*?)<\/svelte:head>/)?.[1] ?? "")
+      .join("\n");
+    managed = [
+      ...(/<title>/.test(heads) ? ["title" as const] : []),
+      ...(/name=["']description["']/.test(heads) ? ["description" as const] : []),
+      ...(/property=["']og:/.test(heads) ? ["og" as const] : []),
+      ...(/application\/ld\+json/.test(heads) ? ["jsonld" as const] : []),
+    ];
+  }
   const packageJson = paths.includes("package.json") ? await read("package.json") : null;
   return {
     ctx: {
@@ -224,6 +261,7 @@ async function buildFixerContext(
       repo: { owner: allow.owner, name: allow.repo, defaultBranch },
       copy,
       framework,
+      spa: detection.repoType === "spa" && detection.spaKind ? { kind: detection.spaKind, ...(managed ? { managed } : {}) } : null,
     },
     defaultBranch,
     headSha: branch.commit.sha,
@@ -240,13 +278,17 @@ export async function advanceJob(jobId: string, ports: RunnerPorts, actorUserId:
 
   if (TERMINAL.includes(job.status) || job.status === "awaiting_approval") return job.status;
 
-  // Lease: skip if another advance is mid-flight
-  const lockedUntil = job.locked_until ? new Date(job.locked_until).getTime() : 0;
-  if (lockedUntil > now().getTime()) return job.status;
-  await db.updateJob(jobId, {
-    locked_until: new Date(now().getTime() + LEASE_MS).toISOString(),
-    attempts: job.attempts + 1,
-  });
+  // Lease: skip if another advance is mid-flight. Claimed atomically when the
+  // port supports it (the tab, the cron driver and the approve kick can all
+  // call at once).
+  const leaseUntil = new Date(now().getTime() + LEASE_MS).toISOString();
+  if (db.claimJob) {
+    if (!(await db.claimJob(jobId, leaseUntil, now().toISOString(), job.attempts + 1))) return job.status;
+  } else {
+    const lockedUntil = job.locked_until ? new Date(job.locked_until).getTime() : 0;
+    if (lockedUntil > now().getTime()) return job.status;
+    await db.updateJob(jobId, { locked_until: leaseUntil, attempts: job.attempts + 1 });
+  }
 
   try {
     if (job.status === "queued" || job.status === "planning") {
@@ -299,11 +341,16 @@ export async function advanceJob(jobId: string, ports: RunnerPorts, actorUserId:
 
 // ── Steps ──────────────────────────────────────────────────────────────────
 
+/** The report this job plans from (a full report, or a lite one from a saved scan). */
+function loadReport(db: AgentDbPort, job: AgentJobRow): Promise<ReportData | null> {
+  return db.getReportForJob ? db.getReportForJob(job) : db.getReport(job.report_id ?? "");
+}
+
 async function runPlanning(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   const { db, llm } = ports;
   await db.updateJob(job.id, { status: "planning", current_step: "plan" });
 
-  const report = await db.getReport(job.report_id ?? "");
+  const report = await loadReport(db, job);
   if (!report) throw new RunnerError("report not found");
 
   const { buildPlan } = await import("./planner");
@@ -354,7 +401,7 @@ async function runPreview(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
   const { db, gh } = ports;
   await db.updateJob(job.id, { current_step: "preview" });
 
-  const report = await db.getReport(job.report_id ?? "");
+  const report = await loadReport(db, job);
   if (!report) throw new RunnerError("report not found");
   const client = await gh.client(job);
 
@@ -521,7 +568,7 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
     return;
   }
 
-  const report = await db.getReport(job.report_id ?? "");
+  const report = await loadReport(db, job);
   if (!report) throw new RunnerError("report not found");
   const client = await gh.client(job);
   const input = job.input as { targetRepo?: string };
@@ -751,6 +798,16 @@ async function runApply(job: AgentJobRow, ports: RunnerPorts): Promise<void> {
       },
     },
   });
+  if (db.notify) {
+    await db
+      .notify(
+        job.user_id,
+        "pr_opened",
+        { jobId: job.id, repo: `${owner}/${repoName}`, prNumber: pr.number, prUrl: pr.html_url, fixes: approved.length },
+        `pr_opened:${job.id}`,
+      )
+      .catch(() => {});
+  }
 }
 
 async function runVerify(job: AgentJobRow, ports: RunnerPorts): Promise<void> {

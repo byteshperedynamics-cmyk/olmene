@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { getEnv } from "@/lib/agent/env";
 import { makeGithubPort } from "@/lib/agent/github/port";
-import { safeEqual, syncLiveChecks, syncPullStates, type LiveCheckDbPort, type SyncDbPort } from "@/lib/agent/sync";
+import { syncLiveChecks, syncPullStates, type LiveCheckDbPort, type SyncDbPort } from "@/lib/agent/sync";
+import { requireCron } from "@/lib/agent/cron";
+import { enqueueNotification } from "@/lib/notify";
 import type { AppliedFix, LiveCheckState } from "@/lib/agent/live-check";
 import type { AgentJobRow } from "@/lib/agent/runner";
 import { agentLog } from "@/lib/agent/redact";
@@ -10,6 +12,8 @@ import { recordOpsEvent } from "@/lib/agent/ops";
 import { decryptSecret, masterKeyFromEnv } from "@/lib/agent/crypto";
 import { googleClient, measureEnabled } from "@/lib/measure/google";
 import { syncMeasure, type MeasureDbPort } from "@/lib/measure/sync";
+import { syncGuidedRuns } from "@/lib/agent/guided/service";
+import { syncPrChecks } from "@/lib/agent/pr-checks";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -21,32 +25,10 @@ export const maxDuration = 60;
  * secret in `x-cron-secret` (OLMENE_CRON_SECRET on the Worker, the same value
  * in Supabase Vault). Without the secret configured the route is disabled.
  */
-/**
- * The cron secret: OLMENE_CRON_SECRET on the Worker if set, otherwise the
- * `cron_secret` already in Supabase Vault (the one pg_cron sends), read with
- * the service role — so the schedule works without copying a secret by hand.
- */
-let vaultSecretCache: { value: string | null; at: number } | null = null;
-async function cronSecret(db: ReturnType<typeof getServiceDb>): Promise<string | null> {
-  const env = getEnv("OLMENE_CRON_SECRET");
-  if (env && env.length >= 32) return env;
-  if (vaultSecretCache && Date.now() - vaultSecretCache.at < 5 * 60_000) return vaultSecretCache.value;
-  const { data, error } = await db.rpc("vault_secret", { p_name: "cron_secret" });
-  const value = !error && typeof data === "string" && data.length >= 32 && !data.startsWith("REPLACE_") ? data : null;
-  vaultSecretCache = { value, at: Date.now() };
-  return value;
-}
-
 export async function POST(req: Request) {
   const db = getServiceDb();
-  const secret = await cronSecret(db).catch(() => null);
-  if (!secret) {
-    return NextResponse.json({ error: { code: "cron_disabled", message: "Cron secret not configured." } }, { status: 503 });
-  }
-  const given = req.headers.get("x-cron-secret") ?? "";
-  if (!safeEqual(given, secret)) {
-    return NextResponse.json({ error: { code: "unauthorized" } }, { status: 401 });
-  }
+  const denied = await requireCron(req, db);
+  if (denied) return denied;
 
   const port: SyncDbPort = {
     async listOpenPrJobs(limit) {
@@ -65,10 +47,15 @@ export async function POST(req: Request) {
       const { writeAudit } = await import("@/lib/agent/audit");
       await writeAudit(db, entry);
     },
+    async getAppliedFixes(jobId) {
+      const { data } = await db.from("planned_actions").select("fixer_id, preview").eq("agent_job_id", jobId).eq("status", "applied");
+      return (data as AppliedFix[] | null) ?? [];
+    },
   };
 
   try {
-    const prs = await syncPullStates(port, makeGithubPort(db));
+    // Open PRs: merge tracking, plus the fixes checked on the PR's preview deployment.
+    const prs = await syncPullStates(port, makeGithubPort(db), { fetchFn: (input, init) => fetch(input, init) });
     // After merges are recorded: confirm merged fixes are live, then weekly.
     const live = await syncLiveChecks(liveCheckPort(db), (input, init) => fetch(input, init));
     let measure: Awaited<ReturnType<typeof syncMeasure>> | null = null;
@@ -81,7 +68,11 @@ export async function POST(req: Request) {
         decrypt: (ct) => decryptSecret(masterKey, ct),
       });
     }
-    return NextResponse.json({ ok: true, prs, live, measure });
+    // Guided fixes (no repository): re-check the live site daily until everything is live.
+    const guided = await syncGuidedRuns(db, (input, init) => fetch(input, init)).catch(() => null);
+    // Olmene checks on every pull request (repos the customer turned on).
+    const prChecks = await syncPrChecks(db, makeGithubPort(db), (input, init) => fetch(input, init)).catch(() => null);
+    return NextResponse.json({ ok: true, prs, live, measure, guided, prChecks });
   } catch (e) {
     const detail = (e instanceof Error ? e.message : String(e)).slice(0, 200);
     agentLog("error", "cron sync failed", { detail });
@@ -153,6 +144,8 @@ function measurePort(db: ReturnType<typeof getServiceDb>): MeasureDbPort {
           confidence: o.confidence,
           before_days: o.beforeDays,
           after_days: o.afterDays,
+          expected_after_mean: o.expectedAfterMean ?? null,
+          trend_adjusted: o.trendAdjusted ?? false,
         })),
       );
       if (error) throw new Error(error.message);
@@ -169,7 +162,7 @@ function liveCheckPort(db: ReturnType<typeof getServiceDb>): LiveCheckDbPort {
     async listMergedJobs(limit) {
       const { data } = await db
         .from("agent_jobs")
-        .select("id, user_id, report_id, connection_id, provider, status, current_step, input, step_outputs, error, wait_reason, locked_until, attempts, pr_number, pr_url, pr_state, merged_at")
+        .select("id, user_id, report_id, scan_id, connection_id, provider, status, current_step, input, step_outputs, error, wait_reason, locked_until, attempts, pr_number, pr_url, pr_state, merged_at")
         .eq("pr_state", "merged")
         .not("merged_at", "is", null)
         .order("merged_at", { ascending: false })
@@ -185,9 +178,15 @@ function liveCheckPort(db: ReturnType<typeof getServiceDb>): LiveCheckDbPort {
       return (data as AppliedFix[] | null) ?? [];
     },
     async getSiteUrl(job) {
-      if (!job.report_id) return null;
-      const { data } = await db.from("reports").select("data").eq("id", job.report_id).maybeSingle();
-      const site = (data?.data as { meta?: { siteUrl?: string } } | undefined)?.meta?.siteUrl;
+      let site: unknown = null;
+      if (job.report_id) {
+        const { data } = await db.from("reports").select("data").eq("id", job.report_id).maybeSingle();
+        site = (data?.data as { meta?: { siteUrl?: string } } | undefined)?.meta?.siteUrl;
+      } else if (job.scan_id) {
+        // Free-preview runs planned from a saved scan.
+        const { data } = await db.from("scans").select("site_url").eq("id", job.scan_id).maybeSingle();
+        site = data?.site_url;
+      }
       return typeof site === "string" && /^https?:\/\//.test(site) ? site : null;
     },
     async saveLiveCheck(job, state: LiveCheckState) {
@@ -199,6 +198,9 @@ function liveCheckPort(db: ReturnType<typeof getServiceDb>): LiveCheckDbPort {
     async audit(entry) {
       const { writeAudit } = await import("@/lib/agent/audit");
       await writeAudit(db, entry);
+    },
+    async notify(userId, kind, payload, dedupeKey) {
+      await enqueueNotification(db, { userId, kind, payload, dedupeKey });
     },
   };
 }

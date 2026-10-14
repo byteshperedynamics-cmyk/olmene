@@ -212,7 +212,7 @@ export function AgentConsole({ job }: { job: Job }) {
                   ) : state === "running" ? (
                     <LogoLoader size={24} />
                   ) : (
-                    <span className="grid size-5 place-items-center rounded-full border-2 border-border text-[10px] font-medium tabular-nums text-muted-foreground/60">
+                    <span className="grid size-5 place-items-center rounded-full border-2 border-border text-[11px] font-medium tabular-nums text-muted-foreground/60">
                       {i + 1}
                     </span>
                   )}
@@ -234,7 +234,7 @@ export function AgentConsole({ job }: { job: Job }) {
                       <span className="sr-only">(in progress)</span>
                     )}
                     {state === "done" && log?.model && (
-                      <span className="hidden rounded bg-muted px-1.5 py-px font-mono text-[10px] font-normal text-muted-foreground/70 sm:inline">
+                      <span className="hidden rounded bg-muted px-1.5 py-px font-mono text-[11px] font-normal text-muted-foreground/70 sm:inline">
                         {shortModel(log.model)}
                       </span>
                     )}
@@ -267,7 +267,7 @@ export function AgentConsole({ job }: { job: Job }) {
                 </div>
 
                 {/* Step index on the right — mono, instrument-style */}
-                <span className="mt-0.5 shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground/40" aria-hidden>
+                <span className="mt-0.5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground/40" aria-hidden>
                   {String(i + 1).padStart(2, "0")}
                 </span>
               </motion.li>

@@ -66,6 +66,19 @@
   --color-diff-del: var(--diff-del);
   --color-grid-line: var(--grid-line);
 
+  /* Obsidian, Silver & Steel */
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-tel-rose: var(--tel-rose);
+  --color-tel-amber: var(--tel-amber);
+  --color-tel-emerald: var(--tel-emerald);
+  --color-tel-sky: var(--tel-sky);
+  --color-well: var(--well);
+  --color-artifact: var(--artifact);
+  --color-chip: var(--chip);
+  --color-edge: var(--edge);
+  --color-rim: var(--rim);
+
   --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-hover: 160ms;
   --dur-state: 280ms;
@@ -198,142 +211,189 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Olmene design system — "Warm craft" (Claude-inspired)
-   Oat surfaces, deep elm-green accent, soft serif display, calm hierarchy.
+   Olmene design system — "Obsidian, Silver & Steel" (docs/design/DESIGN.md)
+   Structure is achromatic: canvas, grid, cards, navigation, logo and the
+   primary button carry zero colour. Colour exists only as telemetry inside
+   product artifacts (diffs, checks, scores, pins, timestamps):
+     rose = deletions / failed · amber = warnings · emerald = insertions /
+     passed / live · sky = branches, commits, timestamps.
+   Dark is the default theme; light is its monochrome counterpart.
    ───────────────────────────────────────────────────────────────────────── */
 
 :root {
   --radius: 0.75rem;
 
-  /* Surfaces — warm oat, never sterile white */
-  --background: oklch(0.984 0.003 106);      /* #FAF9F5 oat */
-  --foreground: oklch(0.245 0.005 90);       /* warm ink */
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.245 0.005 90);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.245 0.005 90);
+  /* Light — monochrome counterpart */
+  --background: #FAFAFA;
+  --foreground: #09090B;
+  --card: #FFFFFF;
+  --card-foreground: #09090B;
+  --popover: #FFFFFF;
+  --popover-foreground: #09090B;
 
-  /* Accent — deep elm green (olm, the elm tree the name comes from),
-     WCAG AA with margin: as text on oat 7.1:1, white text on it 7.4:1.
-     Dark mode keeps the lighter leaf green for text/borders; buttons
-     switch to ink-on-leaf (6.9:1). */
-  --primary: oklch(0.44 0.09 152);           /* #256039 deep elm */
-  --primary-foreground: oklch(0.995 0.002 106);
+  --primary: #09090B;                        /* stark black button, white text */
+  --primary-foreground: #FAFAFA;
 
-  /* Secondary surfaces — oat-200 */
-  --secondary: oklch(0.943 0.006 100);       /* #F0EEE6 */
-  --secondary-foreground: oklch(0.30 0.005 90);
-  --muted: oklch(0.943 0.006 100);
-  --muted-foreground: oklch(0.516 0.006 90); /* #6E6D6A warm gray */
+  --secondary: #F4F4F5;
+  --secondary-foreground: #18181B;
+  --muted: #F4F4F5;
+  --muted-foreground: #52525B;               /* zinc-600, 7.7:1 on canvas */
 
-  /* Hover tint — soft sage wash */
-  --accent: oklch(0.93 0.025 150);           /* #DDEDDF */
-  --accent-foreground: oklch(0.40 0.07 152);
+  --accent: #F4F4F5;
+  --accent-foreground: #09090B;
 
-  --destructive: oklch(0.577 0.199 25);
-  --border: oklch(0.913 0.009 95);           /* #E6E3DA */
-  --input: oklch(0.913 0.009 95);
-  --ring: oklch(0.44 0.09 152);
+  --destructive: #E11D48;
+  --border: rgb(9 9 11 / 0.09);
+  --input: rgb(9 9 11 / 0.48);               /* 3:1 control boundary */
+  --ring: #09090B;
 
-  --chart-1: oklch(0.44 0.09 152);          /* elm */
-  --chart-2: oklch(0.68 0.115 75);           /* ochre */
-  --chart-3: oklch(0.55 0.095 150);          /* sage */
-  --chart-4: oklch(0.45 0.02 90);            /* warm charcoal */
-  --chart-5: oklch(0.80 0.06 95);            /* straw */
+  --chart-1: #09090B;
+  --chart-2: #71717A;
+  --chart-3: #047857;
+  --chart-4: #0369A1;
+  --chart-5: #B45309;
 
-  --sidebar: oklch(0.943 0.006 100);
-  --sidebar-foreground: oklch(0.245 0.005 90);
-  --sidebar-primary: oklch(0.44 0.09 152);
-  --sidebar-primary-foreground: oklch(0.995 0.002 106);
-  --sidebar-accent: oklch(0.913 0.012 90);
-  --sidebar-accent-foreground: oklch(0.30 0.06 152);
-  --sidebar-border: oklch(0.913 0.009 95);
-  --sidebar-ring: oklch(0.74 0.13 150);
+  --sidebar: #F4F4F5;
+  --sidebar-foreground: #09090B;
+  --sidebar-primary: #09090B;
+  --sidebar-primary-foreground: #FAFAFA;
+  --sidebar-accent: #E4E4E7;
+  --sidebar-accent-foreground: #09090B;
+  --sidebar-border: rgb(9 9 11 / 0.09);
+  --sidebar-ring: #09090B;
 
-  /* Score semantics — warm family: sage / ochre / terracotta-red.
-     Light-mode good/mid darkened to clear WCAG AA as text (4.8-5.3:1 on oat). */
-  --score-good: oklch(0.52 0.09 150);
-  --score-mid: oklch(0.53 0.1 75);
-  --score-bad: oklch(0.56 0.16 30);
-  /* Severity-only rust — deliberately NOT the green brand accent, so a
-     "high severity" badge never reads as "pass". */
-  --fg-rust: oklch(0.50 0.12 45);
+  /* Logo: achromatic, never follows --primary */
+  --brand: #09090B;
+  --brand-ink: #09090B;
 
-  /* v2 motion tokens (runtime copies — @theme inline vars are not always emitted) */
+  /* Telemetry — the only colour on the site (text-safe on light surfaces) */
+  --tel-rose: #E11D48;
+  --tel-amber: #B45309;
+  --tel-emerald: #047857;
+  --tel-sky: #0369A1;
+
+  /* Surface ladder */
+  --well: #F4F4F5;
+  --artifact: #FFFFFF;
+  --chip: #FFFFFF;
+  --edge: rgb(9 9 11 / 0.08);
+  --edge-top: rgb(9 9 11 / 0.12);
+  --rim: rgb(9 9 11 / 0.14);
+  --artifact-shadow: 0 24px 60px -28px rgb(9 9 11 / 0.22);
+
+  /* Score + severity semantics → telemetry */
+  --score-good: var(--tel-emerald);
+  --score-mid: var(--tel-amber);
+  --score-bad: var(--tel-rose);
+  --fg-rust: var(--tel-rose);
+
+  /* motion tokens (runtime copies — @theme inline vars are not always emitted) */
   --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-hover: 160ms;
   --dur-state: 280ms;
   --dur-enter: 600ms;
   --dur-ambient: 3.2s;
 
-  /* v2 instrument tokens (light) */
-  --surface-2: #F2F0EA;
-  --faint: #706E69; /* AA on card, oat and surface-2 */
-  --line-strong: rgba(38, 38, 36, 0.18);
-  --leaf-soft: rgba(37, 96, 57, 0.09);
-  --glow: rgba(37, 96, 57, 0.20);
-  --signal-amber: #946F12;
-  --diff-add: rgba(37, 96, 57, 0.08);
-  --diff-del: rgba(181, 83, 42, 0.08);
-  --grid-line: rgba(38, 38, 36, 0.035);
+  /* v2 instrument tokens, remapped to the monochrome ladder */
+  --surface-2: #F4F4F5;
+  --faint: #6B6B74;                           /* AA on canvas, card and well */
+  --line-strong: rgb(9 9 11 / 0.16);
+  --leaf-soft: rgb(9 9 11 / 0.035);
+  --glow: rgb(9 9 11 / 0.10);
+  --signal-amber: var(--tel-amber);
+  --diff-add: rgb(4 120 87 / 0.09);
+  --diff-del: rgb(225 29 72 / 0.08);
+  --grid-line: rgb(9 9 11 / 0.045);
 }
 
 .dark {
-  --background: #1C1D1B;                      /* deep warm instrument dark */
-  --foreground: oklch(0.972 0.004 106);      /* #F5F4EF */
-  --card: #242522;
-  --card-foreground: oklch(0.972 0.004 106);
-  --popover: #242522;
-  --popover-foreground: oklch(0.972 0.004 106);
+  color-scheme: dark;
+  --background: #09090B;                      /* L0 deep canvas, matte carbon */
+  --foreground: #FAFAFA;
+  --card: #111115;                            /* L2 anodized zinc charcoal */
+  --card-foreground: #FAFAFA;
+  --popover: #18181D;                         /* L3 floating slate */
+  --popover-foreground: #FAFAFA;
 
-  --primary: oklch(0.74 0.13 150);           /* #69C27E fresh leaf */
-  /* Ink-on-leaf in dark mode: white on the leaf green is only ~2.4:1 —
-     fails AA. Warm near-black text on the leaf button passes at 6.9:1. */
-  --primary-foreground: oklch(0.245 0.005 90);
+  --primary: #FFFFFF;                         /* stark white button, black text */
+  --primary-foreground: #09090B;
 
-  --secondary: #2C2D2A;
-  --secondary-foreground: oklch(0.955 0.004 106);
-  --muted: #2C2D2A;
-  --muted-foreground: oklch(0.72 0.005 95);  /* #A3A29C */
+  --secondary: #141418;
+  --secondary-foreground: #F4F4F5;
+  --muted: #141418;
+  --muted-foreground: #A1A1AA;               /* zinc-400 body, 7.8:1 */
 
-  --accent: oklch(0.38 0.05 150);
-  --accent-foreground: oklch(0.85 0.08 150);
+  --accent: #18181D;
+  --accent-foreground: #FAFAFA;
 
-  --destructive: oklch(0.704 0.191 22);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.74 0.13 150);
+  --destructive: #F43F5E;
+  --border: rgb(255 255 255 / 0.08);
+  --input: rgb(255 255 255 / 0.34);          /* 3:1 control boundary */
+  --ring: rgb(255 255 255 / 0.85);
 
-  --chart-1: oklch(0.74 0.13 150);
-  --chart-2: oklch(0.82 0.10 80);
-  --chart-3: oklch(0.76 0.10 148);
-  --chart-4: oklch(0.62 0.01 90);
-  --chart-5: oklch(0.55 0.06 95);
+  --chart-1: #FAFAFA;
+  --chart-2: #A1A1AA;
+  --chart-3: #10B981;
+  --chart-4: #38BDF8;
+  --chart-5: #F59E0B;
 
-  --sidebar: #181917;
-  --sidebar-foreground: oklch(0.972 0.004 106);
-  --sidebar-primary: oklch(0.74 0.13 150);
-  --sidebar-primary-foreground: oklch(0.245 0.005 90);
-  --sidebar-accent: oklch(0.38 0.05 150);
-  --sidebar-accent-foreground: oklch(0.85 0.08 150);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.74 0.13 150);
+  --sidebar: #0C0C0F;
+  --sidebar-foreground: #FAFAFA;
+  --sidebar-primary: #FFFFFF;
+  --sidebar-primary-foreground: #09090B;
+  --sidebar-accent: #18181D;
+  --sidebar-accent-foreground: #FAFAFA;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: rgb(255 255 255 / 0.85);
 
-  --score-good: oklch(0.76 0.10 148);
-  --score-mid: oklch(0.82 0.10 80);
-  --score-bad: oklch(0.72 0.15 30);
-  --fg-rust: oklch(0.85 0.10 45);
+  --brand: #FFFFFF;
+  --brand-ink: #FFFFFF;
 
-  /* v2 instrument tokens (dark) */
-  --surface-2: #2C2D2A;
-  --faint: #96958F; /* AA on every dark surface */
-  --line-strong: rgba(245, 244, 239, 0.16);
-  --leaf-soft: rgba(105, 194, 126, 0.14);
-  --glow: rgba(105, 194, 126, 0.38);
-  --signal-amber: #D9B45A;
-  --diff-add: rgba(105, 194, 126, 0.12);
-  --diff-del: rgba(222, 131, 84, 0.12);
-  --grid-line: rgba(245, 244, 239, 0.035);
+  --tel-rose: #F43F5E;
+  --tel-amber: #F59E0B;
+  --tel-emerald: #10B981;
+  --tel-sky: #38BDF8;
+
+  --well: #050507;                            /* L1 recessed obsidian */
+  --artifact: #121216;                        /* L2 */
+  --chip: #18181D;                            /* L3 */
+  --edge: rgb(255 255 255 / 0.07);
+  --edge-top: rgb(255 255 255 / 0.18);        /* specular top edge */
+  --rim: rgb(255 255 255 / 0.14);
+  --artifact-shadow: 0 24px 60px rgb(0 0 0 / 0.7);
+
+  --surface-2: #141418;
+  --faint: #96969F;                           /* AA on every dark surface */
+  --line-strong: rgb(255 255 255 / 0.14);
+  --leaf-soft: rgb(255 255 255 / 0.04);
+  --glow: rgb(255 255 255 / 0.10);
+  --diff-add: rgb(16 185 129 / 0.12);
+  --diff-del: rgb(244 63 94 / 0.12);
+  --grid-line: rgb(255 255 255 / 0.025);
+}
+
+/* Increase Contrast (Apple HIG, accessibility.md › Vision; liquid-glass.md
+   checklist 5): stronger borders and edges, secondary text one step closer
+   to the foreground. Applies in both appearances. */
+@media (prefers-contrast: more) {
+  :root {
+    --muted-foreground: #3F3F46;
+    --faint: #52525B;
+    --border: rgb(9 9 11 / 0.22);
+    --edge: rgb(9 9 11 / 0.22);
+    --rim: rgb(9 9 11 / 0.42);
+    --line-strong: rgb(9 9 11 / 0.36);
+    --input: rgb(9 9 11 / 0.7);
+  }
+  .dark {
+    --muted-foreground: #D4D4D8;
+    --faint: #B4B4BC;
+    --border: rgb(255 255 255 / 0.22);
+    --edge: rgb(255 255 255 / 0.2);
+    --rim: rgb(255 255 255 / 0.4);
+    --line-strong: rgb(255 255 255 / 0.32);
+    --input: rgb(255 255 255 / 0.6);
+  }
 }
 
 @layer base {
@@ -344,6 +404,8 @@
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklab, var(--foreground) 20%, transparent) transparent;
     scroll-behavior: smooth;
+    /* the floating header pill (68px) must never cover a focused control or an anchor target */
+    scroll-padding-top: 5.5rem;
   }
   /* Jump cuts, not glides, for people who are sensitive to motion */
   @media (prefers-reduced-motion: reduce) {
@@ -376,7 +438,7 @@
     text-wrap: balance;
   }
   .section-label {
-    @apply text-xs font-medium uppercase tracking-[0.14em] text-primary;
+    @apply text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground;
   }
 
   /* Scroll-reveal (Reveal/Enter components) — pure CSS transition driven by
@@ -565,8 +627,8 @@
     color: var(--accent-foreground);
   }
   .status-completed {
-    background: var(--score-good);
-    color: oklch(0.99 0.003 106);
+    background: color-mix(in oklab, var(--score-good) 16%, var(--card));
+    color: var(--score-good);
   }
   .status-failed {
     background: color-mix(in oklab, var(--score-bad) 15%, var(--card));
@@ -841,47 +903,108 @@
   70% { transform: translateY(3px); }
   78%, 100% { transform: translateY(0); }
 }
-/* Hero scan preview — one shared 6s timeline (scan-preview.tsx):
-   0–34% beam sweeps down (pins lift as it passes) · 46–53% PR toast
-   · 58–64% pins turn green, score 61 → 94 · 88–97% everything resets. */
+/* Hero scan preview — one shared 9s timeline (scan-preview.tsx):
+   0–28% laser sweeps · 8/13/18% pins land · 30–50% wires draw to their diff
+   lines, which light up · 52% pins turn ✓ · 54–64% bridge 61 → PR #14 → 94
+   · hold · 94–100% reset. Base styles ARE the finished state (reduced motion). */
 @keyframes o-hp-beam {
   0%, 2% { transform: translateY(-100%); opacity: 0; }
-  5% { opacity: 1; }
-  34% { transform: translateY(0); opacity: 1; }
-  40%, 100% { transform: translateY(0); opacity: 0; }
+  4% { opacity: 1; }
+  28% { transform: translateY(0); opacity: 1; }
+  32%, 100% { transform: translateY(0); opacity: 0; }
 }
-@keyframes o-hp-pin1 {
-  0%, 15% { opacity: 0; transform: translateY(6px) scale(0.96); }
-  18% { opacity: 1; transform: translateY(-3px) scale(1); }
-  21%, 88% { opacity: 1; transform: translateY(0) scale(1); }
-  94%, 100% { opacity: 0; transform: translateY(0) scale(1); }
+@keyframes o-hp-pin-1 {
+  0%, 7% { opacity: 0; transform: translateY(6px) scale(0.96); }
+  9% { opacity: 1; transform: translateY(-2px) scale(1); }
+  11%, 93% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: none; }
 }
-@keyframes o-hp-pin2 {
-  0%, 20% { opacity: 0; transform: translateY(6px) scale(0.96); }
-  23% { opacity: 1; transform: translateY(-3px) scale(1); }
-  26%, 88% { opacity: 1; transform: translateY(0) scale(1); }
-  94%, 100% { opacity: 0; transform: translateY(0) scale(1); }
+@keyframes o-hp-pin-2 {
+  0%, 12% { opacity: 0; transform: translateY(6px) scale(0.96); }
+  14% { opacity: 1; transform: translateY(-2px) scale(1); }
+  16%, 93% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: none; }
 }
-@keyframes o-hp-pin3 {
-  0%, 25% { opacity: 0; transform: translateY(6px) scale(0.96); }
-  28% { opacity: 1; transform: translateY(-3px) scale(1); }
-  31%, 88% { opacity: 1; transform: translateY(0) scale(1); }
-  94%, 100% { opacity: 0; transform: translateY(0) scale(1); }
+@keyframes o-hp-pin-3 {
+  0%, 17% { opacity: 0; transform: translateY(6px) scale(0.96); }
+  19% { opacity: 1; transform: translateY(-2px) scale(1); }
+  21%, 93% { opacity: 1; transform: none; }
+  97%, 100% { opacity: 0; transform: none; }
 }
-@keyframes o-hp-toast {
-  0%, 46% { opacity: 0; transform: translateY(12px); }
-  53% { opacity: 1; transform: translateY(-2px); }
-  58%, 90% { opacity: 1; transform: translateY(0); }
-  96%, 100% { opacity: 0; transform: translateY(0); }
+@keyframes o-hp-wire-1 {
+  0%, 30% { stroke-dashoffset: 1; opacity: 1; }
+  38%, 93% { stroke-dashoffset: 0; opacity: 1; }
+  97%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes o-hp-wire-2 {
+  0%, 36% { stroke-dashoffset: 1; opacity: 1; }
+  44%, 93% { stroke-dashoffset: 0; opacity: 1; }
+  97%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes o-hp-wire-3 {
+  0%, 42% { stroke-dashoffset: 1; opacity: 1; }
+  50%, 93% { stroke-dashoffset: 0; opacity: 1; }
+  97%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+@keyframes o-hp-line-1 {
+  0%, 37% { background-color: transparent; color: var(--faint); }
+  40%, 94% { background-color: var(--diff-add); color: var(--foreground); }
+  98%, 100% { background-color: transparent; color: var(--faint); }
+}
+@keyframes o-hp-line-2 {
+  0%, 43% { background-color: transparent; color: var(--faint); }
+  46%, 94% { background-color: var(--diff-add); color: var(--foreground); }
+  98%, 100% { background-color: transparent; color: var(--faint); }
+}
+@keyframes o-hp-line-3 {
+  0%, 49% { background-color: transparent; color: var(--faint); }
+  52%, 94% { background-color: var(--diff-add); color: var(--foreground); }
+  98%, 100% { background-color: transparent; color: var(--faint); }
 }
 @keyframes o-hp-before {
-  0%, 56% { opacity: 1; }
-  59%, 100% { opacity: 0; }
+  0%, 52% { opacity: 1; }
+  54%, 100% { opacity: 0; }
 }
 @keyframes o-hp-after {
-  0%, 59% { opacity: 0; transform: translateY(3px); }
-  64%, 92% { opacity: 1; transform: translateY(0); }
-  97%, 100% { opacity: 0; transform: translateY(0); }
+  0%, 53% { opacity: 0; transform: scale(0.6); }
+  56%, 94% { opacity: 1; transform: scale(1); }
+  98%, 100% { opacity: 0; transform: scale(1); }
+}
+@keyframes o-hp-bridge {
+  0%, 54% { stroke-dashoffset: 1; }
+  64%, 94% { stroke-dashoffset: 0; }
+  98%, 100% { stroke-dashoffset: 1; }
+}
+@keyframes o-hp-pr {
+  0%, 57% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  60%, 94% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  98%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes o-hp-score {
+  0%, 63% { opacity: 0.25; transform: scale(0.94); filter: grayscale(1); }
+  67% { opacity: 1; transform: scale(1.04); filter: none; }
+  70%, 94% { opacity: 1; transform: scale(1); filter: none; }
+  98%, 100% { opacity: 0.25; transform: scale(0.94); filter: grayscale(1); }
+}
+/* finished state = base styles */
+.o-hp-line { background-color: var(--diff-add); color: var(--foreground); }
+.o-hp-before { opacity: 0; }
+.o-hp-wire, .o-hp-bridge { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .o-hp-pin-1 { animation: o-hp-pin-1 9s linear infinite; }
+  .o-hp-pin-2 { animation: o-hp-pin-2 9s linear infinite; }
+  .o-hp-pin-3 { animation: o-hp-pin-3 9s linear infinite; }
+  .o-hp-wire-1 { animation: o-hp-wire-1 9s linear infinite; }
+  .o-hp-wire-2 { animation: o-hp-wire-2 9s linear infinite; }
+  .o-hp-wire-3 { animation: o-hp-wire-3 9s linear infinite; }
+  .o-hp-line-1 { animation: o-hp-line-1 9s linear infinite; }
+  .o-hp-line-2 { animation: o-hp-line-2 9s linear infinite; }
+  .o-hp-line-3 { animation: o-hp-line-3 9s linear infinite; }
+  .o-hp-before { animation: o-hp-before 9s linear infinite; }
+  .o-hp-after { animation: o-hp-after 9s linear infinite; }
+  .o-hp-bridge { animation: o-hp-bridge 9s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+  .o-hp-pr { animation: o-hp-pr 9s linear infinite; }
+  .o-hp-score { animation: o-hp-score 9s linear infinite; }
 }
 @keyframes o-sweep {
   from { background-position: 0 0, -60% 0; }
@@ -954,8 +1077,9 @@
       linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
     background-size: 56px 56px;
   }
+  /* L0 ambient: a faint top-centre light cone (white 4% on dark) */
   .o-wash-hero {
-    background: radial-gradient(60% 70% at 78% 30%, var(--leaf-soft), transparent 70%);
+    background: radial-gradient(48% 62% at 50% -6%, var(--leaf-soft), transparent 72%);
   }
 
   .o-eyebrow {
@@ -964,7 +1088,7 @@
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--primary);
+    color: var(--faint);
   }
   .o-readout {
     font-family: var(--font-mono-code), ui-monospace, monospace;
@@ -976,18 +1100,28 @@
     letter-spacing: -0.01em;
     text-wrap: balance;
   }
+  /* Headline accent: upright, brushed metal (DESIGN.md §5) */
   .o-display em {
-    font-family: var(--font-serif-display-italic), var(--font-display);
-    font-style: italic;
-    color: var(--primary);
+    font-style: normal;
+    background-image: linear-gradient(180deg, #FFFFFF 0%, #E4E4E7 45%, #A1A1AA 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    padding-inline-end: 0.04em;
+  }
+  :root:not(.dark) .o-display em {
+    background-image: linear-gradient(180deg, #3F3F46 0%, #18181B 55%, #09090B 100%);
   }
 
+  /* The live-agent heartbeat — one of the few places colour is allowed */
   .o-pulse-dot {
     width: 7px;
     height: 7px;
     flex: none;
     border-radius: 9999px;
-    background: var(--primary);
+    background: var(--tel-emerald);
+    --glow: color-mix(in oklab, var(--tel-emerald) 45%, transparent);
     animation: o-pulse-dot 1.8s ease-out infinite;
   }
 
@@ -1002,7 +1136,7 @@
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.32) 50%, transparent 70%);
+    background: linear-gradient(110deg, transparent 30%, color-mix(in oklab, var(--primary-foreground) 12%, transparent) 50%, transparent 70%);
     transform: translateX(-120%);
     animation: o-sheen var(--dur-ambient) var(--ease-out-expo) infinite;
     pointer-events: none;
@@ -1022,7 +1156,54 @@
   }
 
   .o-elevated {
-    box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.45), 0 0 0 6px color-mix(in oklab, var(--card) 60%, transparent);
+    box-shadow: inset 0 1px 0 var(--edge-top), var(--artifact-shadow);
+  }
+
+  /* ── Surface ladder (DESIGN.md §4) ── */
+  /* L1: engraved well — terminals, diff viewports, report data */
+  .o-well {
+    background: var(--well);
+    border: 1px solid var(--edge);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05), inset 0 2px 6px rgb(0 0 0 / 0.35);
+  }
+  :root:not(.dark) .o-well {
+    box-shadow: inset 0 1px 2px rgb(9 9 11 / 0.06);
+  }
+  /* L2: lit artifact — product frames, workbench, teardown cards */
+  .o-artifact {
+    background: linear-gradient(180deg, color-mix(in oklab, var(--artifact) 100%, white 1.5%), var(--artifact));
+    border: 1px solid var(--edge);
+    box-shadow: inset 0 1px 0 var(--edge-top), var(--artifact-shadow);
+  }
+  /* L3: floating chip — pins, tabs, status capsules */
+  .o-chip {
+    background: var(--chip);
+    border: 1px solid var(--rim);
+    box-shadow: 0 10px 24px -10px rgb(0 0 0 / 0.55);
+  }
+  :root:not(.dark) .o-chip {
+    box-shadow: 0 8px 20px -12px rgb(9 9 11 / 0.25);
+  }
+
+  /* Command bar: a specular light travels the border while focused */
+  .o-beam-border {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--artifact), var(--artifact)) padding-box,
+      linear-gradient(var(--rim), var(--rim)) border-box;
+  }
+  .o-beam-border:focus-within {
+    background:
+      linear-gradient(var(--artifact), var(--artifact)) padding-box,
+      conic-gradient(from var(--o-ang), var(--rim) 0deg, var(--rim) 250deg, color-mix(in oklab, var(--foreground) 85%, transparent) 310deg, var(--rim) 360deg) border-box;
+    animation: o-spin 3.2s linear infinite;
+  }
+
+  /* Telemetry text that must stay legible on any ladder level */
+  .o-readout-strong {
+    font-family: var(--font-mono-code), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
   }
 
   .o-skeleton {
@@ -1060,6 +1241,7 @@
   .o-pulse-dot,
   .o-sheen::after,
   .o-glow-border,
+  .o-beam-border,
   .o-skeleton,
   .o-crossfade,
   .o-bloom-once,
@@ -1088,4 +1270,87 @@
 :is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) [dir="ltr"] .font-mono,
 :is(:lang(ar), :lang(ur), :lang(hi), :lang(bn), :lang(zh), :lang(ja)) .font-mono[dir="ltr"] {
   font-family: var(--font-mono-code), ui-monospace, monospace;
+}
+
+/* ── Find it. Fix it. Prove it. (home/loop.tsx) — play once on view ──
+   Base styles are the finished state; [data-stage="armed"] is the start;
+   [data-stage="run"] plays. */
+@keyframes o-node-in {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes o-node-out {
+  to { opacity: 0; }
+}
+@keyframes o-laser {
+  0% { transform: translateY(6px); opacity: 0; }
+  8% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(196px); opacity: 0; }
+}
+@keyframes o-del-dim {
+  to { opacity: 0.42; transform: translateX(-6px); }
+}
+.o-node-wait { opacity: 0; }
+.o-del { opacity: 0.42; transform: translateX(-6px); }
+.o-laser {
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--foreground) 90%, transparent) 20%, var(--foreground) 50%, color-mix(in oklab, var(--foreground) 90%, transparent) 80%, transparent);
+  box-shadow: 0 0 14px 2px color-mix(in oklab, var(--foreground) 35%, transparent);
+  opacity: 0;
+}
+.o-loop[data-stage="armed"] .o-node-mark { opacity: 0; }
+.o-loop[data-stage="armed"] .o-node-wait { opacity: 1; }
+.o-loop[data-stage="armed"] .o-del { opacity: 1; transform: none; }
+.o-loop[data-stage="run"] .o-node-mark { animation: o-node-in 280ms var(--ease-out-expo) var(--d) both; }
+.o-loop[data-stage="run"] .o-node-wait { opacity: 1; animation: o-node-out 120ms linear var(--d) forwards; }
+.o-loop[data-stage="run"] .o-laser { animation: o-laser 1.75s linear 0.05s both; }
+.o-loop[data-stage="run"] .o-del { opacity: 1; transform: none; animation: o-del-dim 520ms var(--ease-out-expo) 2.1s forwards; }
+
+/* Workbench approve: one ripple from the click point */
+@keyframes o-ripple {
+  from { transform: translate(-50%, -50%) scale(0.1); opacity: 0.9; }
+  to { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+}
+.o-ripple { animation: o-ripple 650ms var(--ease-out-expo) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .o-ripple { display: none; }
+}
+
+/* Security: trust-boundary steps light up once, in order */
+@keyframes o-step-in {
+  from { opacity: 0.25; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.o-boundary[data-stage="armed"] .o-step { opacity: 0.25; }
+.o-boundary[data-stage="run"] .o-step { animation: o-step-in 420ms var(--ease-out-expo) var(--d) both; }
+
+/* ── Apple HIG pass (2026-10-13) ───────────────────────────────────────────
+   Unlayered on purpose: these win over Tailwind utilities.
+
+   Touch targets (accessibility.md › Mobility: 44x44 pt default, 28x28 pt
+   minimum): on touch screens a small control's hit region grows to 44 px
+   without changing how it looks. Buttons grow for real (button.tsx). */
+@media (pointer: coarse) {
+  .o-hit {
+    position: relative;
+  }
+  .o-hit::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Reduce Transparency (liquid-glass.md checklist 5): the floating layer
+   (header, menus, cookie notice, sticky action bars) turns opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  .o-glass {
+    background-color: var(--background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }

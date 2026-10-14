@@ -1,0 +1,68 @@
+# Checks every pull request and every branch push before anything reaches
+# main (main deploys production through Cloudflare Workers Builds).
+# Nothing here deploys.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Cloudflare Workers Builds installs with `bun install --frozen-lockfile`
+  # (Bun 1.2.15 as of 2026-10-13), not npm: bun.lock must match package.json
+  # or the production build fails before it starts.
+  bun-lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+      - run: bun install --frozen-lockfile --ignore-scripts
+
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: oven-sh/setup-bun@v2
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run check:rls
+      - run: bun test src/lib
+      - run: node scripts/i18n_validate.js
+      # Same build the Worker deploy runs, plus the startup/secret gate.
+      - run: npx opennextjs-cloudflare build
+      - run: node scripts/verify-worker-build.mjs
+
+  edge-functions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      # The functions' own deno.json (no node_modules): without it Deno picks up
+      # the root package.json and looks for npm packages in node_modules.
+      - name: Unit tests
+        run: deno test --allow-all --config supabase/functions/deno.json supabase/functions
+      # Older functions are plain JS in .ts files: parse them (syntax, imports).
+      # Typed functions (TYPED below) get a full type-check.
+      - name: Parse every function
+        run: for f in supabase/functions/*/index.ts; do deno cache --config supabase/functions/deno.json "$f" || exit 1; done
+      - name: Type-check typed functions
+        env:
+          TYPED: free-audit notify monitor health-watch
+        run: for f in $TYPED; do [ -f "supabase/functions/$f/index.ts" ] && { deno check --config supabase/functions/deno.json "supabase/functions/$f/index.ts" || exit 1; }; done; true

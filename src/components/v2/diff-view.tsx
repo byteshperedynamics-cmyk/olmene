@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface Row {
@@ -63,36 +63,59 @@ export function DiffView({
   const [active, setActive] = useState(0);
   const file = files[Math.min(active, files.length - 1)];
   const rows = useMemo(() => (file ? parseUnifiedDiff(file.diff) : []), [file]);
-  const adds = rows.filter((r) => r.kind === "add").length;
-  const dels = rows.filter((r) => r.kind === "del").length;
+  const counts = useMemo(
+    () =>
+      files.map((f) => {
+        const r = parseUnifiedDiff(f.diff);
+        return { adds: r.filter((x) => x.kind === "add").length, dels: r.filter((x) => x.kind === "del").length };
+      }),
+    [files],
+  );
+  // Sliding indicator under the active tab
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [bar, setBar] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = tabRefs.current[active];
+    if (el) setBar({ left: el.offsetLeft, width: el.offsetWidth });
+  }, [active, files.length]);
 
   if (!file) return null;
   let addIndex = 0;
 
   return (
-    <div className={cn("min-w-0 overflow-hidden rounded-xl border bg-card", className)} dir="ltr">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-        <div className="flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
+    <div className={cn("o-well min-w-0 overflow-hidden rounded-xl", className)} dir="ltr">
+      <div className="relative flex flex-wrap items-center justify-between gap-2 border-b border-edge px-3 py-2">
+        <div className="relative flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
           {files.map((f, i) => (
             <button
               key={f.path + i}
+              ref={(el) => {
+                tabRefs.current[i] = el;
+              }}
               type="button"
               role="tab"
               aria-selected={i === active}
               onClick={() => setActive(i)}
               className={cn(
-                "shrink-0 rounded-md px-2 py-1 font-mono text-[11.5px] transition-colors duration-[var(--dur-hover)]",
-                i === active ? "bg-surface-2 text-foreground" : "text-muted-foreground hover:text-foreground",
+                "relative shrink-0 rounded-md px-2 py-1 font-mono text-[11.5px] transition-colors duration-[var(--dur-hover)] pointer-coarse:min-h-11",
+                i === active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {f.path}
-              {f.isNewFile && <span className="ms-1.5 text-primary">· {newFileLabel}</span>}
+              {f.path}{" "}
+              <span className="text-faint">
+                (<span className="text-tel-emerald">+{counts[i].adds}</span> <span className="text-tel-rose">−{counts[i].dels}</span>
+                {f.isNewFile && <> · {newFileLabel}</>})
+              </span>
             </button>
           ))}
+          {bar && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -bottom-2 h-px bg-foreground transition-[transform,width] duration-[var(--dur-state)] ease-[var(--ease-out-expo)]"
+              style={{ width: bar.width, transform: `translateX(${bar.left}px)` }}
+            />
+          )}
         </div>
-        <span className="font-mono text-[11.5px]">
-          <span className="text-primary">+{adds}</span> <span className="text-signal-rust">−{dels}</span>
-        </span>
       </div>
       <div className="overflow-x-auto py-2 font-mono text-[12px] leading-[1.75]">
         <table className="w-full border-collapse">
@@ -101,7 +124,7 @@ export function DiffView({
               if (r.kind === "hunk") {
                 return (
                   <tr key={i}>
-                    <td colSpan={4} className="bg-surface-2/60 px-3 py-0.5 text-[11px] text-muted-foreground">
+                    <td colSpan={4} className="bg-foreground/[0.03] px-3 py-0.5 text-[11px] text-faint">
                       {r.text}
                     </td>
                   </tr>
@@ -118,13 +141,13 @@ export function DiffView({
                   )}
                   style={r.kind === "add" && animate ? { animationDelay: `${delay}ms` } : undefined}
                 >
-                  <td className="w-9 select-none pe-1 text-end text-muted-foreground">{r.oldNo ?? ""}</td>
-                  <td className="w-9 select-none pe-2 text-end text-muted-foreground">{r.newNo ?? ""}</td>
+                  <td className="w-9 select-none pe-1 text-end text-faint">{r.oldNo ?? ""}</td>
+                  <td className="w-9 select-none pe-2 text-end text-faint">{r.newNo ?? ""}</td>
                   <td
                     className={cn(
                       "w-4 select-none text-center",
-                      r.kind === "add" && "text-primary",
-                      r.kind === "del" && "text-signal-rust",
+                      r.kind === "add" && "text-tel-emerald",
+                      r.kind === "del" && "text-tel-rose",
                     )}
                   >
                     {r.kind === "add" ? "+" : r.kind === "del" ? "−" : ""}

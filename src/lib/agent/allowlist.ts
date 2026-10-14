@@ -20,6 +20,10 @@ const READ_PATHS: RegExp[] = [
   /^\/repos\/[^/]+\/[^/]+\/contents(\/[^/?]+)*(\?.*)?$/,
   /^\/repos\/[^/]+\/[^/]+\/git\/trees\/[^/]+(\?.*)?$/,
   /^\/repos\/[^/]+\/[^/]+\/pulls(\/\d+)?(\?.*)?$/,
+  // Preview deployments of a fix PR's head commit (needs the app's
+  // read-only Deployments permission; without it GitHub answers 403).
+  /^\/repos\/[^/]+\/[^/]+\/deployments(\?.*)?$/,
+  /^\/repos\/[^/]+\/[^/]+\/deployments\/\d+\/statuses(\?.*)?$/,
 ];
 
 const WRITE_PATHS: RegExp[] = [
@@ -28,6 +32,8 @@ const WRITE_PATHS: RegExp[] = [
   /^\/repos\/[^/]+\/[^/]+\/git\/commits$/,
   /^\/repos\/[^/]+\/[^/]+\/git\/refs$/,
   /^\/repos\/[^/]+\/[^/]+\/pulls$/,
+  // PR checks (engine v2): a completed check run on a commit; needs Checks: write.
+  /^\/repos\/[^/]+\/[^/]+\/check-runs$/,
 ];
 
 /** Installation-level reads (not repo-scoped). */
@@ -87,7 +93,9 @@ export const ALLOWED_FILE_EXTENSIONS = [".html", ".htm", ".txt", ".xml"];
  */
 export const FRAMEWORK_EDIT_PATHS: RegExp[] = [
   /^(src\/)?app\/layout\.(tsx|jsx|ts|js)$/, // Next.js root layout (metadata + <body>)
-  /^(src\/)?components\/olmene-jsonld\.(tsx|jsx)$/, // the JSON-LD component Olmene adds
+  /^(src\/)?components\/olmene-(jsonld|local-business)\.(tsx|jsx)$/, // the JSON-LD components Olmene adds
+  /^(src\/)?pages\/(index|_document)\.(tsx|jsx|ts|js)$/, // Next.js Pages Router: homepage <Head>, _document
+  /^nuxt\.config\.(ts|js|mjs)$/, // Nuxt: app.head defaults
   /^src\/layouts\/[A-Za-z0-9_-]+\.astro$/, // Astro layouts (<head>)
   /^src\/pages\/index\.astro$/, // Astro homepage
 ];

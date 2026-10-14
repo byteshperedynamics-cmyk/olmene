@@ -32,5 +32,13 @@ export const STUDIO_NAME = "Bytesphere_Dynamics";
 export const FOUNDER_NAME = "Hermes Lekkas";
 export const FOUNDER_LINKEDIN = "https://www.linkedin.com/in/hermes-lekkas-453722441/";
 export const STUDIO_GITHUB = "https://github.com/byteshperedynamics-cmyk";
-/** Support / security contact (the mailbox is spelled "byteshpere"). null hides contact links. */
-export const SUPPORT_EMAIL: string | null = "byteshpere.dynamics@gmail.com";
+/**
+ * Contact addresses. The owner wants support@ and security@olmene.com, but
+ * olmene.com has no MX records yet (2026-10-13), so mail to them would bounce.
+ * Until Cloudflare Email Routing forwards both to the studio mailbox, the site
+ * shows the studio mailbox (spelled "byteshpere"). Then switch these two lines
+ * to "support@olmene.com" and "security@olmene.com". null hides contact links.
+ */
+const STUDIO_MAILBOX = "byteshpere.dynamics@gmail.com";
+export const SUPPORT_EMAIL: string | null = STUDIO_MAILBOX;
+export const SECURITY_EMAIL: string | null = STUDIO_MAILBOX;

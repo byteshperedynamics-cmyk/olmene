@@ -26,13 +26,13 @@ export function KpiTile({
 }) {
   return (
     <div className={cn("grid min-w-0 gap-0.5 rounded-xl border bg-card px-3.5 py-3", className)}>
-      <span className="truncate font-mono text-[10px] uppercase tracking-[0.1em] text-faint">{label}</span>
+      <span className="truncate font-mono text-[11px] uppercase tracking-[0.1em] text-faint">{label}</span>
       <span className="font-display text-[28px] font-medium leading-tight tabular-nums">
         {typeof value === "number" ? <CountUp value={value} /> : value}
         {unit && <span className="ms-0.5 text-base text-faint">{unit}</span>}
       </span>
       {delta && (
-        <span className={cn("font-mono text-[11px] leading-snug text-pretty", positive ? "text-primary" : "text-muted-foreground")}>{delta}</span>
+        <span className={cn("font-mono text-[11px] leading-snug text-pretty", positive ? "text-tel-emerald" : "text-muted-foreground")}>{delta}</span>
       )}
     </div>
   );
@@ -218,7 +218,7 @@ export function MetricBars({
 }) {
   return (
     <div className={cn("grid grid-cols-[34px_1fr] gap-1.5", className)} role="img" aria-label={title}>
-      <div className="flex h-[130px] flex-col justify-between text-end font-mono text-[9.5px] text-faint" aria-hidden>
+      <div className="flex h-[130px] flex-col justify-between text-end font-mono text-[11px] text-faint" aria-hidden>
         <span>{yLabels[0]}</span>
         <span>{yLabels[1]}</span>
         <span>{yLabels[2]}</span>
@@ -237,7 +237,7 @@ export function MetricBars({
           />
         ))}
       </div>
-      <div className="col-start-2 flex justify-between font-mono text-[9.5px] text-faint" aria-hidden>
+      <div className="col-start-2 flex justify-between font-mono text-[11px] text-faint" aria-hidden>
         {xLabels.map((l) => (
           <span key={l}>{l}</span>
         ))}
@@ -286,11 +286,11 @@ export function FixFeed({ items, mergedLabel, className }: { items: FeedItem[]; 
   if (!items.length) return null;
   const row = (it: FeedItem, hidden: boolean, k: string) => (
     <li key={k} aria-hidden={hidden || undefined} className="flex min-w-0 items-center gap-2 text-[12.5px]">
-      <span className="shrink-0 rounded-full bg-leaf-soft px-2 py-0.5 font-mono text-[10.5px] text-primary">{mergedLabel}</span>
+      <span className="shrink-0 rounded-full bg-tel-emerald/10 px-2 py-0.5 font-mono text-[11px] text-tel-emerald">{mergedLabel}</span>
       <span className="min-w-0 truncate" title={`${it.title} · ${it.site}`}>
         {it.title} <span className="text-muted-foreground">· {it.site}</span>
       </span>
-      <span className="ms-auto shrink-0 font-mono text-[10.5px] text-faint">{it.ago}</span>
+      <span className="ms-auto shrink-0 font-mono text-[11px] text-faint">{it.ago}</span>
     </li>
   );
   return (

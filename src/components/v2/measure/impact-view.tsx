@@ -138,7 +138,7 @@ export function ImpactView({
               {data.connection.property}
             </p>
           </div>
-          <div className="flex gap-4 font-mono text-[10.5px] text-muted-foreground">
+          <div className="flex gap-4 font-mono text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <i className="inline-block h-0.5 w-3 bg-primary" /> clicks
             </span>
@@ -176,7 +176,7 @@ export function ImpactView({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-[13.5px]">
               <thead>
-                <tr className="border-b font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">
+                <tr className="border-b font-mono text-[11px] uppercase tracking-[0.1em] text-faint">
                   <th className="px-5 py-2.5 text-start font-medium">Fix</th>
                   <th className="px-5 py-2.5 text-start font-medium">Merged</th>
                   <th className="px-5 py-2.5 text-start font-medium">Measured change</th>
@@ -210,9 +210,17 @@ export function ImpactView({
                           <span className="text-muted-foreground">—</span>
                         ) : (
                           <span className="grid gap-0.5">
-                            <span className={o.deltaPct > 0 && o.confidence !== "low" ? "text-primary" : ""}>
+                            <span className={o.deltaPct > 0 && o.confidence !== "low" ? "text-tel-emerald" : ""}>
                               {o.deltaPct > 0 ? "+" : ""}
                               {o.deltaPct}% clicks
+                              {o.trendAdjusted && (
+                                <span
+                                  className="ms-1.5 inline-block rounded bg-surface-2 px-1 py-px align-middle font-mono text-[11px] font-normal text-muted-foreground"
+                                  title="Measured against the trend the site was already on before the merge — not against the raw before-average."
+                                >
+                                  vs trend
+                                </span>
+                              )}
                             </span>
                             <span className="font-mono text-[11px] text-faint">
                               {o.beforeMean} → {o.afterMean} per day

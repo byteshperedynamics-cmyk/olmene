@@ -13,7 +13,7 @@ export function CookiePreferencesLink() {
     <button
       type="button"
       onClick={clearConsentForReask}
-      className="inline-block py-1 text-start hover:text-foreground"
+      className="inline-block py-1 text-start hover:text-foreground pointer-coarse:min-h-11"
     >
       {t("footer.cookiePrefs")}
     </button>

@@ -1,4 +1,4 @@
-/** TypeScript types for the report data model (schemaVersion 1). */
+/** TypeScript types for the report data model (schemaVersion 1). Mirrors the Report schema in supabase/functions/advance-analysis. */
 
 export interface ScoreSet {
   overall: number;
@@ -51,6 +51,26 @@ export interface Source {
   retrievedAt?: string;
 }
 
+/**
+ * Grounded before/after rewrites of the hero copy (the pipeline's "gitdiff"
+ * step). Present on reports since 2026-10; null when the hero couldn't be read.
+ */
+export interface ConversionDiffField {
+  kind: "h1" | "subheadline" | "cta";
+  before: string;
+  after: string;
+  rationale: string;
+  tag: string;
+  /** Pre-rendered before/after snippet (escaped HTML from the engine). */
+  snippetHtml: string;
+  lengthDelta: number;
+  lengthWarn: boolean;
+}
+
+export interface ConversionDiff {
+  fields: ConversionDiffField[];
+}
+
 export interface ReportData {
   meta: {
     siteUrl: string;
@@ -58,6 +78,22 @@ export interface ReportData {
     language: string;
     modelsUsed: string[];
     schemaVersion: number;
+    /** Lite report built from a free scan for a fix preview (no research sections). */
+    lite?: boolean;
+    /** Lite reports: visible homepage text, server-side only (fix copy drafting). */
+    pageExcerpt?: string;
+    /** Unscored site checks from the free scan (AI search, links…) when the plan came from a scan. */
+    extras?: Array<{ id: string; status: "pass" | "warn" | "fail"; detail: string }>;
+    /** engine v2: kind of business detected by the free scan (local, restaurant, ecommerce, saas…). */
+    category?: { id: string; label: string } | null;
+    /** engine v2: App Store app id linked from the homepage (smart app banner fix). */
+    appStoreId?: string | null;
+    /** engine v2: what the site is built with (free scan platform id), for guided fixes. */
+    platformId?: string | null;
+    /** engine v2: mobile lab speed (PageSpeed Insights) measured during the report. */
+    speed?: { source: string; performance: number | null; lcpMs: number | null; cls: number | null; tbtMs: number | null } | null;
+    /** engine v2: market claims whose numbers were checked against their cited sources. */
+    quality?: { claimsChecked: number; claimsUnverified: number };
   };
   executiveSummary: {
     headline: string;
@@ -76,8 +112,9 @@ export interface ReportData {
   };
   market: {
     definition: string;
-    size: { value: string; basis: string; confidence: string; sourceIds: string[] };
-    trends: { trend: string; implication: string; sourceIds: string[] }[];
+    /** verified (engine v2): false when a number in the claim isn't in any cited source; absent when there's no number to check. */
+    size: { value: string; basis: string; confidence: string; sourceIds: string[]; verified?: boolean };
+    trends: { trend: string; implication: string; sourceIds: string[]; verified?: boolean }[];
     segments: { name: string; fitScore: number; why: string; howToReach: string }[];
     potentialAssessment: string;
   };
@@ -106,4 +143,5 @@ export interface ReportData {
   risks: { risk: string; mitigation: string }[];
   assumptions: string[];
   sources: Source[];
+  conversionDiff?: ConversionDiff | null;
 }

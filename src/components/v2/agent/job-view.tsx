@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ExternalLink, Undo2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ExternalLink, ShieldCheck, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AuditRow, JobState, PlannedAction } from "@/lib/agent-client";
-import type { LiveCheckState } from "@/lib/agent/live-check";
+import type { LiveCheckResult, LiveCheckState } from "@/lib/agent/live-check";
 import { fmtDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Flower } from "@/components/v2/flower";
@@ -20,6 +20,18 @@ import {
   fixerLabel,
   statusLine,
 } from "./fixers";
+
+/** The fixes checked on the PR's preview deployment, before merge (engine sync). */
+export interface PreviewCheckState {
+  sha: string;
+  checkedAt: string;
+  available: boolean;
+  reason?: string;
+  url?: string;
+  passed?: number;
+  total?: number;
+  results?: LiveCheckResult[];
+}
 
 /** Pure presentation of a fix run — also rendered by the dev gallery with example states. */
 export function JobView({
@@ -131,7 +143,7 @@ export function JobView({
           )}
 
           {applyOut?.prUrl && (
-            <div className="grid gap-4 rounded-2xl border border-primary/35 bg-leaf-soft p-6 sm:p-7">
+            <div className="grid gap-4 rounded-2xl border border-tel-emerald/35 bg-tel-emerald/[0.06] p-6 sm:p-7">
               <div className="flex items-start gap-4">
                 <Flower size={36} variant="bloom-once" />
                 <div className="min-w-0">
@@ -182,6 +194,8 @@ export function JobView({
           {job.pr_state === "merged" && (
             <LiveCheckPanel state={job.step_outputs?.liveCheck as LiveCheckState | undefined} mergedAt={job.merged_at ?? null} />
           )}
+
+          {applyOut?.prUrl && <PreviewCheckPanel out={job.step_outputs?.previewCheck as PreviewCheckState | undefined} />}
 
           {terminal && !applyOut?.prUrl && job.status === "completed" && (
             <StateMessage
@@ -266,7 +280,7 @@ function ActionCard({
   const impact = fixerImpact(action.fixer_id);
   const p = action.preview;
   return (
-    <div className={cn("min-w-0 rounded-2xl border bg-card transition-colors", checked && "border-primary/40")}>
+    <div className={cn("min-w-0 rounded-2xl border bg-card transition-colors", checked && "border-rim shadow-[inset_0_1px_0_var(--edge-top)]")}>
       <div className="flex items-start gap-3 p-4 sm:p-5">
         <input
           id={`act-${action.id}`}
@@ -361,7 +375,7 @@ function ApproveBar({
   onReject: () => void;
 }) {
   return (
-    <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.5)] backdrop-blur sm:px-5">
+    <div className="o-glass sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.5)] backdrop-blur sm:px-5">
       <p className="min-w-0 text-[12.5px] text-muted-foreground">
         Opens a pull request on{" "}
         <code className="font-mono text-[11.5px] text-foreground" dir="ltr">
@@ -447,9 +461,9 @@ function AuditLog({ audit }: { audit: AuditRow[] }) {
           <li key={row.id} className="flex items-start gap-3 border-b py-2 last:border-0">
             <span
               className={cn(
-                "mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10.5px]",
+                "mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[11px]",
                 row.result === "success"
-                  ? "bg-leaf-soft text-primary"
+                  ? "bg-tel-emerald/10 text-tel-emerald"
                   : row.result === "blocked" || row.result === "failure"
                     ? "bg-diff-del text-signal-rust"
                     : "bg-surface-2 text-muted-foreground",
@@ -492,6 +506,79 @@ export function StateMessage({
   );
 }
 
+/**
+ * Preview verification (engine sync): the fixes were checked on the pull
+ * request's preview deployment BEFORE merge. all-pass is the "Verified on
+ * your preview: 3/3" trust moment; available:false means the GitHub App
+ * lacks the Deployments permission (an owner setting), not a failure.
+ */
+function PreviewCheckPanel({ out }: { out: PreviewCheckState | undefined }) {
+  if (!out) return null;
+
+  if (!out.available) {
+    return (
+      <div className="grid gap-1 rounded-2xl border bg-card p-5 text-[14px]">
+        <p className="font-medium">Preview verification isn&apos;t available for this repository</p>
+        <p className="text-[13px] text-muted-foreground">
+          {out.reason ??
+            "The Olmene GitHub App is missing the Deployments permission, so no preview deployment could be read."}{" "}
+          Your fixes are still checked on the live site after you merge.
+        </p>
+      </div>
+    );
+  }
+
+  if (out.passed === undefined || out.total === undefined) return null;
+  const all = out.passed === out.total;
+
+  return (
+    <div className={cn("grid gap-3 rounded-2xl border p-5", all ? "border-tel-emerald/35 bg-tel-emerald/[0.06]" : "border-signal-amber/40 bg-card")}>
+      <div className="flex items-start gap-3">
+        {all ? (
+          <ShieldCheck className="mt-0.5 size-5 shrink-0 text-tel-emerald" aria-hidden />
+        ) : (
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-signal-amber" aria-hidden />
+        )}
+        <div className="min-w-0">
+          <p className="text-[15px] font-medium">
+            {all
+              ? `Verified on your preview: ${out.passed}/${out.total}`
+              : `${out.passed} of ${out.total} fixes verified on your preview`}
+          </p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            Checked {fmtDateTime(out.checkedAt)} against the pull request&apos;s preview deployment — before you merge.
+            {out.url && (
+              <>
+                {" "}
+                <a href={out.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                  Open preview <ExternalLink className="inline size-3" aria-hidden />
+                </a>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+      {out.results && out.results.length > 0 && (
+        <ul className="grid gap-2">
+          {out.results.map((r) => (
+            <li key={r.fixer} className="flex items-start gap-3 text-[14px]">
+              {r.ok ? (
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-tel-emerald" aria-label="Verified" />
+              ) : (
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-label="Not verified" />
+              )}
+              <span className="min-w-0">
+                <span className="font-medium">{r.label}</span>
+                <span className="block text-[13px] text-muted-foreground">{r.detail}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function LiveCheckPanel({ state, mergedAt }: { state: LiveCheckState | undefined; mergedAt: string | null }) {
   const last = state?.last;
   if (!last) {
@@ -507,7 +594,7 @@ function LiveCheckPanel({ state, mergedAt }: { state: LiveCheckState | undefined
   }
   const allLive = last.total > 0 && last.passed === last.total;
   return (
-    <div className={cn("grid gap-4 rounded-2xl border p-6", allLive ? "border-primary/35 bg-leaf-soft" : "bg-card")}>
+    <div className={cn("grid gap-4 rounded-2xl border p-6", allLive ? "border-tel-emerald/35 bg-tel-emerald/[0.06]" : "bg-card")}>
       <div className="grid gap-1">
         <p className="o-display text-2xl">
           {last.fetchError
@@ -533,7 +620,7 @@ function LiveCheckPanel({ state, mergedAt }: { state: LiveCheckState | undefined
           {last.results.map((r) => (
             <li key={r.fixer} className="flex items-start gap-3 text-[14px]">
               {r.ok ? (
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" aria-label="Live" />
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-tel-emerald" aria-label="Live" />
               ) : (
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-signal-amber" aria-label="Not live yet" />
               )}

@@ -8,11 +8,11 @@ export function Eyebrow({ children, className }: { children: React.ReactNode; cl
 export type PillTone = "live" | "neutral" | "problem" | "example" | "ok";
 
 const TONES: Record<PillTone, string> = {
-  live: "bg-leaf-soft text-primary",
-  ok: "bg-leaf-soft text-primary",
-  neutral: "bg-surface-2 text-muted-foreground",
-  problem: "bg-diff-del text-signal-rust",
-  example: "border border-signal-amber/40 text-signal-amber",
+  live: "border border-tel-emerald/35 bg-tel-emerald/10 text-tel-emerald",
+  ok: "border border-tel-emerald/35 bg-tel-emerald/10 text-tel-emerald",
+  neutral: "border border-rim bg-chip text-muted-foreground",
+  problem: "border border-tel-rose/35 bg-tel-rose/10 text-tel-rose",
+  example: "border border-tel-amber/40 text-tel-amber",
 };
 
 /** Small status pill. `live` adds the pulsing dot. */
@@ -46,7 +46,7 @@ export function ExampleBadge({ label, className }: { label: string; className?: 
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full border border-signal-amber/40 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-signal-amber",
+        "inline-flex items-center whitespace-nowrap rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-tel-amber",
         className,
       )}
     >
@@ -68,14 +68,14 @@ export function ProductFrame({
   className?: string;
 }) {
   return (
-    <div className={cn("o-elevated min-w-0 overflow-hidden rounded-2xl border border-line-strong bg-background", className)}>
-      <div className="flex items-center gap-3 border-b bg-card px-3.5 py-2.5">
+    <div className={cn("o-artifact min-w-0 overflow-hidden rounded-2xl", className)}>
+      <div className="flex items-center gap-3 border-b border-edge px-3.5 py-2.5">
         <div className="flex gap-1.5" aria-hidden>
           <i className="size-2.5 rounded-full bg-line-strong" />
           <i className="size-2.5 rounded-full bg-line-strong" />
           <i className="size-2.5 rounded-full bg-line-strong" />
         </div>
-        <div className="min-w-0 flex-1 truncate rounded-md border bg-background px-2.5 py-1 font-mono text-[11.5px] text-faint" dir="ltr">
+        <div className="o-well min-w-0 flex-1 truncate rounded-md px-2.5 py-1 font-mono text-[11.5px] text-faint" dir="ltr">
           {url}
         </div>
         {badge}
@@ -100,7 +100,7 @@ export function ConfidenceBar({
     <span className={cn("inline-flex items-center gap-2", className)}>
       <span className="h-1.5 w-20 overflow-hidden rounded-full bg-surface-2" aria-hidden>
         <span
-          className="o-anim block h-full origin-left rounded-full bg-primary animate-[o-grow_1.6s_var(--ease-out-expo)_both] rtl:origin-right"
+          className="o-anim block h-full origin-left rounded-full bg-foreground animate-[o-grow_1.6s_var(--ease-out-expo)_both] rtl:origin-right"
           style={{ width: `${pct}%`, opacity: level === "low" ? 0.55 : 1 }}
         />
       </span>

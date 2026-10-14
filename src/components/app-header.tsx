@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { LogOut, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Logo } from "@/components/logo";
 import { featureAgentEnabled, featureMeasureEnabled } from "@/lib/agent-client";
 
 const NAV = [
   { href: "/app/", label: "Analyses", on: true },
+  { href: "/app/sites/", label: "Sites", on: true },
   { href: "/app/billing/", label: "Billing", on: true },
   { href: "/app/agent/", label: "Fix runs", on: featureAgentEnabled() },
   { href: "/app/impact/", label: "Impact", on: featureMeasureEnabled() },
+  { href: "/app/alerts/", label: "Alerts", on: true },
 ].filter((n) => n.on);
 
 // Sub-pages that belong to a nav item without sharing its path prefix.
@@ -34,7 +35,7 @@ function isActive(pathname: string, href: string): boolean {
  */
 export function AppHeader({ pathname, onSignOut }: { pathname: string; onSignOut: () => void }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 print:hidden">
+    <header className="o-glass sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 print:hidden">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-6">
           <Logo />
@@ -58,7 +59,6 @@ export function AppHeader({ pathname, onSignOut }: { pathname: string; onSignOut
               <span className="hidden sm:inline">New analysis</span>
             </Link>
           </Button>
-          <ThemeToggle />
           <Button variant="ghost" size="sm" onClick={onSignOut} aria-label="Sign out">
             <LogOut className="size-4 sm:hidden" aria-hidden />
             <span className="hidden sm:inline">Sign out</span>

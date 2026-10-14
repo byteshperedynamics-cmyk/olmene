@@ -53,3 +53,24 @@ export function InView<T extends ElementType = "div">({ as, ...props }: InViewPr
 export function prefersReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
+
+export type Stage = "final" | "armed" | "run";
+
+/**
+ * useStage — play-once demos (DESIGN.md §6). Server render and no-JS show the
+ * FINAL state ("final"); after mount, motion-allowed browsers switch to
+ * "armed" (the start state, still off-screen) and to "run" when the element
+ * scrolls into view. Reduced motion stays "final". Pair with
+ * data-stage={stage} and CSS keyed on [data-stage="armed"|"run"].
+ */
+export function useStage<T extends Element>(rootMargin = "-12% 0px") {
+  const [ref, inView] = useInView<T>({ once: true, rootMargin });
+  const [stage, setStage] = useState<Stage>("final");
+  useEffect(() => {
+    if (!prefersReducedMotion()) setStage((s) => (s === "final" ? "armed" : s));
+  }, []);
+  useEffect(() => {
+    if (inView) setStage((s) => (s === "armed" ? "run" : s));
+  }, [inView]);
+  return [ref, stage, setStage] as const;
+}

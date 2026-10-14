@@ -14,6 +14,9 @@ export interface MeasureOverview {
     deltaPct: number | null;
     confidence: "low" | "medium" | "high" | null;
     afterDays: number;
+    /** Set when traffic was already trending before the merge: delta/deltaPct are measured against this projected baseline. */
+    expectedAfterMean?: number | null;
+    trendAdjusted?: boolean;
   }>;
   merges: Array<{ jobId: string; prNumber: number | null; prUrl: string | null; mergedAt: string }>;
   prs: { opened: number; merged: number };

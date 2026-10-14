@@ -37,7 +37,7 @@ export function ScoreRing({ value, size = 96, label }: { value: number; size?: n
         </div>
       </div>
       {label ? (
-        <figcaption className="max-w-[10rem] text-center text-[10px] uppercase leading-snug tracking-[0.12em] text-muted-foreground">
+        <figcaption className="max-w-[10rem] text-center text-[11px] uppercase leading-snug tracking-[0.12em] text-muted-foreground">
           {label}
         </figcaption>
       ) : null}

@@ -88,9 +88,8 @@ export function ComponentGallery() {
           <InView className="max-w-md">
             <ScanPreview
               pins={["No meta description", "Pricing hidden", "Unreadable to AI search"]}
-              toastTitle="PR #14 opened · 3 fixes"
-              toastMeta="view diff →"
               previewLabel="Preview"
+              scoreLabel="readiness / 100"
             />
           </InView>
         </Cell>

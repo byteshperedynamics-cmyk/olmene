@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getEntitlement } from "@/lib/data";
 import { ConnectPanel } from "@/components/v2/agent/connect-panel";
 import { StateMessage } from "@/components/v2/agent/job-view";
+import { PrChecksPanel } from "@/components/v2/agent/pr-checks-panel";
 import { useAgentHub, type DisconnectResult } from "@/components/v2/agent/use-agent-hub";
 import { statusLine } from "@/components/v2/agent/fixers";
 
@@ -33,6 +34,21 @@ export default function AgentPage() {
   const hub = useAgentHub();
   const { data: billing } = useQuery({ queryKey: ["entitlement"], queryFn: getEntitlement });
   const { config, jobs, activeConnection, completedReports, busy } = hub;
+  // Arriving from a free scan ("Preview the fix"): the run is planned from the
+  // saved scan, no completed report needed. Sign-in and the GitHub connect
+  // round-trip both come back without the query string, so the scan id is
+  // stashed and restored exactly once.
+  const [scanId] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const fromUrl = new URLSearchParams(window.location.search).get("scan");
+    if (fromUrl) {
+      sessionStorage.setItem("olmene.scanId", fromUrl);
+      return fromUrl;
+    }
+    const saved = sessionStorage.getItem("olmene.scanId");
+    if (saved) sessionStorage.removeItem("olmene.scanId");
+    return saved;
+  });
 
   if (!featureAgentEnabled()) {
     return (
@@ -125,8 +141,8 @@ export default function AgentPage() {
         <>
           <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-5">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-9 place-items-center rounded-full bg-leaf-soft">
-                <ShieldCheck className="size-4 text-primary" aria-hidden />
+              <span className="grid size-9 place-items-center rounded-full bg-tel-emerald/10">
+                <ShieldCheck className="size-4 text-tel-emerald" aria-hidden />
               </span>
               <div className="min-w-0">
                 <p className="text-[14px] font-medium">
@@ -162,12 +178,14 @@ export default function AgentPage() {
 
           <section className="grid gap-4 rounded-2xl border bg-card p-6">
             <div>
-              <h2 className="o-display text-2xl">Start a fix run</h2>
+              <h2 className="o-display text-2xl">{scanId ? "Preview fixes from your free scan" : "Start a fix run"}</h2>
               <p className="mt-1 text-[14px] text-muted-foreground">
-                Pick a completed report and the repository it should fix. You see the exact diff before anything is written.
+                {scanId
+                  ? "This plan comes from your free scan, not a full report. Pick the repository it should fix — you see the exact diff before anything is written, and applying the fixes needs a plan."
+                  : "Pick a completed report and the repository it should fix. You see the exact diff before anything is written."}
               </p>
             </div>
-            {completedReports.length === 0 ? (
+            {completedReports.length === 0 && !scanId ? (
               <p className="text-[14px] text-muted-foreground">
                 No completed reports yet.{" "}
                 <Link href="/app/new/" className="text-primary underline underline-offset-4">
@@ -180,9 +198,12 @@ export default function AgentPage() {
                 reports={completedReports.map((j) => ({ id: j.id, site: j.siteUrl, date: j.createdAt }))}
                 repos={activeConnection.repos ?? []}
                 killSwitch={cfg.killSwitch}
+                scanId={scanId}
               />
             )}
           </section>
+
+          <PrChecksPanel repos={activeConnection.repos ?? []} defaultSiteUrl={completedReports[0]?.siteUrl} />
         </>
       )}
 
@@ -207,7 +228,7 @@ function RunsTable({ jobs }: { jobs: AgentJob[] }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13.5px]">
             <thead>
-              <tr className="border-b text-start font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">
+              <tr className="border-b text-start font-mono text-[11px] uppercase tracking-[0.1em] text-faint">
                 <th className="px-5 py-2.5 text-start font-medium">Repository</th>
                 <th className="px-5 py-2.5 text-start font-medium">Status</th>
                 <th className="px-5 py-2.5 text-start font-medium">Started</th>
@@ -263,13 +284,13 @@ function DisconnectNotice({ result }: { result: DisconnectResult }) {
     <div
       className={cn(
         "grid gap-2 rounded-2xl border p-5 text-[14px]",
-        result.verified ? "border-primary/35 bg-leaf-soft" : "border-signal-amber/40 bg-card",
+        result.verified ? "border-tel-emerald/35 bg-tel-emerald/[0.06]" : "border-signal-amber/40 bg-card",
       )}
     >
       <p className="flex items-center gap-2 font-medium">
         {result.verified ? (
           <>
-            <ShieldCheck className="size-4 text-primary" aria-hidden /> Access removed and verified with GitHub
+            <ShieldCheck className="size-4 text-tel-emerald" aria-hidden /> Access removed and verified with GitHub
           </>
         ) : (
           <>
@@ -306,10 +327,13 @@ function NewRunForm({
   reports,
   repos,
   killSwitch,
+  scanId,
 }: {
   reports: Array<{ id: string; site: string; date: string }>;
   repos: string[];
   killSwitch: boolean;
+  /** Present when arriving from a free scan ("Preview the fix"). */
+  scanId?: string | null;
 }) {
   const initial = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("report") : null;
   const [reportId, setReportId] = useState(
@@ -321,17 +345,50 @@ function NewRunForm({
   async function start() {
     setStarting(true);
     try {
-      const { startAgentJob } = await import("@/lib/agent-client");
-      const { jobId } = await startAgentJob(reportId, repo);
+      const { startAgentJob, startAgentJobFromScan } = await import("@/lib/agent-client");
+      const { jobId } = scanId
+        ? await startAgentJobFromScan(scanId, repo)
+        : await startAgentJob(reportId, repo);
       window.location.href = `/app/agent/job/${jobId}`;
     } catch (e) {
-      toast.error(e instanceof AgentApiError ? e.message : "Could not start the run. Try again.");
+      if (e instanceof AgentApiError && e.code === "rate_limited") {
+        toast.error("That's the three free previews for today — they reset at midnight.", {
+          description: "A plan removes the limit and lets you merge fixes.",
+          duration: 10000,
+          action: { label: "See plans", onClick: () => (window.location.href = "/pricing/") },
+        });
+      } else {
+        toast.error(e instanceof AgentApiError ? e.message : "Could not start the run. Try again.");
+      }
       setStarting(false);
     }
   }
 
   const select =
     "h-11 w-full rounded-[10px] border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+  if (scanId) {
+    // Scan mode: no report picker — the plan is built from the saved free scan.
+    return (
+      <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className="grid gap-1.5 text-[13px]" htmlFor="run-repo">
+          <span className="text-muted-foreground">Repository</span>
+          <select id="run-repo" value={repo} onChange={(e) => setRepo(e.target.value)} className={select}>
+            {repos.length === 0 && <option value="">Install the app on a repository first</option>}
+            {repos.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button variant="sheen" size="xl" onClick={start} disabled={!repo || killSwitch}>
+          {starting ? "Starting…" : "Preview fixes from this scan"}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
       <label className="grid gap-1.5 text-[13px]" htmlFor="run-report">
