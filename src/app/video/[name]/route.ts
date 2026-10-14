@@ -4,11 +4,14 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
  * Range-aware video serving.
  *
  * Workers static assets return the full file (200) for Range requests, which
- * breaks video seeking and Safari/iOS playback. This handler serves the demo
- * MP4 from the ASSETS binding with proper 206 Partial Content responses.
- * The asset itself stays in public/video/ (bundled into the worker's assets);
- * `run_worker_first: ["/video/*.mp4"]` in wrangler.jsonc routes MP4 requests
- * here instead of the platform's direct asset response.
+ * breaks video seeking and Safari/iOS playback. This handler serves the MP4s
+ * from the ASSETS binding with proper 206 Partial Content responses.
+ *
+ * The files live in public/media/, NOT public/video/: a public file at the
+ * requested path is served by Next as a plain static asset before this route
+ * runs (that is what happened in production until 2026-10-15). Pages link to
+ * /video/<name>.mp4, `run_worker_first: ["/video/*.mp4"]` sends those requests
+ * to the Worker, and this route reads /media/<name> from the assets.
  */
 
 const FILES: Record<string, { type: string }> = {
@@ -30,7 +33,7 @@ async function loadFile(name: string): Promise<ArrayBuffer | null> {
   // Production: read from the Workers ASSETS binding (path-based lookup).
   try {
     const { env } = getCloudflareContext({ async: false });
-    const res = await env.ASSETS.fetch(`https://assets.local/video/${name}`);
+    const res = await env.ASSETS.fetch(`https://assets.local/media/${name}`);
     if (res.ok) return await res.arrayBuffer();
     return null;
   } catch {
@@ -38,7 +41,7 @@ async function loadFile(name: string): Promise<ArrayBuffer | null> {
     try {
       const { readFile } = await import("node:fs/promises");
       const { join } = await import("node:path");
-      const buf = await readFile(join(process.cwd(), "public", "video", name));
+      const buf = await readFile(join(process.cwd(), "public", "media", name));
       return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
     } catch {
       return null;
