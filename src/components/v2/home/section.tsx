@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Eyebrow } from "../atoms";
 
-/** Standard v2 section rhythm: 96px desktop / 64px mobile, max-w-6xl. */
+/** Section rhythm: 128px desktop, 112px tablet, 80px mobile; max-w-6xl. */
 export function Section({
   id,
   className,
@@ -16,7 +16,7 @@ export function Section({
   "aria-label"?: string;
 }) {
   return (
-    <section id={id} aria-label={ariaLabel} className={cn("scroll-mt-20 py-16 md:py-24", className)}>
+    <section id={id} aria-label={ariaLabel} className={cn("scroll-mt-24 py-20 md:py-28 lg:py-32", className)}>
       <div className={cn("mx-auto w-full max-w-6xl px-4 sm:px-6", innerClassName)}>{children}</div>
     </section>
   );
@@ -35,10 +35,10 @@ export function SectionHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("grid max-w-2xl gap-4", className)}>
+    <div className={cn("grid max-w-3xl gap-4", className)}>
       <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="o-display text-[30px] leading-[1.08] sm:text-[40px]">{title}</h2>
-      {lede && <p className="text-[17px] leading-relaxed text-muted-foreground">{lede}</p>}
+      <h2 className="o-display text-[34px] leading-[1.04] tracking-[-0.02em] sm:text-[44px] lg:text-[52px]">{title}</h2>
+      {lede && <p className="max-w-[40rem] text-[17px] leading-relaxed text-muted-foreground sm:text-[18px]">{lede}</p>}
     </div>
   );
 }

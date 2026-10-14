@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Quote, TriangleAlert } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown, Quote, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CHECK_COUNT } from "@/lib/config";
 import { useI18n } from "@/i18n/provider";
@@ -42,7 +42,7 @@ export function Teardown() {
 
           {/* @graph parser story: engineering transparency */}
           <div className="o-artifact mt-8 grid gap-3 rounded-2xl p-5">
-            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-tel-amber">{t("teardown.lessonTitle")}</p>
+            <p className="text-[13px] text-tel-amber font-medium">{t("teardown.lessonTitle")}</p>
             <p className="max-w-[64ch] text-[14.5px] leading-relaxed text-muted-foreground">{t("teardown.lesson")}</p>
             <pre dir="ltr" className="o-well overflow-x-auto rounded-lg px-3 py-2.5 font-mono text-[11.5px] leading-relaxed text-muted-foreground">
               <span className="text-faint">{"{"}</span> <span className="text-foreground">&quot;@context&quot;</span>: &quot;https://schema.org&quot;,{"\n"}
@@ -116,58 +116,66 @@ export function Teardown() {
         </div>
       </div>
 
-      {/* Real output screenshot — also gives our image-alt check something to check */}
-      <figure className="mt-12">
-        {/* Light and dark captures of the same real result; the hidden one is display:none, so it neither loads nor is announced. */}
-        <div className="o-artifact overflow-hidden rounded-2xl">
-          {(["", "-dark"] as const).map((v) => (
-            <img
-              key={v || "light"}
-              src={`/img/teardown-001-diagnosis${v}-768.webp`}
-              srcSet={[480, 768, 1064].map((w) => `/img/teardown-001-diagnosis${v}-${w}.webp ${w}w`).join(", ")}
-              sizes="(min-width: 1152px) 1104px, calc(100vw - 32px)"
-              alt={t("teardown.screenshotAlt", { n: CHECK_COUNT })}
-              className={`w-full ${v ? "hidden dark:block" : "dark:hidden"}`}
-              width={1064}
-              height={478}
-              loading="lazy"
-              decoding="async"
-            />
-          ))}
-        </div>
-        <figcaption className="mt-3 text-center font-mono text-[11px] text-faint">
-          {t("teardown.figcaption", { n: CHECK_COUNT })}
-        </figcaption>
-      </figure>
+      {/* The raw scan result and the paid layer's findings: proof, one click away (progressive disclosure) */}
+      <details className="o-disclosure group mt-12">
+        <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-rim bg-chip px-4 py-2 text-[14px] font-medium text-foreground transition-colors hover:bg-accent pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
+          <ChevronDown className="size-4 text-muted-foreground transition-transform duration-[var(--dur-state)] group-open:rotate-180" aria-hidden />
+          {t("teardown.more")}
+        </summary>
+        {/* Real output screenshot — also gives our image-alt check something to check */}
+        <figure className="mt-12">
+          {/* Light and dark captures of the same real result; the hidden one is display:none, so it neither loads nor is announced.
+              Shown in greyscale: the capture predates the monochrome design, the numbers are unchanged. */}
+          <div className="o-artifact overflow-hidden rounded-2xl">
+            {(["", "-dark"] as const).map((v) => (
+              <img
+                key={v || "light"}
+                src={`/img/teardown-001-diagnosis${v}-768.webp`}
+                srcSet={[480, 768, 1064].map((w) => `/img/teardown-001-diagnosis${v}-${w}.webp ${w}w`).join(", ")}
+                sizes="(min-width: 1152px) 1104px, calc(100vw - 32px)"
+                alt={t("teardown.screenshotAlt", { n: CHECK_COUNT })}
+                className={`w-full grayscale contrast-[1.05] ${v ? "hidden dark:block" : "dark:hidden"}`}
+                width={1064}
+                height={478}
+                loading="lazy"
+                decoding="async"
+              />
+            ))}
+          </div>
+          <figcaption className="mt-3 text-center font-mono text-[11px] text-faint">
+            {t("teardown.figcaption", { n: CHECK_COUNT })}
+          </figcaption>
+        </figure>
 
-      {/* What the paid layer found — real quotes from our own full report */}
-      <div className="o-artifact mt-10 rounded-2xl p-6 sm:p-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <Eyebrow>{t("teardown.quotesLabel")}</Eyebrow>
-          <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[11px] text-faint">{t("teardown.engineTag")}</span>
+        {/* What the paid layer found — real quotes from our own full report */}
+        <div className="o-artifact mt-10 rounded-2xl p-6 sm:p-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <Eyebrow>{t("teardown.quotesLabel")}</Eyebrow>
+            <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[11px] text-faint">{t("teardown.engineTag")}</span>
+          </div>
+          <ul className="mt-5 grid gap-4 text-[14.5px] leading-relaxed">
+            {[
+              { quote: "teardown.q1", note: "teardown.q1note" },
+              { quote: "teardown.q2", note: "teardown.q2note" },
+              { quote: "teardown.q3", note: "teardown.q3note" },
+            ].map((r) => (
+              <li key={r.quote} className="flex gap-3">
+                <Quote className="mt-1 size-4 shrink-0 text-faint rtl-flip" aria-hidden />
+                <span>
+                  <span className="text-muted-foreground">&ldquo;{t(r.quote)}&rdquo;</span> <span>{t(r.note)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 text-[14px] text-muted-foreground">
+            {t("teardown.paidLayerPre")}{" "}
+            <Link href="/sample-report/" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
+              {t("teardown.paidLayerLink")}
+            </Link>
+            .
+          </p>
         </div>
-        <ul className="mt-5 grid gap-4 text-[14.5px] leading-relaxed">
-          {[
-            { quote: "teardown.q1", note: "teardown.q1note" },
-            { quote: "teardown.q2", note: "teardown.q2note" },
-            { quote: "teardown.q3", note: "teardown.q3note" },
-          ].map((r) => (
-            <li key={r.quote} className="flex gap-3">
-              <Quote className="mt-1 size-4 shrink-0 text-faint rtl-flip" aria-hidden />
-              <span>
-                <span className="text-muted-foreground">&ldquo;{t(r.quote)}&rdquo;</span> <span>{t(r.note)}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-5 text-[14px] text-muted-foreground">
-          {t("teardown.paidLayerPre")}{" "}
-          <Link href="/sample-report/" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
-            {t("teardown.paidLayerLink")}
-          </Link>
-          .
-        </p>
-      </div>
+      </details>
     </Section>
   );
 }

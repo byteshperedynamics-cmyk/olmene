@@ -644,5 +644,15 @@
   "rv.speedCls": "Pergeseran tata letak (CLS)",
   "rv.speedTbt": "Waktu pemblokiran (TBT)",
   "rv.qualityNote": "Pemeriksaan klaim: {checked} angka pasar dibandingkan dengan sumber yang dikutip; {unverified} tidak ditemukan di sana dan diberi tanda.",
-  "rv.qualityAll": "Pemeriksaan klaim: semua {checked} angka pasar ditemukan di sumber yang dikutip."
+  "rv.qualityAll": "Pemeriksaan klaim: semua {checked} angka pasar ditemukan di sumber yang dikutip.",
+  "stage.aria": "Contoh: Olmene memindai sebuah beranda, menemukan tiga masalah tepat di tempatnya, membuka pull request #14 yang memperbaikinya, dan skor kesiapan naik dari 61 ke 94.",
+  "stage.fix1": "Deskripsi meta ditambahkan",
+  "stage.fix2": "Tautan harga ditambahkan",
+  "stage.fix3": "Data terstruktur ditambahkan",
+  "stage.pr": "Pull request #14 dibuka dengan 3 perbaikan",
+  "stage.pause": "Jeda animasi",
+  "stage.play": "Putar animasi",
+  "works.title": "Bekerja di situs yang dibuat dengan",
+  "works.more": "Framework kode mendapat pull request. Platform hosting mendapat perbaikan langkah demi langkah, dan Webflow serta WordPress bisa menerapkannya untuk Anda. Plus lebih dari 20 lainnya.",
+  "teardown.more": "Lihat hasil pindaian asli dan apa yang ditambahkan laporan lengkap"
 }

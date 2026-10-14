@@ -84,7 +84,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
           </div>
           <div className="mt-4 grid gap-4 md:grid-cols-[1.2fr_1fr]">
             <div className="o-well rounded-2xl p-5 sm:p-6">
-              <p className="text-[12px] uppercase tracking-[0.12em] text-faint">{t("rv.topFindings")}</p>
+              <p className="text-[12px] text-faint font-medium">{t("rv.topFindings")}</p>
               <ol className="mt-3 grid gap-3 text-[14.5px] leading-relaxed">
                 {data.executiveSummary.topFindings.map((f, i) => (
                   <li key={i} className="flex gap-3">
@@ -95,7 +95,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
               </ol>
             </div>
             <div className="o-artifact rounded-2xl p-5 sm:p-6">
-              <p className="text-[12px] uppercase tracking-[0.12em] text-tel-emerald">{t("common.biggestOpportunity")}</p>
+              <p className="text-[12px] text-tel-emerald font-medium">{t("common.biggestOpportunity")}</p>
               <p className="mt-3 text-[15px] leading-relaxed">{data.executiveSummary.biggestOpportunity}</p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
             ).map(([k, items]) =>
               items.length ? (
                 <div key={k} className="grid gap-3">
-                  <h3 className="text-[13px] uppercase tracking-[0.12em] text-faint">{t(k)}</h3>
+                  <h3 className="text-[13px] text-faint font-medium">{t(k)}</h3>
                   {items.map((f, i) => (
                     <FindingCard key={i} f={f} evidence={strip(t("rv.evidence"))} fix={strip(t("rv.recommendation"))} />
                   ))}
@@ -226,7 +226,7 @@ export function ReportDocument({ data }: { data: ReportData }) {
             ))}
           </ol>
           <p className="mt-4 text-[12.5px] text-faint">{t("rv.aiNote")}</p>
-          <p className="mt-6 border-t border-edge pt-4 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-faint">◼ {t("rv.endOfReport")}</p>
+          <p className="mt-6 border-t border-edge pt-4 text-center text-[13px] text-faint font-medium">◼ {t("rv.endOfReport")}</p>
         </section>
       </div>
     </div>
@@ -306,13 +306,13 @@ function FindingCard({ f, evidence, fix }: { f: AuditFinding; evidence: string; 
       </header>
       <div className="grid md:grid-cols-2">
         <div className="grid content-start gap-2 border-b border-edge p-5 md:border-b-0 md:border-e">
-          <p className="flex items-center gap-2 text-[11.5px] uppercase tracking-[0.12em] text-tel-amber">
+          <p className="flex items-center gap-2 text-[13px] text-tel-amber font-medium">
             <span className="size-1.5 rounded-full bg-tel-amber" aria-hidden /> {evidence}
           </p>
           <p className="text-[14px] leading-relaxed text-muted-foreground">{f.evidence}</p>
         </div>
         <div className="grid content-start gap-2 bg-tel-emerald/[0.05] p-5">
-          <p className="flex items-center gap-2 text-[11.5px] uppercase tracking-[0.12em] text-tel-emerald">
+          <p className="flex items-center gap-2 text-[13px] text-tel-emerald font-medium">
             <span className="size-1.5 rounded-full bg-tel-emerald" aria-hidden /> {fix}
           </p>
           <p className="text-[14px] leading-relaxed">{f.recommendation}</p>

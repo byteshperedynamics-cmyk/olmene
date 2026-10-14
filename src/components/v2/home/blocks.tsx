@@ -44,7 +44,7 @@ export function CanCannot() {
         </div>
       </div>
       <p className="mt-6 text-sm">
-        <Link href="/security/#github" className="o-hit font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
+        <Link href="/security/#github" className="o-hit relative font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
           {t("cc.more")}
         </Link>
       </p>
@@ -72,7 +72,7 @@ export function AboutStudio() {
               LinkedIn
             </a>
           </p>
-          <Link href="/security/" className="o-hit font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
+          <Link href="/security/" className="o-hit relative font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
             {t("about.security")}
           </Link>
         </div>
@@ -96,7 +96,7 @@ export function Comparison() {
       <div className="mt-10 grid gap-4 lg:grid-cols-3">
         {rows.map((r) => (
           <div key={r.who} className="o-well flex flex-col rounded-2xl p-6">
-            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">{t(r.who)}</p>
+            <p className="text-[13px] text-faint font-medium">{t(r.who)}</p>
             <p className="o-display mt-3 text-xl">&ldquo;{t(r.pitch)}&rdquo;</p>
             <p className="mt-3 text-[14.5px] leading-relaxed text-muted-foreground">{t(r.problem)}</p>
           </div>
@@ -105,7 +105,7 @@ export function Comparison() {
       <div className="o-glow-border mt-4 rounded-2xl p-6 sm:p-8">
         <div className="flex items-center gap-2.5">
           <Flower size={18} />
-          <p translate="no" className="font-mono text-[11px] uppercase tracking-[0.12em] text-foreground">Olmene</p>
+          <p translate="no" className="text-[13px] text-foreground font-medium">Olmene</p>
         </div>
         <p className="o-display mt-3 text-2xl leading-snug sm:text-[28px]">&ldquo;{t("compare.ours")}&rdquo;</p>
       </div>
@@ -170,14 +170,11 @@ export function HomeFaq() {
 export function FinalCta() {
   const { t } = useI18n();
   return (
-    <section className="relative overflow-hidden border-t py-20 md:py-28">
-      <div
-        aria-hidden
-        className="o-grid-bg pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_70%_at_50%_100%,black,transparent)]"
-      />
-      <div className="mx-auto grid w-full max-w-2xl justify-items-center gap-5 px-4 text-center sm:px-6">
+    <section className="relative isolate overflow-hidden border-t border-edge py-24 md:py-36">
+      <div aria-hidden className="o-hero-backdrop pointer-events-none absolute inset-0 -z-10" />
+      <div className="mx-auto grid w-full max-w-3xl justify-items-center gap-6 px-4 text-center sm:px-6">
         <Flower size={40} variant="bloom" />
-        <h2 className="o-display text-[32px] leading-[1.08] sm:text-[44px]">{t("cta.title")}</h2>
+        <h2 className="o-display o-hero-title text-[40px] leading-[1.02] sm:text-[56px] lg:text-[64px]">{t("cta.title")}</h2>
         <p className="max-w-xl text-[17px] leading-relaxed text-muted-foreground">{t("cta.body")}</p>
         <FreeAuditInput variant="cta" className="mt-3" />
       </div>

@@ -644,5 +644,15 @@
   "rv.speedCls": "Düzen kayması (CLS)",
   "rv.speedTbt": "Engelleme süresi (TBT)",
   "rv.qualityNote": "İddia kontrolü: {checked} pazar sayısı, belirtilen kaynaklarıyla karşılaştırıldı; {unverified} tanesi orada bulunamadı ve işaretlendi.",
-  "rv.qualityAll": "İddia kontrolü: {checked} pazar sayısının tümü belirtilen kaynaklarda bulundu."
+  "rv.qualityAll": "İddia kontrolü: {checked} pazar sayısının tümü belirtilen kaynaklarda bulundu.",
+  "stage.aria": "Örnek: Olmene bir ana sayfayı tarar, üç sorunu sayfada bulundukları yerde tespit eder, bunları düzelten 14 numaralı pull request'i açar ve hazırlık puanı 61'den 94'e yükselir.",
+  "stage.fix1": "Meta açıklaması eklendi",
+  "stage.fix2": "Fiyatlandırma bağlantısı eklendi",
+  "stage.fix3": "Yapılandırılmış veri eklendi",
+  "stage.pr": "3 düzeltmeyle 14 numaralı pull request açıldı",
+  "stage.pause": "Animasyonu duraklat",
+  "stage.play": "Animasyonu oynat",
+  "works.title": "Şunlarla yapılmış sitelerde çalışır",
+  "works.more": "Kod çatıları pull request alır. Barındırılan platformlar adım adım düzeltmeler alır; Webflow ve WordPress bunları sizin yerinize uygulayabilir. Ayrıca 20'den fazla başka platform.",
+  "teardown.more": "Ham tarama sonucunu ve tam raporun eklediklerini görün"
 }

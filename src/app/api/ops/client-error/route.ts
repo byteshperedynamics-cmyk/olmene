@@ -30,7 +30,12 @@ export async function POST(req: Request) {
   } catch {
     path = null;
   }
-  const db = getServiceDb();
+  let db: ReturnType<typeof getServiceDb>;
+  try {
+    db = getServiceDb();
+  } catch {
+    return new NextResponse(null, { status: 204 }); // not configured (local dev): drop quietly
+  }
   const since = new Date(Date.now() - 10 * 60_000).toISOString();
   const { count } = await db.from("ops_events").select("id", { count: "exact", head: true }).eq("source", "browser").eq("message", message).gte("created_at", since);
   if ((count ?? 0) === 0) {

@@ -644,5 +644,15 @@
   "rv.speedCls": "布局偏移 (CLS)",
   "rv.speedTbt": "阻塞时间 (TBT)",
   "rv.qualityNote": "数据核查：已将 {checked} 个市场数字与其引用来源进行比对；其中 {unverified} 个未能在来源中找到，已作标记。",
-  "rv.qualityAll": "数据核查：全部 {checked} 个市场数字均在其引用来源中找到。"
+  "rv.qualityAll": "数据核查：全部 {checked} 个市场数字均在其引用来源中找到。",
+  "stage.aria": "示例：Olmene 扫描一个主页，在页面上找出三个问题所在的位置，提交修复它们的拉取请求 #14，就绪度评分从 61 升至 94。",
+  "stage.fix1": "已添加元描述",
+  "stage.fix2": "已添加价格链接",
+  "stage.fix3": "已添加结构化数据",
+  "stage.pr": "已提交拉取请求 #14，包含 3 项修复",
+  "stage.pause": "暂停动画",
+  "stage.play": "播放动画",
+  "works.title": "适用于以下平台搭建的网站",
+  "works.more": "代码框架会收到拉取请求。托管平台会收到分步修复指南，Webflow 和 WordPress 还可以替你直接应用。另外还支持 20 多个其他平台。",
+  "teardown.more": "查看原始扫描结果以及完整报告补充的内容"
 }

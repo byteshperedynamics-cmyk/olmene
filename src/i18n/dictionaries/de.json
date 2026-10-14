@@ -644,5 +644,15 @@
   "rv.speedCls": "Layoutverschiebung (CLS)",
   "rv.speedTbt": "Blockierzeit (TBT)",
   "rv.qualityNote": "Faktencheck: {checked} Marktzahlen wurden mit ihren zitierten Quellen verglichen; {unverified} wurden dort nicht gefunden und sind markiert.",
-  "rv.qualityAll": "Faktencheck: Alle {checked} Marktzahlen stehen in ihren zitierten Quellen."
+  "rv.qualityAll": "Faktencheck: Alle {checked} Marktzahlen stehen in ihren zitierten Quellen.",
+  "stage.aria": "Beispiel: Olmene scannt eine Startseite, findet drei Probleme genau dort, wo sie auf der Seite liegen, öffnet Pull Request #14 mit den Korrekturen, und der Bereitschaftswert steigt von 61 auf 94.",
+  "stage.fix1": "Meta-Beschreibung ergänzt",
+  "stage.fix2": "Link zu den Preisen ergänzt",
+  "stage.fix3": "Strukturierte Daten ergänzt",
+  "stage.pr": "Pull Request #14 mit 3 Korrekturen geöffnet",
+  "stage.pause": "Animation anhalten",
+  "stage.play": "Animation abspielen",
+  "works.title": "Funktioniert mit Websites auf Basis von",
+  "works.more": "Code-Frameworks bekommen Pull Requests. Gehostete Plattformen bekommen Schritt-für-Schritt-Korrekturen, die Webflow und WordPress auch für Sie anwenden können. Dazu mehr als 20 weitere.",
+  "teardown.more": "Rohes Scan-Ergebnis und die Ergänzungen des vollständigen Berichts ansehen"
 }

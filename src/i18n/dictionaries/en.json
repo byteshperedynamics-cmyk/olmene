@@ -644,5 +644,15 @@
   "rv.speedCls": "Layout shift (CLS)",
   "rv.speedTbt": "Blocking time (TBT)",
   "rv.qualityNote": "Claim check: {checked} market numbers were compared with their cited sources; {unverified} could not be found there and are marked.",
-  "rv.qualityAll": "Claim check: all {checked} market numbers were found in their cited sources."
+  "rv.qualityAll": "Claim check: all {checked} market numbers were found in their cited sources.",
+  "stage.aria": "Example: Olmene scans a homepage, finds three problems where they appear on the page, opens pull request #14 that fixes them, and the readiness score rises from 61 to 94.",
+  "stage.fix1": "Meta description added",
+  "stage.fix2": "Pricing link added",
+  "stage.fix3": "Structured data added",
+  "stage.pr": "Pull request #14 opened with 3 fixes",
+  "stage.pause": "Pause the animation",
+  "stage.play": "Play the animation",
+  "works.title": "Works on sites built with",
+  "works.more": "Code frameworks get pull requests. Hosted platforms get step-by-step fixes, and Webflow and WordPress can apply them for you. Plus more than 20 others.",
+  "teardown.more": "See the raw scan result and what the full report added"
 }

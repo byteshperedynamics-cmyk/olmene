@@ -87,7 +87,7 @@ export function SecurityContent() {
           <p className="mt-3 max-w-2xl text-muted-foreground">{t("sec.gh.lede")}</p>
           <div className="o-well mt-6 overflow-x-auto rounded-2xl">
             <table className="w-full min-w-[560px] text-start text-sm">
-              <thead className="border-b border-edge text-xs uppercase tracking-wide text-faint">
+              <thead className="border-b border-edge text-[13px] text-faint font-medium">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-medium">{t("sec.gh.colPerm")}</th>
                   <th scope="col" className="px-4 py-3 font-medium">{t("sec.gh.colAccess")}</th>
@@ -114,7 +114,7 @@ export function SecurityContent() {
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {([true, false] as const).map((yes) => (
               <div key={String(yes)} className={cn("rounded-2xl p-5 sm:p-6", yes ? "o-artifact" : "o-well")}>
-                <p className={cn("flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em]", yes ? "text-tel-emerald" : "text-tel-rose")}>
+                <p className={cn("flex items-center gap-2 text-[13px] font-medium", yes ? "text-tel-emerald" : "text-tel-rose")}>
                   {yes ? <Check className="size-3.5" strokeWidth={2.5} aria-hidden /> : <Lock className="size-3.5" aria-hidden />}
                   {t(yes ? "sec.cap.allowed" : "sec.cap.blocked")}
                 </p>
@@ -156,7 +156,7 @@ export function SecurityContent() {
           <h2 className="o-display text-2xl sm:text-3xl">{t("sec.data.title")}</h2>
           <div className="o-well mt-6 overflow-x-auto rounded-2xl">
             <table className="w-full min-w-[640px] text-start text-sm">
-              <thead className="border-b border-edge text-xs uppercase tracking-wide text-faint">
+              <thead className="border-b border-edge text-[13px] text-faint font-medium">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-medium">{t("sec.data.colWhat")}</th>
                   <th scope="col" className="px-4 py-3 font-medium">{t("sec.data.colHow")}</th>
@@ -184,7 +184,7 @@ export function SecurityContent() {
               {PROCESSORS.map((p) => (
                 <li key={p} className="o-artifact grid content-start gap-2 rounded-xl p-4">
                   <p translate="no" className="font-medium">{PROCESSOR_NAMES[p]}</p>
-                  <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-faint">{t(`sec.proc.${p}.role`)}</p>
+                  <p className="text-[13px] tracking-[0.1em] text-faint font-medium">{t(`sec.proc.${p}.role`)}</p>
                   <p className="text-[13px] leading-relaxed text-muted-foreground">{t(`sec.proc.${p}.data`)}</p>
                 </li>
               ))}
@@ -252,7 +252,7 @@ function TrustBoundary() {
     <div ref={ref} data-stage={stage} className="o-boundary mt-6 grid gap-4">
       <div className="grid gap-4 lg:grid-cols-[1.35fr_auto_1fr]">
         <div className="o-well rounded-2xl p-4 sm:p-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-faint">{t("sec.zone.olmene")}</p>
+          <p className="text-[13px] text-faint font-medium">{t("sec.zone.olmene")}</p>
           <p className="mt-1.5 max-w-[56ch] text-[13px] leading-relaxed text-muted-foreground">{t("sec.zone.olmeneNote")}</p>
           <ol className="mt-4 grid gap-3 sm:grid-cols-2">{["s1", "s2", "s3", "s4"].map((k, i) => step(k, i))}</ol>
         </div>
@@ -263,13 +263,13 @@ function TrustBoundary() {
           </span>
         </div>
         <div className="rounded-2xl border border-foreground/25 p-4 sm:p-5">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-foreground">{t("sec.zone.you")}</p>
+          <p className="text-[13px] text-foreground font-medium">{t("sec.zone.you")}</p>
           <p className="mt-1.5 max-w-[56ch] text-[13px] leading-relaxed text-muted-foreground">{t("sec.zone.youNote")}</p>
           <ol start={5} className="mt-4 grid gap-3">{["s5", "s6"].map((k, i) => step(k, i + 4, true))}</ol>
         </div>
       </div>
       <div className="o-well flex flex-col gap-3 rounded-2xl p-4 sm:flex-row sm:items-center sm:p-5">
-        <p className="shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] text-faint sm:w-64">{t("sec.zone.after")}</p>
+        <p className="shrink-0 text-[13px] text-faint sm:w-64 font-medium">{t("sec.zone.after")}</p>
         <ol start={7} className="grid flex-1">{step("s7", 6)}</ol>
       </div>
     </div>

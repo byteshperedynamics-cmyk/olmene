@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { FreeAuditProvider } from "@/components/free-audit-form";
 import { HomeHero } from "@/components/v2/home/hero";
+import { WorksWith } from "@/components/v2/home/works-with";
 import { ProofStrip, type ProofStat } from "@/components/v2/home/proof-strip";
 import { HomeLoop } from "@/components/v2/home/loop";
 import { ReviewShowcase } from "@/components/v2/home/review-showcase";
@@ -49,6 +50,7 @@ export default function HomePage() {
       <FreeAuditProvider>
         <main id="main-content" className="flex-1">
           <HomeHero />
+          <WorksWith />
           <ProofStrip stats={stats} />
           <HomeLoop />
           <ReviewShowcase />

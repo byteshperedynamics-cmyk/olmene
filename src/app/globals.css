@@ -1082,13 +1082,14 @@
     background: radial-gradient(48% 62% at 50% -6%, var(--leaf-soft), transparent 72%);
   }
 
+  /* Section label: sentence case, the body face, one step quieter than the
+     heading it introduces (no tracked-out monospace capitals). */
   .o-eyebrow {
-    font-family: var(--font-mono-code), ui-monospace, monospace;
-    font-size: 11px;
+    font-family: var(--font-sans);
+    font-size: 15px;
     font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--faint);
+    letter-spacing: -0.005em;
+    color: var(--muted-foreground);
   }
   .o-readout {
     font-family: var(--font-mono-code), ui-monospace, monospace;
@@ -1330,10 +1331,9 @@
    Touch targets (accessibility.md › Mobility: 44x44 pt default, 28x28 pt
    minimum): on touch screens a small control's hit region grows to 44 px
    without changing how it looks. Buttons grow for real (button.tsx). */
+/* .o-hit never changes positioning: the element carries `relative` (or is
+   already absolute/fixed) so the pseudo-element anchors to it. */
 @media (pointer: coarse) {
-  .o-hit {
-    position: relative;
-  }
   .o-hit::after {
     content: "";
     position: absolute;
@@ -1350,6 +1350,233 @@
 @media (prefers-reduced-transparency: reduce) {
   .o-glass {
     background-color: var(--background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ── Hero and the 3D scan stage (2026-10-14) ───────────────────────────────── */
+
+/* The whole headline in brushed metal (no single accented phrase). */
+.o-hero-title {
+  letter-spacing: -0.028em;
+  padding-bottom: 0.06em;
+  background-image: linear-gradient(180deg, #FFFFFF 0%, #F4F4F5 42%, #A1A1AA 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+:root:not(.dark) .o-hero-title {
+  background-image: linear-gradient(180deg, #3F3F46 0%, #09090B 55%, #27272A 100%);
+}
+.o-hero-title em {
+  font-style: normal;
+  background-image: none;
+  padding: 0;
+}
+@media (prefers-contrast: more) {
+  .o-hero-title,
+  :root:not(.dark) .o-hero-title {
+    background-image: none;
+    color: var(--foreground);
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* Light from above the headline, and a pool of light where the stage sits. */
+.o-hero-backdrop {
+  background:
+    radial-gradient(55% 42% at 50% 0%, color-mix(in oklab, var(--foreground) 9%, transparent), transparent 72%),
+    radial-gradient(46% 32% at 50% 70%, color-mix(in oklab, var(--foreground) 5%, transparent), transparent 75%);
+}
+
+.o-stage {
+  aspect-ratio: 4 / 3.4;
+}
+@media (min-width: 640px) {
+  .o-stage {
+    aspect-ratio: 16 / 9.6;
+  }
+}
+@media (min-width: 1024px) {
+  .o-stage {
+    aspect-ratio: 16 / 8.4;
+  }
+}
+.o-stage-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%), linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%), linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+  mask-composite: intersect;
+}
+.o-stage[data-mode="live"] .o-stage-canvas {
+  opacity: 1;
+}
+/* Still poster in the scene's pose until WebGL arrives (and if it never does on a slow device). */
+.o-stage-poster {
+  position: absolute;
+  inset: 18% 24% 24%;
+  border-radius: 12px;
+  border: 1px solid var(--rim);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--foreground) 10%, transparent), color-mix(in oklab, var(--foreground) 3%, transparent)),
+    var(--artifact);
+  box-shadow: var(--artifact-shadow);
+  transform: perspective(1600px) rotateX(26deg) rotateY(-20deg) rotateZ(-2deg);
+  transition: opacity 600ms ease;
+}
+.o-stage[data-mode="live"] .o-stage-poster {
+  opacity: 0;
+}
+
+/* Glass callouts that follow the 3D pins (moved by the scene each frame). */
+.o-stage-chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  will-change: transform;
+}
+.o-stage-chip-inner,
+.o-stage-pr,
+.o-stage-score {
+  border: 1px solid var(--rim);
+  background: color-mix(in oklab, var(--background) 74%, transparent);
+  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.55), inset 0 1px 0 var(--edge-top);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+}
+.o-stage-chip-inner {
+  position: absolute;
+  top: -17px;
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 7px 13px 7px 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  transition:
+    opacity 280ms var(--ease-out-expo, ease-out),
+    transform 280ms var(--ease-out-expo, ease-out);
+}
+.o-stage-chip[data-side="start"] .o-stage-chip-inner {
+  left: auto;
+  right: 18px;
+}
+.o-stage-chip[data-lift="up"] .o-stage-chip-inner {
+  top: -46px;
+}
+.o-stage-chip[data-lift="down"] .o-stage-chip-inner {
+  top: 12px;
+}
+.o-stage-chip[data-state="hidden"] .o-stage-chip-inner {
+  opacity: 0;
+  transform: translateY(6px) scale(0.96);
+}
+.o-stage-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--tel-rose);
+  box-shadow: 0 0 10px var(--tel-rose);
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease;
+}
+.o-stage-fixed {
+  display: none;
+}
+.o-stage-chip[data-state="fixed"] .o-stage-dot {
+  background: var(--tel-emerald);
+  box-shadow: 0 0 10px var(--tel-emerald);
+}
+.o-stage-chip[data-state="fixed"] .o-stage-found {
+  display: none;
+}
+.o-stage-chip[data-state="fixed"] .o-stage-fixed {
+  display: inline;
+}
+.o-stage-pr {
+  position: absolute;
+  top: 16px;
+  inset-inline-end: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+  transition:
+    opacity 300ms var(--ease-out-expo, ease-out),
+    transform 300ms var(--ease-out-expo, ease-out);
+}
+.o-stage-pr[data-state="off"] {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+.o-stage-score {
+  position: absolute;
+  bottom: 16px;
+  inset-inline-start: 16px;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: 16px;
+}
+.o-stage-score [data-score] {
+  transition: color 300ms ease;
+}
+.o-stage-score[data-state="low"] [data-score] {
+  color: var(--tel-rose);
+}
+.o-stage-score[data-state="mid"] [data-score] {
+  color: var(--tel-amber);
+}
+.o-stage-score[data-state="good"] [data-score] {
+  color: var(--tel-emerald);
+}
+@media (min-width: 640px) {
+  .o-stage-pr {
+    top: 24px;
+    inset-inline-end: 24px;
+  }
+  .o-stage-score {
+    bottom: 24px;
+    inset-inline-start: 24px;
+  }
+}
+@media (max-width: 639px) {
+  .o-stage-chip-inner {
+    font-size: 11.5px;
+    padding: 5px 10px 5px 9px;
+  }
+  .o-stage-pr {
+    font-size: 12px;
+    padding: 6px 11px;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .o-stage-chip-inner,
+  .o-stage-pr,
+  .o-stage-score {
+    background: var(--popover);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

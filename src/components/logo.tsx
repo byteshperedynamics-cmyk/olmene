@@ -6,7 +6,7 @@ export function Logo({ className }: { className?: string }) {
   return (
     <Link
       href="/"
-      className={`o-hit flex items-center gap-2 text-foreground ${className ?? ""}`}
+      className={`o-hit relative flex items-center gap-2 text-foreground ${className ?? ""}`}
       aria-label={`${APP_NAME} home`}
     >
       {/* Brand lockup — elm flower mark + lowercase serif wordmark.

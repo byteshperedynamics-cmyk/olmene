@@ -238,7 +238,7 @@ function VerifyStage({ stage }: { stage: Stage }) {
         <span className={good ? "text-tel-emerald" : "text-foreground"} style={{ fontSize: 24 }}>
           {Math.round(score)}
         </span>{" "}
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em]">{t("scores.readiness")}</span>
+        <span className="text-[13px] font-medium">{t("scores.readiness")}</span>
       </span>
     </div>
   );

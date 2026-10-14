@@ -644,5 +644,15 @@
   "rv.speedCls": "Décalage de mise en page (CLS)",
   "rv.speedTbt": "Temps de blocage (TBT)",
   "rv.qualityNote": "Vérification : {checked} chiffres de marché ont été comparés à leurs sources citées ; {unverified} n'y figurent pas et sont signalés.",
-  "rv.qualityAll": "Vérification : les {checked} chiffres de marché figurent bien dans leurs sources citées."
+  "rv.qualityAll": "Vérification : les {checked} chiffres de marché figurent bien dans leurs sources citées.",
+  "stage.aria": "Exemple : Olmene analyse une page d'accueil, repère trois problèmes à l'endroit où ils apparaissent, ouvre la pull request n° 14 qui les corrige, et le score de préparation passe de 61 à 94.",
+  "stage.fix1": "Méta-description ajoutée",
+  "stage.fix2": "Lien vers les tarifs ajouté",
+  "stage.fix3": "Données structurées ajoutées",
+  "stage.pr": "Pull request n° 14 ouverte avec 3 corrections",
+  "stage.pause": "Mettre l'animation en pause",
+  "stage.play": "Lancer l'animation",
+  "works.title": "Fonctionne avec les sites construits avec",
+  "works.more": "Les frameworks reçoivent des pull requests. Les plateformes hébergées reçoivent des corrections pas à pas, que Webflow et WordPress peuvent appliquer pour vous. Et plus de 20 autres.",
+  "teardown.more": "Voir le résultat brut de l'analyse et ce que le rapport complet a ajouté"
 }

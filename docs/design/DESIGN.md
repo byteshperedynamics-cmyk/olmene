@@ -100,3 +100,18 @@ The owner asked for a review against Apple's Human Interface Guidelines (the `ap
 - **One colour, one meaning** (`color.md › Best practices`): sky marks links, URLs, ids, branches and pull requests only, so decorative heading icons are neutral now.
 - **Writing** (`writing.md › Best practices`: avoid "we"): the error pages say "Olmene logged the error".
 
+
+## 11. Signature moment and the big-company pass (2026-10-14)
+
+The owner asked for a site that looks professional, highly polished and big-company, with animation and 3D. Applied with the frontend-design skill (Anthropic, installed in `.claude/skills/frontend-design`) and olmene-motion:
+
+- **One signature moment: the 3D scan** (`src/components/v2/home/scan-scene.ts`, `scan-stage.tsx`). A glossy 3D slab of an example homepage floats over a fading floor grid; a light plane sweeps it, three problems light up where they occur, pull request #14 lands, each turns green and readiness climbs 61 → 94. The address bar shows whatever the visitor types into the scan box. Scrolling turns the page toward you; the pointer adds a little parallax.
+  - Plain three.js (0.186.1, pinned), loaded with `import()` when the browser is idle after the headline paints; ~145 KB gzip, never blocks LCP. A CSS poster holds the space until then; without WebGL the 2D ScanPreview is shown.
+  - The page is unlit (`toneMapped: false`) so white stays white and text stays sharp; a thin glass layer carries the reflections. Callouts, score and PR card are HTML, positioned by projecting the 3D pins each frame (crisp, translatable, `aria-hidden`); the stage itself is `role="img"` with a full description.
+  - Rendering stops off screen and in hidden tabs; frames that run long drop the pixel ratio to 1. Reduced motion renders the finished state once, without the loop or parallax. A pause button covers motion longer than 5 s.
+  - Exception recorded: marketing pages otherwise stay CSS-only for motion; three.js is allowed for this one scene because the owner asked for 3D.
+- **Hero**: centred, the whole headline in brushed metal (no single accented phrase), scan box, then the stage. 
+- **Works on** strip: the platforms the engine supports (Simple Icons marks, CC0), with one line on what each kind gets (pull requests vs guided fixes).
+- **Template tells removed**: eyebrows are sentence case in the body face (`.o-eyebrow`), no tracked-out monospace capitals on marketing pages; monospace stays for numbers, code and URLs.
+- **Rhythm**: sections 128 px apart on desktop, headings 52 px.
+- **Teardown**: the raw scan screenshot and report quotes sit behind "See the raw scan result…" (progressive disclosure); the pre-redesign capture shows in greyscale until it is retaken.

@@ -54,7 +54,7 @@ export function ScanPreview({
           <i className="size-1.5 shrink-0 rounded-full bg-faint" />
           <span className="truncate">{url}</span>
         </div>
-        <span className="shrink-0 rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-tel-amber">
+        <span className="shrink-0 rounded-full border border-tel-amber/40 px-2 py-0.5 text-[13px] text-tel-amber font-medium">
           {previewLabel}
         </span>
       </div>

@@ -55,7 +55,7 @@ export function PreviewCards({ preview, after }: { preview: FreeAuditPreview; af
             {preview.serp.favicon ? (
               <img src={preview.serp.favicon} alt="" className="size-4 rounded-sm" />
             ) : (
-              <span className="grid size-4 place-items-center rounded-sm bg-surface-2 font-mono text-[11px] uppercase text-faint">
+              <span className="grid size-4 place-items-center rounded-sm bg-surface-2 text-[13px] text-faint font-medium">
                 {(preview.serp.siteName ?? preview.serp.displayUrl)[0]?.toUpperCase()}
               </span>
             )}
@@ -68,7 +68,7 @@ export function PreviewCards({ preview, after }: { preview: FreeAuditPreview; af
           <TruncatedLine text={preview.serp.description} className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-muted-foreground" />
           {after && (after.serp.title !== preview.serp.title || after.serp.description !== preview.serp.description) && (
             <p className="mt-2 border-t border-line-strong pt-2 text-[12px] leading-snug">
-              <span className="me-1 font-mono text-[11px] uppercase tracking-wide text-tel-emerald">after</span>
+              <span className="me-1 text-[13px] text-tel-emerald font-medium">after</span>
               <TruncatedLine text={after.serp.title} className="line-clamp-1 text-[13.5px] text-primary" />
               <TruncatedLine text={after.serp.description} className="mt-0.5 line-clamp-2 text-[11.5px] text-muted-foreground" />
             </p>
@@ -87,12 +87,12 @@ export function PreviewCards({ preview, after }: { preview: FreeAuditPreview; af
             <div className="grid h-20 place-items-center bg-surface-2/60 font-mono text-[11px] text-faint">{t("form.previewNoImage")}</div>
           )}
           <div className="p-3">
-            <span className="block truncate font-mono text-[11px] uppercase text-faint" dir="ltr">{preview.social.host}</span>
+            <span className="block truncate text-[13px] text-faint font-medium" dir="ltr">{preview.social.host}</span>
             <TruncatedLine text={preview.social.title} className="mt-0.5 line-clamp-1 block text-[13.5px] font-medium leading-snug" />
             <TruncatedLine text={preview.social.description} className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-muted-foreground" />
             {after && (after.social.title !== preview.social.title || after.social.description !== preview.social.description) && (
               <p className="mt-2 border-t border-line-strong pt-2 text-[12px] leading-snug">
-                <span className="me-1 font-mono text-[11px] uppercase tracking-wide text-tel-emerald">after</span>
+                <span className="me-1 text-[13px] text-tel-emerald font-medium">after</span>
                 <TruncatedLine text={after.social.title} className="line-clamp-1 text-[12.5px]" />
                 <TruncatedLine text={after.social.description} className="mt-0.5 line-clamp-2 text-[11.5px] text-muted-foreground" />
               </p>
@@ -262,7 +262,7 @@ export function ProposalsPanel({ scanId, onProposals }: { scanId: string; onProp
       {proposals.fields.map((f) => (
         <div key={f.field} className="rounded-xl border border-line-strong bg-background p-3.5">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-faint">{f.field}</p>
+            <p className="text-[13px] tracking-[0.1em] text-faint font-medium">{f.field}</p>
             <CopyChip label={t("rv.copyText")} text={f.after} />
           </div>
           {f.before && (
@@ -279,7 +279,7 @@ export function ProposalsPanel({ scanId, onProposals }: { scanId: string; onProp
 
       <div className="overflow-hidden rounded-xl border border-line-strong bg-surface-2/60" dir="ltr">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-1.5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-faint">&lt;head&gt;</span>
+          <span className="text-[13px] tracking-[0.1em] text-faint font-medium">&lt;head&gt;</span>
           <CopyChip label={t("rv.copyHtml")} text={proposals.snippet} />
         </div>
         <pre className="overflow-x-auto px-3 py-2.5 font-mono text-[11.5px] leading-relaxed">

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-/** Mono uppercase section label. */
+/** Section label (sentence case, body face). */
 export function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
   return <p className={cn("o-eyebrow", className)}>{children}</p>;
 }
@@ -46,7 +46,7 @@ export function ExampleBadge({ label, className }: { label: string; className?: 
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-tel-amber",
+        "inline-flex items-center whitespace-nowrap rounded-full border border-tel-amber/40 px-2 py-0.5 text-[13px] font-medium capitalize text-tel-amber",
         className,
       )}
     >

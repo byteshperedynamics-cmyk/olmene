@@ -187,7 +187,7 @@ export function FreeAuditProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function useFreeAudit(): FreeAuditState {
+export function useFreeAudit(): FreeAuditState {
   const ctx = useContext(FreeAuditContext);
   if (!ctx) throw new Error("FreeAudit components must be inside <FreeAuditProvider>");
   return ctx;
@@ -307,7 +307,7 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
         <button
           type="button"
           onClick={trySample}
-          className="o-chip o-hit mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors duration-[var(--dur-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="o-chip o-hit relative mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors duration-[var(--dur-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="text-faint">{t("hero.trySample")}</span>
           <span dir="ltr" className="font-mono text-foreground">{SAMPLE_SITE}</span>
@@ -566,7 +566,7 @@ export function FreeAuditResult() {
                       if (rows.length === 0) return null;
                       return (
                         <div key={group}>
-                          <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.1em] text-faint">{group}</p>
+                          <p className="mb-1 text-[13px] tracking-[0.1em] text-faint font-medium">{group}</p>
                           <ul>
                             {rows.map((e) => (
                               <CheckRow key={e.id} c={e} />
@@ -589,7 +589,7 @@ export function FreeAuditResult() {
                     {result.findings.map((f, i) => (
                       <li key={i} className="rounded-xl border border-line-strong bg-background p-4">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${severityClass(f.severity)}`}>
+                          <span className={`rounded px-1.5 py-0.5 text-[13px] font-semibold ${severityClass(f.severity)}`}>
                             {t(SEVERITY_KEYS[f.severity] ?? f.severity)}
                           </span>
                           <p className="font-medium">{f.title}</p>
@@ -600,7 +600,7 @@ export function FreeAuditResult() {
                         </p>
                         {f.impactHypothesis && (
                           <p className="mt-2 rounded-md bg-secondary/60 px-3 py-2 text-sm text-muted-foreground">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-foreground/70">
+                            <span className="text-[13px] font-semibold text-foreground/70">
                               {t("form.impactLabel", { tag: f.impact ? ` · ${f.impact}` : "" })}
                             </span>
                             {f.impactHypothesis}

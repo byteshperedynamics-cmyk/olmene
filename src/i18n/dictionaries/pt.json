@@ -644,5 +644,15 @@
   "rv.speedCls": "Mudança de layout (CLS)",
   "rv.speedTbt": "Tempo de bloqueio (TBT)",
   "rv.qualityNote": "Verificação: {checked} números de mercado foram comparados com as fontes citadas; {unverified} não foram encontrados lá e estão marcados.",
-  "rv.qualityAll": "Verificação: todos os {checked} números de mercado foram encontrados nas fontes citadas."
+  "rv.qualityAll": "Verificação: todos os {checked} números de mercado foram encontrados nas fontes citadas.",
+  "stage.aria": "Exemplo: o Olmene analisa uma página inicial, encontra três problemas onde eles aparecem, abre o pull request nº 14 que os corrige, e a pontuação de prontidão sobe de 61 para 94.",
+  "stage.fix1": "Meta descrição adicionada",
+  "stage.fix2": "Link de preços adicionado",
+  "stage.fix3": "Dados estruturados adicionados",
+  "stage.pr": "Pull request nº 14 aberto com 3 correções",
+  "stage.pause": "Pausar a animação",
+  "stage.play": "Reproduzir a animação",
+  "works.title": "Funciona em sites feitos com",
+  "works.more": "Frameworks de código recebem pull requests. Plataformas hospedadas recebem correções passo a passo, e o Webflow e o WordPress podem aplicá-las por você. E mais de 20 outras.",
+  "teardown.more": "Ver o resultado original da análise e o que o relatório completo acrescentou"
 }

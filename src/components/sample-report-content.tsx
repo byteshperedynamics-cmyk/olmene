@@ -57,7 +57,7 @@ export function SampleReportContent() {
             <div className="flex flex-wrap items-center gap-3">
               <p className="section-label">{t("sample.label")}</p>
               {/* Fictional data, marked where it can't be missed: here, on the report, and at the foot. */}
-              <span className="rounded-full border border-tel-amber/40 px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] text-tel-amber">
+              <span className="rounded-full border border-tel-amber/40 px-2 py-0.5 text-[13px] text-tel-amber font-medium">
                 {t("common.example")}
               </span>
             </div>
@@ -81,7 +81,7 @@ export function SampleReportContent() {
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
             <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-edge pb-4 font-mono text-[11.5px] text-faint">
               <span dir="ltr" className="text-tel-sky">{data.meta.siteUrl.replace(/^https?:\/\//, "")}</span>
-              <span className="rounded-full border border-tel-amber/40 px-2 py-0.5 uppercase tracking-[0.12em] text-tel-amber">{t("sample.badge")}</span>
+              <span className="rounded-full border border-tel-amber/40 px-2 py-0.5 text-tel-amber font-medium">{t("sample.badge")}</span>
             </div>
             <ReportDocument data={data} />
             <p className="mt-10 text-[12.5px] leading-relaxed text-faint">{t("sample.badgeTip")}</p>
