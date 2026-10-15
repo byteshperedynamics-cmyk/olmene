@@ -17,12 +17,28 @@ export const CONSENT_CHANGED_EVENT = "mw-consent-changed";
 export const CONSENT_OPEN_EVENT = "mw-consent-open";
 
 /**
- * Pages an agency sends its clients (/c/…, and progress links an agency
- * shares) mark themselves with data-agency-page: no cookie banner and no
- * analytics there. Those visitors are the agency's clients, not ours.
+ * Pages with no cookie banner and no analytics. Pages an agency sends its
+ * clients (/c/…, progress links an agency shares, report unsubscribes) mark
+ * themselves data-agency-page: those visitors are the agency's clients, not
+ * ours. Pages whose address carries a secret (an invitation link) mark
+ * themselves data-private-page, so the secret never reaches Google.
  */
-export function onAgencyPage(): boolean {
-  return typeof document !== "undefined" && !!document.querySelector("[data-agency-page]");
+export function onQuietPage(): boolean {
+  return typeof document !== "undefined" && !!document.querySelector("[data-agency-page], [data-private-page]");
+}
+
+/** Query parameters that carry secrets (invitation and unsubscribe tokens). */
+const SECRET_PARAMS = ["t", "token"];
+
+/** The page address as analytics may see it: secrets stripped. */
+export function analyticsLocation(href: string): string {
+  try {
+    const u = new URL(href);
+    for (const k of SECRET_PARAMS) u.searchParams.delete(k);
+    return u.toString();
+  } catch {
+    return href.split("?")[0];
+  }
 }
 
 export function readConsent(): ConsentValue | null {
@@ -69,7 +85,7 @@ export function ensureGaQueued() {
   if (w.__mwGaQueued || !w.gtag) return;
   w.__mwGaQueued = true;
   w.gtag("js", new Date());
-  w.gtag("config", GA_MEASUREMENT_ID);
+  w.gtag("config", GA_MEASUREMENT_ID, { page_location: analyticsLocation(window.location.href) });
 }
 
 /** Remove any _ga* cookies the visitor may have from a previous acceptance. */

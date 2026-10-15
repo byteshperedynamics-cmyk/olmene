@@ -21,9 +21,9 @@ import {
   type ClientInput,
   type ReportCadence,
 } from "./rules";
-import type { Brand, Client, ClientRecipient, ClientSite, ClientsView, PortalView } from "./types";
+import type { Brand, Client, ClientRecipient, ClientSite, ClientsView, PortalView, UnsubscribeView } from "./types";
 
-export { cleanBrandInput, cleanClientInput, isPortalSlug } from "./rules";
+export { cleanBrandInput, cleanClientInput, isPortalSlug, isUnsubToken } from "./rules";
 
 export const BRAND_BUCKET = "brand-assets";
 
@@ -230,6 +230,33 @@ export async function removeRecipient(db: SupabaseClient, actor: Actor, clientId
   const { data: kept } = await db.from("client_recipients").select("id").eq("id", recipientId).eq("user_id", actor.ownerId).maybeSingle();
   if (kept) throw new TeamError(409, "unsubscribed", "They unsubscribed, so they stay on the list to make sure they aren't added back.");
   throw new TeamError(404, "not_found", "They aren't on this report any more.");
+}
+
+/** What /unsubscribe/?t= shows: whose reports, sent to which address, and whether they already stopped. */
+export async function loadUnsubscribe(db: SupabaseClient, token: string): Promise<UnsubscribeView | null> {
+  const { data } = await db.from("client_recipients").select("user_id, client_id, email, unsubscribed_at").eq("unsub_token", token).maybeSingle();
+  if (!data) return null;
+  const r = data as { user_id: string; client_id: string; email: string; unsubscribed_at: string | null };
+  const [{ data: client }, brand] = await Promise.all([
+    db.from("clients").select("name").eq("id", r.client_id).maybeSingle(),
+    publicBrandOf(db, r.user_id).catch(() => null),
+  ]);
+  if (!client) return null;
+  return {
+    client: (client as { name: string }).name,
+    email: r.email,
+    brand: brand ?? { name: null, color: null, url: null, logoUrl: null, whiteLabel: false },
+    unsubscribed: !!r.unsubscribed_at,
+  };
+}
+
+/** Stop a client's reports for the person holding the link. True when the link is known. */
+export async function unsubscribeRecipient(db: SupabaseClient, token: string): Promise<boolean> {
+  const { data } = await db.from("client_recipients").select("id, unsubscribed_at").eq("unsub_token", token).maybeSingle();
+  if (!data) return false;
+  const r = data as { id: string; unsubscribed_at: string | null };
+  if (!r.unsubscribed_at) await db.from("client_recipients").update({ unsubscribed_at: new Date().toISOString() }).eq("id", r.id);
+  return true;
 }
 
 /**

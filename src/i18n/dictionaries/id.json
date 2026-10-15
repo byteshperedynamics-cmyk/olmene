@@ -733,5 +733,14 @@
   "portal.empty": "Belum ada situs web di halaman ini.",
   "portal.powered": "Diukur dengan Olmene",
   "portal.visit": "Kunjungi {agency}",
-  "portal.private": "Dibagikan oleh {agency}. Laporan, temuan, dan semua hal lainnya tetap privat."
+  "portal.private": "Dibagikan oleh {agency}. Laporan, temuan, dan semua hal lainnya tetap privat.",
+  "unsub.title": "Berhenti menerima laporan situs web untuk {client}?",
+  "unsub.body": "Email tentang {client} tidak akan dikirim lagi ke",
+  "unsub.cta": "Hentikan email ini",
+  "unsub.busy": "Menghentikan…",
+  "unsub.error": "Email tidak bisa dihentikan. Coba lagi sebentar lagi.",
+  "unsub.done.title": "Anda tidak akan menerima email ini lagi",
+  "unsub.done.body": "Tidak ada yang lain berubah. Jika ini keliru, beri tahu pengirim laporan tentang {client}.",
+  "unsub.invalid.title": "Tautan ini tidak valid",
+  "unsub.invalid.body": "Mungkin tautannya terpotong. Buka lagi tautan dari email."
 }

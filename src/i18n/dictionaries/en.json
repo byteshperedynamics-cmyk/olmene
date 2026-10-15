@@ -733,5 +733,14 @@
   "portal.empty": "No websites on this page yet.",
   "portal.powered": "Measured with Olmene",
   "portal.visit": "Visit {agency}",
-  "portal.private": "Shared by {agency}. Reports, findings and everything else stay private."
+  "portal.private": "Shared by {agency}. Reports, findings and everything else stay private.",
+  "unsub.title": "Stop the website reports about {client}?",
+  "unsub.body": "This stops the emails about {client} sent to",
+  "unsub.cta": "Stop these emails",
+  "unsub.busy": "Stopping…",
+  "unsub.error": "Couldn't stop the emails. Try again in a moment.",
+  "unsub.done.title": "You won't get these emails any more",
+  "unsub.done.body": "Nothing else changes. If this was a mistake, tell whoever sent you the reports about {client}.",
+  "unsub.invalid.title": "This link isn't valid",
+  "unsub.invalid.body": "It may have been cut short. Open the link in the email again."
 }

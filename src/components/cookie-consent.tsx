@@ -8,7 +8,7 @@ import {
   CONSENT_OPEN_EVENT,
   ensureGaQueued,
   expireGaCookies,
-  onAgencyPage,
+  onQuietPage,
   pushConsentUpdate,
   readConsent,
   storeConsent,
@@ -25,8 +25,8 @@ export function CookieConsent() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // New users (no stored choice) always see the banner, except on pages an agency sends its clients.
-    if (readConsent() === null && !onAgencyPage()) setOpen(true);
+    // New users (no stored choice) always see the banner, except on quiet pages (agency clients, invitation links).
+    if (readConsent() === null && !onQuietPage()) setOpen(true);
     const onOpen = () => setOpen(true);
     window.addEventListener(CONSENT_OPEN_EVENT, onOpen);
     return () => window.removeEventListener(CONSENT_OPEN_EVENT, onOpen);

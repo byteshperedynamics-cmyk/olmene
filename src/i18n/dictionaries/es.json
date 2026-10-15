@@ -733,5 +733,14 @@
   "portal.empty": "Todavía no hay sitios en esta página.",
   "portal.powered": "Medido con Olmene",
   "portal.visit": "Visitar {agency}",
-  "portal.private": "Compartido por {agency}. Los informes, los hallazgos y todo lo demás siguen siendo privados."
+  "portal.private": "Compartido por {agency}. Los informes, los hallazgos y todo lo demás siguen siendo privados.",
+  "unsub.title": "¿Dejar de recibir los informes web de {client}?",
+  "unsub.body": "Dejarán de enviarse los correos sobre {client} a",
+  "unsub.cta": "Dejar de recibir estos correos",
+  "unsub.busy": "Cancelando…",
+  "unsub.error": "No se pudieron cancelar los correos. Inténtalo de nuevo en un momento.",
+  "unsub.done.title": "Ya no recibirás estos correos",
+  "unsub.done.body": "No cambia nada más. Si ha sido un error, avisa a quien te enviaba los informes de {client}.",
+  "unsub.invalid.title": "Este enlace no es válido",
+  "unsub.invalid.body": "Puede que esté incompleto. Vuelve a abrir el enlace del correo."
 }

@@ -733,5 +733,14 @@
   "portal.empty": "Ainda não há sites nesta página.",
   "portal.powered": "Medido com Olmene",
   "portal.visit": "Visitar {agency}",
-  "portal.private": "Compartilhado por {agency}. Relatórios, descobertas e todo o resto continuam privados."
+  "portal.private": "Compartilhado por {agency}. Relatórios, descobertas e todo o resto continuam privados.",
+  "unsub.title": "Parar os relatórios de sites de {client}?",
+  "unsub.body": "Os e-mails sobre {client} deixam de ser enviados para",
+  "unsub.cta": "Parar estes e-mails",
+  "unsub.busy": "Parando…",
+  "unsub.error": "Não foi possível parar os e-mails. Tente de novo daqui a pouco.",
+  "unsub.done.title": "Você não vai mais receber estes e-mails",
+  "unsub.done.body": "Nada mais muda. Se foi um engano, avise quem lhe enviava os relatórios de {client}.",
+  "unsub.invalid.title": "Este link não é válido",
+  "unsub.invalid.body": "Ele pode ter sido cortado. Abra de novo o link do e-mail."
 }

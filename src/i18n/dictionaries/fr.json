@@ -733,5 +733,14 @@
   "portal.empty": "Aucun site sur cette page pour l'instant.",
   "portal.powered": "Mesuré avec Olmene",
   "portal.visit": "Visiter {agency}",
-  "portal.private": "Partagé par {agency}. Les rapports, les constats et tout le reste restent privés."
+  "portal.private": "Partagé par {agency}. Les rapports, les constats et tout le reste restent privés.",
+  "unsub.title": "Ne plus recevoir les rapports web de {client} ?",
+  "unsub.body": "Les e-mails concernant {client} ne seront plus envoyés à",
+  "unsub.cta": "Ne plus recevoir ces e-mails",
+  "unsub.busy": "Désinscription…",
+  "unsub.error": "Impossible d'arrêter les e-mails. Réessayez dans un instant.",
+  "unsub.done.title": "Vous ne recevrez plus ces e-mails",
+  "unsub.done.body": "Rien d'autre ne change. Si c'était une erreur, prévenez la personne qui vous envoyait les rapports sur {client}.",
+  "unsub.invalid.title": "Ce lien n'est pas valide",
+  "unsub.invalid.body": "Il a peut-être été tronqué. Ouvrez à nouveau le lien depuis l'e-mail."
 }

@@ -13,7 +13,7 @@ export function jsonError(status: number, code: string, message: string): NextRe
 
 export const ERR = {
   disabled: () => jsonError(503, "agent_disabled", "The fix agent is not enabled on this deployment."),
-  unauthorized: () => jsonError(401, "unauthorized", "Sign in to use the fix agent."),
+  unauthorized: () => jsonError(401, "unauthorized", "Sign in to continue."),
   forbidden: () => jsonError(403, "forbidden", "Not yours."),
   ownerOnly: () => jsonError(403, "owner_only", "Only the Olmene owner can register the GitHub App."),
   notFound: (what = "resource") => jsonError(404, "not_found", `${what} not found.`),

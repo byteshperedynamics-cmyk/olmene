@@ -150,7 +150,8 @@ function Invitation() {
 /** /invite/?t=… — accept a workspace invitation (sign in or sign up first if needed). */
 export default function InvitePage() {
   return (
-    <div className="relative isolate flex min-h-screen flex-col">
+    // The address carries the invitation token: no analytics here (consent.ts).
+    <div className="relative isolate flex min-h-screen flex-col" data-private-page="">
       <div aria-hidden className="o-hero-backdrop pointer-events-none absolute inset-x-0 top-0 -z-10 h-[70vh]" />
       <SiteHeader />
       <main id="main-content" className="flex flex-1 items-center justify-center px-4 py-14 sm:py-20">

@@ -733,5 +733,14 @@
   "portal.empty": "このページにはまだサイトがありません。",
   "portal.powered": "Olmene で計測",
   "portal.visit": "{agency} を見る",
-  "portal.private": "{agency} が共有しています。レポートや指摘事項などはすべて非公開のままです。"
+  "portal.private": "{agency} が共有しています。レポートや指摘事項などはすべて非公開のままです。",
+  "unsub.title": "{client} のウェブサイトレポートの配信を停止しますか？",
+  "unsub.body": "{client} に関するメールの次の宛先への送信を停止します：",
+  "unsub.cta": "配信を停止する",
+  "unsub.busy": "停止しています…",
+  "unsub.error": "配信を停止できませんでした。しばらくしてからもう一度お試しください。",
+  "unsub.done.title": "今後このメールは届きません",
+  "unsub.done.body": "そのほかに変わる点はありません。誤って停止した場合は、{client} のレポートを送っていた方にお知らせください。",
+  "unsub.invalid.title": "このリンクは無効です",
+  "unsub.invalid.body": "リンクが途中で切れている可能性があります。メールのリンクをもう一度開いてください。"
 }

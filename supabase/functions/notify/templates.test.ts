@@ -69,7 +69,7 @@ Deno.test("client reports: the agency's name and colour, one line per site, the 
     fromName: "Northwind Studio via Olmene",
     replyTo: "ana@northwind.example",
     test: false,
-    unsubscribeUrl: "https://x.supabase.co/functions/v1/notify?unsubscribe_client=" + "a".repeat(64),
+    unsubscribeUrl: "https://olmene.com/unsubscribe/?t=" + "a".repeat(64),
   };
   const r = render("client_report", report, "https://olmene.com", "ignored")!;
   assertEquals(r.subject, "Bakery <Brothers>: your websites this week");
@@ -80,7 +80,7 @@ Deno.test("client reports: the agency's name and colour, one line per site, the 
   assert(r.html.includes("Up 4 this week") && r.html.includes("First checked this week"), "change per site");
   assert(r.html.includes("18 of 21 checks pass, 2 fixed this week."), "checks line");
   assert(r.html.includes("See the full page") && r.html.includes("https://olmene.com/c/k7m2xq9pwdab/"), "client page button");
-  assert(r.html.includes(`unsubscribe_client=${"a".repeat(64)}`) && r.text.includes(`unsubscribe_client=${"a".repeat(64)}`), "unsubscribe in both");
+  assert(r.html.includes(`/unsubscribe/?t=${"a".repeat(64)}`) && r.text.includes(`/unsubscribe/?t=${"a".repeat(64)}`), "unsubscribe page in both");
   assert(r.html.includes("Sent by Northwind Studio with Olmene."), "credit");
   assert(r.text.includes("Questions? Reply to this email to reach Northwind Studio."), "reply line");
   assert(!r.html.includes("ignored"), "brings its own footer");
@@ -99,7 +99,7 @@ Deno.test("client reports: white label drops Olmene's name; tests carry no unsub
     pageUrl: null,
     replyTo: null,
     test: false,
-    unsubscribeUrl: "https://x.supabase.co/functions/v1/notify?unsubscribe_client=" + "b".repeat(64),
+    unsubscribeUrl: "https://olmene.com/unsubscribe/?t=" + "b".repeat(64),
   };
   const wl = render("client_report", base, "https://olmene.com", "")!;
   assertEquals(wl.subject, "Harbor Dental: your website in October");
@@ -113,7 +113,7 @@ Deno.test("client reports: white label drops Olmene's name; tests carry no unsub
 
   const test = render("client_report", { ...base, test: true, unsubscribeUrl: null }, "https://olmene.com", "")!;
   assertEquals(test.subject, "[Test] Harbor Dental: your website in October");
-  assert(!test.optional && !test.html.includes("unsubscribe_client"));
+  assert(!test.optional && !test.html.includes("/unsubscribe/"));
   assert(test.html.includes("This is a test."));
 
   assertEquals(render("client_report", { ...base, unsubscribeUrl: null }, "https://olmene.com", ""), null, "never without an unsubscribe link");

@@ -733,5 +733,14 @@
   "portal.empty": "Auf dieser Seite gibt es noch keine Websites.",
   "portal.powered": "Gemessen mit Olmene",
   "portal.visit": "Zu {agency}",
-  "portal.private": "Geteilt von {agency}. Berichte, Befunde und alles Weitere bleiben privat."
+  "portal.private": "Geteilt von {agency}. Berichte, Befunde und alles Weitere bleiben privat.",
+  "unsub.title": "Website-Berichte zu {client} abbestellen?",
+  "unsub.body": "Damit enden die E-Mails zu {client} an",
+  "unsub.cta": "Diese E-Mails abbestellen",
+  "unsub.busy": "Wird abbestellt…",
+  "unsub.error": "Die E-Mails konnten nicht abbestellt werden. Versuchen Sie es gleich noch einmal.",
+  "unsub.done.title": "Sie erhalten diese E-Mails nicht mehr",
+  "unsub.done.body": "Sonst ändert sich nichts. Falls das ein Versehen war, sagen Sie es dem Absender der Berichte zu {client}.",
+  "unsub.invalid.title": "Dieser Link ist ungültig",
+  "unsub.invalid.body": "Er wurde vielleicht abgeschnitten. Öffnen Sie den Link in der E-Mail noch einmal."
 }

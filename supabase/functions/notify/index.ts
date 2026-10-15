@@ -6,7 +6,8 @@
 // nothing, and rows older than 48 h are marked stale instead of sent late.
 //
 // GET/POST ?unsubscribe=<token>&list=digest|all — one-click opt-out.
-// GET/POST ?unsubscribe_client=<token> — stop one client report (the person an agency added).
+// POST ?unsubscribe_client=<token> — one-click stop of a client report (RFC 8058); a GET
+// is sent to olmene.com/unsubscribe/, which asks first (mail scanners open every link).
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { emailConfigured, sendEmail } from "../_shared/email.ts";
 import type { Cadence } from "../_shared/client-report.ts";
@@ -72,6 +73,7 @@ async function sendClientReport(
   const test = p.test === true;
   let to: string;
   let unsubscribeUrl: string | null = null;
+  let oneClickUrl: string | null = null;
   if (test) {
     to = typeof p.to === "string" ? p.to.trim().toLowerCase() : "";
     if (!INVITE_EMAIL.test(to)) return { status: "skipped", error: "test without a valid address" };
@@ -83,7 +85,10 @@ async function sendClientReport(
     if (!rec || rec.client_id !== clientId) return { status: "skipped", error: "recipient removed" };
     if (rec.unsubscribed_at) return { status: "skipped", error: "recipient unsubscribed" };
     to = rec.email as string;
-    unsubscribeUrl = `${fnBase}?unsubscribe_client=${rec.unsub_token}`;
+    // The footer opens a page that asks first (mail scanners open every link);
+    // the mail app's own button (List-Unsubscribe) POSTs here directly.
+    unsubscribeUrl = `${appUrl.replace(/\/$/, "")}/unsubscribe/?t=${rec.unsub_token}`;
+    oneClickUrl = `${fnBase}?unsubscribe_client=${rec.unsub_token}`;
   }
   const end = typeof p.periodEnd === "string" && !Number.isNaN(Date.parse(p.periodEnd)) ? new Date(p.periodEnd) : new Date(n.created_at);
   const key = `${clientId}:${cadence}:${end.toISOString()}`;
@@ -100,11 +105,14 @@ async function sendClientReport(
     html: mail.html,
     text: mail.text,
     tag: "client_report",
-    unsubscribeUrl: unsubscribeUrl ?? undefined,
+    unsubscribeUrl: oneClickUrl ?? undefined,
     fromName: report.fromName,
     replyTo: report.replyTo ?? undefined,
   });
-  return res.ok ? { status: "sent" } : { status: "failed", error: res.error ?? "send failed" };
+  if (!res.ok) return { status: "failed", error: res.error ?? "send failed" };
+  // "Last sent" on the Clients page means someone really got one.
+  if (!test) await supabase.from("clients").update({ report_sent_at: new Date().toISOString() }).eq("id", clientId);
+  return { status: "sent" };
 }
 
 /** Post one event to the user's Slack / Discord / webhook channels (one attempt each). */
@@ -155,10 +163,16 @@ Deno.serve(async (req) => {
     return text(list === "digest" ? "Done: no more weekly summaries from Olmene." : "Done: Olmene won't email you updates any more. Sign-in links still arrive when you ask for one.");
   }
 
-  // ── One-click unsubscribe from a client report (the agency's link in its footer) ──
+  // ── One-click unsubscribe from a client report (List-Unsubscribe, RFC 8058) ──
+  // Only the mail app's POST acts. A GET (a person, or a mail scanner opening
+  // every link) goes to the page that asks first.
   const clientToken = url.searchParams.get("unsubscribe_client");
   if (clientToken) {
     if (!REPORT_TOKEN.test(clientToken)) return text("That unsubscribe link isn't valid.", 400);
+    if (req.method !== "POST") {
+      const app = (Deno.env.get("APP_URL") ?? "https://olmene.com").replace(/\/$/, "");
+      return Response.redirect(`${app}/unsubscribe/?t=${clientToken}`, 303);
+    }
     const { data: rec } = await supabase.from("client_recipients").select("id, client_id, unsubscribed_at").eq("unsub_token", clientToken).maybeSingle();
     // Unknown (the agency removed the client): nothing will be sent to it either.
     if (!rec) return text("Done: you won't get these reports any more.");

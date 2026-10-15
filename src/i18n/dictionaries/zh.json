@@ -733,5 +733,14 @@
   "portal.empty": "这个页面还没有网站。",
   "portal.powered": "由 Olmene 测量",
   "portal.visit": "访问 {agency}",
-  "portal.private": "由 {agency} 分享。报告、发现的问题和其他内容均保持私密。"
+  "portal.private": "由 {agency} 分享。报告、发现的问题和其他内容均保持私密。",
+  "unsub.title": "停止接收 {client} 的网站报告？",
+  "unsub.body": "将停止向以下地址发送有关 {client} 的邮件：",
+  "unsub.cta": "停止接收这些邮件",
+  "unsub.busy": "正在停止…",
+  "unsub.error": "无法停止邮件。请稍后再试。",
+  "unsub.done.title": "您将不再收到这些邮件",
+  "unsub.done.body": "其他一切不变。如果是误操作，请告诉给您发送 {client} 报告的人。",
+  "unsub.invalid.title": "此链接无效",
+  "unsub.invalid.body": "链接可能不完整。请从邮件中重新打开链接。"
 }

@@ -733,5 +733,14 @@
   "portal.empty": "Bu sayfada henüz web sitesi yok.",
   "portal.powered": "Olmene ile ölçüldü",
   "portal.visit": "{agency} sitesine git",
-  "portal.private": "{agency} tarafından paylaşıldı. Raporlar, bulgular ve diğer her şey gizli kalır."
+  "portal.private": "{agency} tarafından paylaşıldı. Raporlar, bulgular ve diğer her şey gizli kalır.",
+  "unsub.title": "{client} web sitesi raporlarını durdurmak istiyor musunuz?",
+  "unsub.body": "{client} hakkındaki e-postalar şu adrese artık gönderilmez:",
+  "unsub.cta": "Bu e-postaları durdur",
+  "unsub.busy": "Durduruluyor…",
+  "unsub.error": "E-postalar durdurulamadı. Birazdan tekrar deneyin.",
+  "unsub.done.title": "Bu e-postaları artık almayacaksınız",
+  "unsub.done.body": "Başka hiçbir şey değişmez. Bu bir hataysa, {client} raporlarını size gönderen kişiye haber verin.",
+  "unsub.invalid.title": "Bu bağlantı geçerli değil",
+  "unsub.invalid.body": "Bağlantı kesilmiş olabilir. E-postadaki bağlantıyı yeniden açın."
 }

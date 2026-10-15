@@ -73,3 +73,11 @@ export interface PortalView {
   brand: Brand;
   sites: SiteProgress[];
 }
+
+/** /unsubscribe/?t=…: stopping one client's emailed report. */
+export interface UnsubscribeView {
+  client: string;
+  email: string;
+  brand: Brand;
+  unsubscribed: boolean;
+}

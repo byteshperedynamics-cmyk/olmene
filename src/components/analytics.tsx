@@ -7,7 +7,7 @@ import {
   CONSENT_CHANGED_EVENT,
   CONSENT_STORAGE_KEY,
   ensureGaQueued,
-  onAgencyPage,
+  onQuietPage,
   pushConsentUpdate,
   readConsent,
   type ConsentValue,
@@ -65,7 +65,7 @@ export function Analytics() {
       setConsent("accepted");
     };
 
-    if (readConsent() === "accepted" && !onAgencyPage()) {
+    if (readConsent() === "accepted" && !onQuietPage()) {
       // Returning visitor who had accepted: defer the library load until the
       // browser is idle so the tag never blocks first paint or hydration.
       loadWhenIdle(arm);

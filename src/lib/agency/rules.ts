@@ -68,6 +68,16 @@ export function nextReportAt(cadence: ReportCadence, from: Date): Date | null {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+/** A report recipient's unsubscribe token (client_recipients.unsub_token). */
+export function isUnsubToken(v: unknown): v is string {
+  return typeof v === "string" && /^[0-9a-f]{64}$/.test(v);
+}
+
+/** The page a report's "Unsubscribe" link opens: it asks before stopping anything (mail scanners open every link). */
+export function unsubscribePath(token: string): string {
+  return `/unsubscribe/?t=${token}`;
+}
+
 /** A report recipient's address, lower-cased; throws TeamError(400) with a message to show. */
 export function cleanRecipientEmail(raw: unknown): string {
   const e = typeof raw === "string" ? raw.trim().toLowerCase() : "";

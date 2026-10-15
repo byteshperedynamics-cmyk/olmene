@@ -50,3 +50,13 @@ create policy client_recipients_workspace_read on public.client_recipients
 -- read every column but that one (only the service role sees it).
 revoke all on public.client_recipients from anon, authenticated;
 grant select (id, user_id, client_id, email, unsubscribed_at, added_by, created_at) on public.client_recipients to authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- 3. Invitation links stay with whoever sent them
+-- ─────────────────────────────────────────────────────────────────────────
+-- A pending workspace_invite notification carries the invitation link until
+-- notify sends it. Members read the owner's notifications (activity feed),
+-- but not those rows; the owner still does ("own notifications").
+drop policy if exists notifications_workspace_read on public.notifications;
+create policy notifications_workspace_read on public.notifications
+  for select to authenticated using (user_id in (select public.readable_owner_ids()) and kind <> 'workspace_invite');

@@ -16,6 +16,9 @@ end $$;
 insert into public.clients (id, user_id, name) values
   ('40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000a1', 'Bakery Co'),
   ('40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-0000000000d4', 'Dan''s client');
+insert into public.notifications (user_id, kind, payload) values
+  ('00000000-0000-0000-0000-0000000000a1', 'workspace_invite', '{"to": "new@studio.example", "link": "https://olmene.com/invite/?t=secret"}'),
+  ('00000000-0000-0000-0000-0000000000a1', 'report_ready', '{"site": "bakery.example"}');
 insert into public.client_recipients (id, user_id, client_id, email) values
   ('50000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-000000000001', 'owner@bakery.example'),
   ('50000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-0000000000d4', '40000000-0000-0000-0000-000000000002', 'boss@dan.example');
@@ -80,6 +83,17 @@ begin
   end;
   update public.clients set report_cadence = 'off';
   if found then raise exception 'cadence changes through the Worker only'; end if;
+  if not exists (select 1 from public.notifications where kind = 'report_ready') then raise exception 'Ben should see the activity feed'; end if;
+  if exists (select 1 from public.notifications where kind = 'workspace_invite') then raise exception 'invitation links must stay with the owner'; end if;
+end $$;
+reset role;
+
+-- Ana (the owner) still sees her invitations
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+set local role authenticated;
+do $$
+begin
+  if not exists (select 1 from public.notifications where kind = 'workspace_invite') then raise exception 'the owner should see her own invitation rows'; end if;
 end $$;
 reset role;
 

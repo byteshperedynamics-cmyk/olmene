@@ -299,8 +299,9 @@ async function queueClientReports(supabase: ReturnType<typeof db>): Promise<numb
       await recordOps(supabase, "monitor", "client report crashed", { clientId: c.id, error: String(e).slice(0, 200) });
     }
     // From now, not from the missed slot: a monitor outage never sends a burst.
+    // (notify sets report_sent_at once an email really goes out.)
     await supabase.from("clients")
-      .update({ report_next_at: nextReportAt(c.report_cadence, now).toISOString(), ...(sent ? { report_sent_at: now.toISOString() } : {}) })
+      .update({ report_next_at: nextReportAt(c.report_cadence, now).toISOString() })
       .eq("id", c.id).eq("report_next_at", c.report_next_at);
     if (sent) queued++;
   }

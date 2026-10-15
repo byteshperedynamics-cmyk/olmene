@@ -57,9 +57,14 @@ per client, 250 per workspace).
 - **Sending**: `notify` builds the report when it sends (so a test and the
   real one are the same email), never posts it to Slack/Discord/webhooks,
   and skips anyone removed or unsubscribed since it was queued.
-- **Unsubscribe**: one click from the footer or the mail app's button
-  (`List-Unsubscribe`, RFC 8058) hits `notify?unsubscribe_client=<token>`.
-  The person stays listed as unsubscribed so the agency can't add them back.
+- **Unsubscribe**: the footer link opens `/unsubscribe/?t=<token>` on
+  olmene.com (the agency's branding, no banner or analytics), which asks
+  first and stops the emails with a button (`POST /api/report-unsubscribe/`).
+  A link alone never unsubscribes anyone: mail scanners (Outlook Safe Links
+  and the like) open every link in an email. The mail app's own button
+  (`List-Unsubscribe`, RFC 8058) POSTs to `notify?unsubscribe_client=<token>`;
+  a GET there redirects to the page. The person stays listed as
+  unsubscribed so the agency can't add them back.
   Tokens are 64 hex characters, readable by the service role only (column
   grants), and left out of the data export.
 - **Send me a test**: emails the signed-in person ("[Test]", no unsubscribe
@@ -123,6 +128,7 @@ an in-memory copy of the API):
 - `/dev/clients/?role=owner|admin|member|viewer&state=company|new|empty&brand=none|wl&plan=fix`
 - `/dev/portal/?state=wl|plain|name|empty|gone`
 - `/dev/share/?state=agency|agency-wl`
+- `/unsubscribe/?t=<anything>` shows the "link isn't valid" state locally
 
 ## Tests
 
