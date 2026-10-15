@@ -6,6 +6,8 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { LanguageSelector } from "@/components/language-selector";
+import { AccountMenu } from "@/components/account/account-menu";
+import { identityOf, useProfile } from "@/lib/account-client";
 import { useSession } from "@/lib/session";
 import { useI18n } from "@/i18n/provider";
 
@@ -26,6 +28,8 @@ export function SiteHeader() {
   const { session, loading, loggedIn, signOut } = useSession();
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const profile = useProfile(session);
+  const identity = identityOf(session, profile.data);
 
   // Escape closes the mobile menu, like any other disclosure.
   useEffect(() => {
@@ -57,14 +61,25 @@ export function SiteHeader() {
           <div className="hidden md:block">
             <LanguageSelector size="sm" compact />
           </div>
-          {loading ? null : loggedIn ? (
+          {loading ? null : loggedIn && identity ? (
             <>
               <Button asChild size="sm">
                 <Link href="/app/">{t("common.dashboard")}</Link>
               </Button>
-              <Button variant="ghost" size="sm" className="hidden sm:inline-flex" onClick={() => signOut()}>
-                {t("common.signOut")}
-              </Button>
+              <AccountMenu
+                identity={identity}
+                onSignOut={() => signOut({ to: "/login/?signed_out=1" })}
+                labels={{
+                  menu: t("account.menu"),
+                  dashboard: t("common.dashboard"),
+                  account: t("account.settings"),
+                  share: t("account.share"),
+                  billing: t("account.billing"),
+                  help: t("account.help"),
+                  signOut: t("common.signOut"),
+                  addName: t("account.addName"),
+                }}
+              />
             </>
           ) : (
             <>
@@ -72,7 +87,7 @@ export function SiteHeader() {
                 <Link href="/login/">{t("common.signIn")}</Link>
               </Button>
               <Button asChild size="sm">
-                <Link href="/login/">{t("common.getStarted")}</Link>
+                <Link href="/login/?mode=signup">{t("common.getStarted")}</Link>
               </Button>
             </>
           )}
@@ -117,8 +132,6 @@ export function SiteHeader() {
         </div>
       )}
       </div>
-      {/* keep session referenced for future use (avatar etc.) */}
-      <span className="hidden">{session?.user?.email}</span>
     </header>
   );
 }

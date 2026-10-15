@@ -313,6 +313,7 @@ async function handleOrderPaid(
     { onConflict: "source", ignoreDuplicates: true },
   );
   if (error) {
+    if (error.code === "23503") return ok({ ignored: "deleted user" }); // account deleted (see the subscription handler)
     console.error(
       JSON.stringify({ level: "error", msg: "report_credits upsert failed", err: error.message }),
     );
@@ -480,6 +481,13 @@ Deno.serve(async (req: Request) => {
     updated_at: new Date().toISOString(),
   }, { onConflict: "polar_subscription_id" });
   if (error) {
+    // 23503: the user deleted their account (Account settings). Their last
+    // events (cancellation, period end) have nobody to update; acknowledge
+    // them so Polar doesn't keep retrying and eventually disable the endpoint.
+    if (error.code === "23503") {
+      console.log(JSON.stringify({ level: "warn", msg: "event for deleted user", sub: payload.id }));
+      return ok({ ignored: "deleted user" });
+    }
     console.error(
       JSON.stringify({
         level: "error",

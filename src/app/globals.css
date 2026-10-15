@@ -1588,3 +1588,37 @@
   box-shadow: var(--artifact-shadow), inset 0 1px 0 var(--edge-top);
   background: #000;
 }
+
+/* ── Account (DESIGN.md §12) ───────────────────────────────────────────── */
+/* Score trend: the line draws once, then the latest point settles in. */
+.o-trend-line {
+  --o-len: 1;
+  stroke-dasharray: 1;
+  animation: o-draw 1.1s var(--ease-out-expo) both;
+}
+.o-trend-dot {
+  animation: o-trend-dot 360ms var(--ease-out-expo) 0.95s both;
+}
+@keyframes o-trend-dot {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+/* Milestone ring: fills to the share earned. */
+.o-ring-fill {
+  transition: stroke-dashoffset 900ms var(--ease-out-expo);
+}
+/* Earned milestones get a lit edge; the rest stay flat and quiet. */
+.o-milestone[data-earned="true"] {
+  background: var(--chip);
+  border-color: var(--rim);
+  box-shadow: inset 0 1px 0 var(--edge-top);
+}
+@media (prefers-reduced-motion: reduce) {
+  .o-trend-line,
+  .o-trend-dot {
+    animation: none;
+  }
+  .o-ring-fill {
+    transition: none;
+  }
+}
