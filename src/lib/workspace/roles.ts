@@ -49,6 +49,18 @@ export function roleRequiredMessage(need: WorkspaceRole): string {
   }
 }
 
+/** A refusal with an HTTP status and a message to show the person (the Worker turns it into the API's error shape). */
+export class TeamError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "TeamError";
+  }
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function isUuid(v: unknown): v is string {
   return typeof v === "string" && UUID.test(v);

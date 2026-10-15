@@ -726,5 +726,12 @@
   "share.cta.button": "Scan your site free",
   "share.notFound.title": "This link isn't available",
   "share.notFound.body": "Its owner may have turned it off, or the address has a typo.",
-  "share.notFound.cta": "Go to Olmene"
+  "share.notFound.cta": "Go to Olmene",
+  "portal.title": "{client}: website progress",
+  "portal.preparedBy": "Prepared by {agency}",
+  "portal.body": "How each site is doing, updated every week.",
+  "portal.empty": "No websites on this page yet.",
+  "portal.powered": "Measured with Olmene",
+  "portal.visit": "Visit {agency}",
+  "portal.private": "Shared by {agency}. Reports, findings and everything else stay private."
 }

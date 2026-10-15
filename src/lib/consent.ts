@@ -16,6 +16,15 @@ export const CONSENT_CHANGED_EVENT = "mw-consent-changed";
 /** window event fired when the footer asks the banner to re-open. */
 export const CONSENT_OPEN_EVENT = "mw-consent-open";
 
+/**
+ * Pages an agency sends its clients (/c/…, and progress links an agency
+ * shares) mark themselves with data-agency-page: no cookie banner and no
+ * analytics there. Those visitors are the agency's clients, not ours.
+ */
+export function onAgencyPage(): boolean {
+  return typeof document !== "undefined" && !!document.querySelector("[data-agency-page]");
+}
+
 export function readConsent(): ConsentValue | null {
   if (typeof window === "undefined") return null;
   try {

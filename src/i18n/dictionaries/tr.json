@@ -726,5 +726,12 @@
   "share.cta.button": "Sitenizi ücretsiz tarayın",
   "share.notFound.title": "Bu bağlantı kullanılamıyor",
   "share.notFound.body": "Sahibi bağlantıyı kapatmış olabilir ya da adreste bir yazım hatası vardır.",
-  "share.notFound.cta": "Olmene'a gidin"
+  "share.notFound.cta": "Olmene'a gidin",
+  "portal.title": "{client}: web sitelerinin ilerlemesi",
+  "portal.preparedBy": "{agency} tarafından hazırlandı",
+  "portal.body": "Her sitenin durumu, her hafta güncellenir.",
+  "portal.empty": "Bu sayfada henüz web sitesi yok.",
+  "portal.powered": "Olmene ile ölçüldü",
+  "portal.visit": "{agency} sitesine git",
+  "portal.private": "{agency} tarafından paylaşıldı. Raporlar, bulgular ve diğer her şey gizli kalır."
 }

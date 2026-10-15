@@ -211,7 +211,7 @@ function DeleteDataDialog({ open, onOpenChange, onDone }: { open: boolean; onOpe
             <div className="grid gap-4 text-[14px] leading-relaxed">
               <div className="grid gap-1.5">
                 <p className="font-medium text-foreground">Deleted for good</p>
-                <p>Reports and analyses, watched sites and their weekly history, scans and screenshots, your activity feed, guided fixes, pull-request checks and progress links.</p>
+                <p>Reports and analyses, watched sites and their weekly history, scans and screenshots, your activity feed, guided fixes, pull-request checks, progress links, and clients with their pages.</p>
               </div>
               <div className="grid gap-1.5">
                 <p className="font-medium text-foreground">Kept</p>

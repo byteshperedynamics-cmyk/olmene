@@ -2,8 +2,8 @@
 /**
  * SQL tests: builds a scratch database from supabase/tests/stub-supabase.sql
  * (the bits of Supabase our migrations use) plus every migration in order,
- * then runs each supabase/tests/*.test.sql in its own transaction. A test
- * fails by raising an exception.
+ * then runs each supabase/tests/*.test.sql in its own transaction, rolled
+ * back afterwards. A test fails by raising an exception.
  *
  * Needs psql and a Postgres you can create databases on; point at it with
  * the usual PGHOST / PGPORT / PGUSER / PGPASSWORD. KEEP_DB=1 keeps the
@@ -71,7 +71,8 @@ try {
 
   const tests = readdirSync(`${root}supabase/tests`).filter((f) => f.endsWith(".test.sql")).sort();
   for (const f of tests) {
-    const r = psql(["-1"], readFileSync(`${root}supabase/tests/${f}`, "utf8"), db);
+    // Each test in its own transaction, rolled back: tests can't see each other's rows.
+    const r = psql([], `begin;\n${readFileSync(`${root}supabase/tests/${f}`, "utf8")}\nrollback;\n`, db);
     if (r.ok) console.log(`✓ ${f}`);
     else {
       failed++;

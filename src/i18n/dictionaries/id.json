@@ -726,5 +726,12 @@
   "share.cta.button": "Pindai situs Anda gratis",
   "share.notFound.title": "Tautan ini tidak tersedia",
   "share.notFound.body": "Pemiliknya mungkin sudah menonaktifkannya, atau ada salah ketik di alamatnya.",
-  "share.notFound.cta": "Buka Olmene"
+  "share.notFound.cta": "Buka Olmene",
+  "portal.title": "{client}: perkembangan situs web",
+  "portal.preparedBy": "Disiapkan oleh {agency}",
+  "portal.body": "Kondisi setiap situs, diperbarui setiap minggu.",
+  "portal.empty": "Belum ada situs web di halaman ini.",
+  "portal.powered": "Diukur dengan Olmene",
+  "portal.visit": "Kunjungi {agency}",
+  "portal.private": "Dibagikan oleh {agency}. Laporan, temuan, dan semua hal lainnya tetap privat."
 }

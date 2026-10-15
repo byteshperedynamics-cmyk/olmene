@@ -726,5 +726,12 @@
   "share.cta.button": "اپنی سائٹ مفت اسکین کریں",
   "share.notFound.title": "یہ لنک دستیاب نہیں ہے",
   "share.notFound.body": "ممکن ہے اس کے مالک نے اسے بند کر دیا ہو، یا پتے میں کوئی غلطی ہو۔",
-  "share.notFound.cta": "Olmene پر جائیں"
+  "share.notFound.cta": "Olmene پر جائیں",
+  "portal.title": "{client}: ویب سائٹس کی پیش رفت",
+  "portal.preparedBy": "{agency} کی جانب سے تیار کردہ",
+  "portal.body": "ہر سائٹ کی صورتحال، ہر ہفتے اپ ڈیٹ۔",
+  "portal.empty": "اس صفحے پر ابھی کوئی ویب سائٹ نہیں۔",
+  "portal.powered": "Olmene سے ناپا گیا",
+  "portal.visit": "{agency} دیکھیں",
+  "portal.private": "{agency} کی جانب سے شیئر کیا گیا۔ رپورٹس، نتائج اور باقی سب کچھ نجی رہتا ہے۔"
 }

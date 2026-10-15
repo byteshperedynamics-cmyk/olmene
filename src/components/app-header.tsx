@@ -9,17 +9,24 @@ import { featureAgentEnabled, featureMeasureEnabled } from "@/lib/agent-client";
 import type { Identity } from "@/lib/account-client";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import { atLeast } from "@/lib/workspace/roles";
-import type { WorkspaceSummary } from "@/lib/workspace/types";
+import { cn } from "@/lib/utils";
+import type { WorkspaceKind, WorkspaceSummary } from "@/lib/workspace/types";
 
 const NAV = [
   { href: "/app/", label: "Analyses", on: true },
   { href: "/app/sites/", label: "Sites", on: true },
+  { href: "/app/clients/", label: "Clients", on: true, agency: true },
   { href: "/app/billing/", label: "Billing", on: true },
   { href: "/app/agent/", label: "Fix runs", on: featureAgentEnabled() },
   { href: "/app/impact/", label: "Impact", on: featureMeasureEnabled() },
   { href: "/app/alerts/", label: "Alerts", on: true },
   { href: "/app/team/", label: "Team", on: true },
 ].filter((n) => n.on);
+
+/** The links for this workspace: Clients only in agency workspaces (or while you're on it). */
+function navFor(kind: WorkspaceKind | undefined, pathname: string) {
+  return NAV.filter((n) => !n.agency || kind === "agency" || isActive(pathname, n.href));
+}
 
 // Sub-pages that belong to a nav item without sharing its path prefix.
 const ALSO: Record<string, string[]> = {
@@ -35,9 +42,9 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 /**
- * Signed-in app header. From lg up the links sit inline next to the logo;
- * below lg they move to a scrollable tab row under the bar (seven links and
- * the workspace switcher don't fit inline on a tablet), and below sm the
+ * Signed-in app header. From lg up the links sit inline next to the logo
+ * (from xl when an agency's extra link and the switcher make them too many);
+ * below that they move to a scrollable tab row under the bar, and below sm the
  * action buttons collapse to icons so nothing clips at 375px. The person's picture
  * on the right opens the account menu (account, sharing, billing, sign out).
  */
@@ -55,19 +62,24 @@ export function AppHeader({
 }) {
   // Viewers can't start anything; everyone else can (the server checks too).
   const canStart = !workspaces?.current || atLeast(workspaces.current.role, "member");
+  const nav = navFor(workspaces?.current?.kind, pathname);
+  // Inline links from lg while they fit beside the switcher; with more (an agency's
+  // Clients plus the switcher) they stay in the tab row until xl.
+  const switcher = !!workspaces?.current && (workspaces.list?.length ?? 0) > 1;
+  const roomy = nav.length + (switcher ? 2 : 0) <= 8;
   return (
     <header className="o-glass sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 print:hidden">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-3 sm:gap-6">
           <Logo />
           {workspaces?.list && <WorkspaceSwitcher list={workspaces.list} current={workspaces.current} />}
-          <nav className="hidden items-center gap-4 lg:flex" aria-label="App">
-            {NAV.map((n) => (
+          <nav className={cn("hidden items-center gap-4", roomy ? "lg:flex" : "xl:flex")} aria-label="App">
+            {nav.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
                 aria-current={isActive(pathname, n.href) ? "page" : undefined}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground"
+                className="whitespace-nowrap text-sm text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground"
               >
                 {n.label}
               </Link>
@@ -93,12 +105,15 @@ export function AppHeader({
           )}
         </div>
       </div>
-      {/* Below lg: the same links as a scrollable tab row (lg+ uses the inline nav above). */}
+      {/* Below lg (or xl): the same links as a scrollable tab row. */}
       <nav
         aria-label="App"
-        className="flex gap-1 overflow-x-auto border-t border-border/50 px-3 py-1.5 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "flex gap-1 overflow-x-auto border-t border-border/50 px-3 py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          roomy ? "lg:hidden" : "xl:hidden",
+        )}
       >
-        {NAV.map((n) => (
+        {nav.map((n) => (
           <Link
             key={n.href}
             href={n.href}

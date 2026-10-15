@@ -726,5 +726,12 @@
   "share.cta.button": "免费扫描你的网站",
   "share.notFound.title": "此链接不可用",
   "share.notFound.body": "可能是所有者已关闭此链接，或地址有误。",
-  "share.notFound.cta": "前往 Olmene"
+  "share.notFound.cta": "前往 Olmene",
+  "portal.title": "{client}：网站进展",
+  "portal.preparedBy": "由 {agency} 提供",
+  "portal.body": "每个网站的表现，每周更新。",
+  "portal.empty": "这个页面还没有网站。",
+  "portal.powered": "由 Olmene 测量",
+  "portal.visit": "访问 {agency}",
+  "portal.private": "由 {agency} 分享。报告、发现的问题和其他内容均保持私密。"
 }

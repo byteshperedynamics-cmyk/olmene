@@ -726,5 +726,12 @@
   "share.cta.button": "Ελέγξτε δωρεάν τον ιστότοπό σας",
   "share.notFound.title": "Αυτός ο σύνδεσμος δεν είναι διαθέσιμος",
   "share.notFound.body": "Ίσως ο κάτοχός του τον απενεργοποίησε ή η διεύθυνση έχει κάποιο λάθος.",
-  "share.notFound.cta": "Μετάβαση στο Olmene"
+  "share.notFound.cta": "Μετάβαση στο Olmene",
+  "portal.title": "{client}: πρόοδος ιστοσελίδων",
+  "portal.preparedBy": "Ετοιμάστηκε από: {agency}",
+  "portal.body": "Πώς πάει κάθε ιστοσελίδα, με ενημέρωση κάθε εβδομάδα.",
+  "portal.empty": "Δεν υπάρχουν ακόμη ιστοσελίδες σε αυτή τη σελίδα.",
+  "portal.powered": "Μετρήθηκε με το Olmene",
+  "portal.visit": "Επίσκεψη: {agency}",
+  "portal.private": "Κοινοποιήθηκε από: {agency}. Οι αναφορές, τα ευρήματα και όλα τα υπόλοιπα μένουν ιδιωτικά."
 }

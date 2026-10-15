@@ -726,5 +726,12 @@
   "share.cta.button": "Escanea tu sitio gratis",
   "share.notFound.title": "Este enlace no está disponible",
   "share.notFound.body": "Es posible que su propietario lo haya desactivado o que la dirección tenga un error.",
-  "share.notFound.cta": "Ir a Olmene"
+  "share.notFound.cta": "Ir a Olmene",
+  "portal.title": "{client}: progreso de los sitios web",
+  "portal.preparedBy": "Preparado por {agency}",
+  "portal.body": "Cómo va cada sitio, actualizado cada semana.",
+  "portal.empty": "Todavía no hay sitios en esta página.",
+  "portal.powered": "Medido con Olmene",
+  "portal.visit": "Visitar {agency}",
+  "portal.private": "Compartido por {agency}. Los informes, los hallazgos y todo lo demás siguen siendo privados."
 }

@@ -21,12 +21,11 @@ import { fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { INVITABLE_ROLES, ROLE_COPY, atLeast, type InvitableRole } from "@/lib/workspace/roles";
 import { changeMemberRole, inviteToWorkspace, removeMember, revokeInvite, TeamApiError, updateWorkspace } from "@/lib/workspace/client";
-import type { WorkspaceInvite, WorkspaceMember, WorkspaceView } from "@/lib/workspace/types";
+import type { WorkspaceInvite, WorkspaceKind, WorkspaceMember, WorkspaceView } from "@/lib/workspace/types";
+import { inputClass, selectClass } from "./field-styles";
 
-const input =
-  "h-11 w-full rounded-[10px] border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60";
-const select =
-  "h-9 cursor-pointer rounded-lg border border-line-strong bg-background px-2.5 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-60 pointer-coarse:h-11";
+const input = inputClass;
+const select = selectClass;
 
 const message = (e: unknown, fallback: string) => (e instanceof TeamApiError || e instanceof Error ? e.message : fallback);
 
@@ -70,6 +69,59 @@ function NameForm({ view, onSaved }: { view: WorkspaceView; onSaved: (v: Workspa
       </div>
       <p className="text-[12.5px] text-muted-foreground">People see it in their workspace switcher and in invitation emails.</p>
     </form>
+  );
+}
+
+// ── Company or agency ─────────────────────────────────────────────────────
+
+const KINDS: { kind: WorkspaceKind; label: string; blurb: string }[] = [
+  { kind: "company", label: "Company", blurb: "Your organisation's own websites." },
+  {
+    kind: "agency",
+    label: "Agency",
+    blurb: "Websites you look after for clients. Adds a Clients page: sites grouped by client, and pages to share with them under your name.",
+  },
+];
+
+function KindForm({ view, onSaved }: { view: WorkspaceView; onSaved: (v: WorkspaceView) => void }) {
+  const [busy, setBusy] = useState(false);
+  async function choose(kind: WorkspaceKind) {
+    if (kind === view.kind || busy) return;
+    setBusy(true);
+    try {
+      onSaved(await updateWorkspace({ kind }));
+      toast.success(kind === "agency" ? "Agency features are on. Find them under Clients." : "Now a company workspace. Your clients are kept if you switch back.");
+    } catch (e) {
+      toast.error(message(e, "Couldn't change it."));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <fieldset className="grid gap-2" disabled={busy}>
+      <legend className="mb-2 text-[13px] text-muted-foreground">What it's for</legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {KINDS.map((k) => (
+          <label
+            key={k.kind}
+            className="flex cursor-pointer gap-3 rounded-xl border border-edge p-4 transition-colors hover:bg-chip/40 has-[:checked]:border-rim has-[:checked]:bg-chip/60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:disabled]:cursor-default"
+          >
+            <input
+              type="radio"
+              name="ws-kind"
+              value={k.kind}
+              checked={view.kind === k.kind}
+              onChange={() => void choose(k.kind)}
+              className="mt-1 size-4 shrink-0 accent-[var(--foreground)] focus-visible:outline-none"
+            />
+            <span className="grid content-start gap-0.5">
+              <span className="text-[14px] font-medium">{k.label}</span>
+              <span className="text-[13px] text-muted-foreground">{k.blurb}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -421,6 +473,7 @@ export function TeamView({ view, onChanged, onLeft }: { view: WorkspaceView; onC
             Workspace
           </h2>
           <NameForm key={view.name} view={view} onSaved={(v) => onChanged(v)} />
+          <KindForm view={view} onSaved={(v) => onChanged(v)} />
         </section>
       )}
 

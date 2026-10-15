@@ -41,11 +41,14 @@ export function ProgressCard({
   site,
   owner,
   compact = false,
+  title,
   className,
 }: {
   site: SiteProgress;
   owner: { name: string | null; avatarUrl: string | null };
   compact?: boolean;
+  /** Replaces "{name} is improving {host}" (client pages title each card by its site). */
+  title?: string;
   className?: string;
 }) {
   const { t } = useI18n();
@@ -55,6 +58,7 @@ export function ProgressCard({
   const weeks = weeksWatched(site.since);
   const earned = siteMilestones(site);
   const named = !!owner.name;
+  const address = site.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const tone = site.scoreNow == null ? "" : site.scoreNow >= 75 ? "text-tel-emerald" : site.scoreNow >= 50 ? "text-tel-amber" : "text-tel-rose";
 
   const trendLabel =
@@ -70,11 +74,13 @@ export function ProgressCard({
         )}
         <div className="min-w-0">
           <p className={cn("text-balance font-medium leading-snug", compact ? "text-[15px]" : "text-[18px] sm:text-[20px]")}>
-            {named ? t("share.title.named", { name: owner.name!, host: site.host }) : t("share.title.anon", { host: site.host })}
+            {title ?? (named ? t("share.title.named", { name: owner.name!, host: site.host }) : t("share.title.anon", { host: site.host }))}
           </p>
-          <p className="mt-0.5 truncate text-[13px] text-muted-foreground" dir="ltr">
-            {site.url.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-          </p>
+          {address !== title && (
+            <p className="mt-0.5 truncate text-[13px] text-muted-foreground" dir="ltr">
+              {address}
+            </p>
+          )}
         </div>
       </header>
 

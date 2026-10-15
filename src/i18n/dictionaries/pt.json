@@ -726,5 +726,12 @@
   "share.cta.button": "Analise seu site grátis",
   "share.notFound.title": "Este link não está disponível",
   "share.notFound.body": "O dono pode ter desativado o link, ou o endereço tem um erro de digitação.",
-  "share.notFound.cta": "Ir para o Olmene"
+  "share.notFound.cta": "Ir para o Olmene",
+  "portal.title": "{client}: progresso dos sites",
+  "portal.preparedBy": "Preparado por {agency}",
+  "portal.body": "Como vai cada site, atualizado toda semana.",
+  "portal.empty": "Ainda não há sites nesta página.",
+  "portal.powered": "Medido com Olmene",
+  "portal.visit": "Visitar {agency}",
+  "portal.private": "Compartilhado por {agency}. Relatórios, descobertas e todo o resto continuam privados."
 }

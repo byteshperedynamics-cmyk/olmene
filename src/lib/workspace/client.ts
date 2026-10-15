@@ -78,16 +78,22 @@ export class TeamApiError extends Error {
   }
 }
 
-async function call<T>(method: string, path: string, body?: unknown, opts: { auth?: boolean } = {}): Promise<T> {
+/**
+ * A Worker API call as the signed-in person, in the workspace they're in.
+ * `body` goes as JSON; a File or Blob goes as it is, with its own type.
+ * Errors come back as TeamApiError with the server's message.
+ */
+export async function apiCall<T>(method: string, path: string, body?: unknown, opts: { auth?: boolean } = {}): Promise<T> {
   const session = opts.auth === false ? null : (await getSupabase()?.auth.getSession())?.data.session;
+  const raw = typeof Blob !== "undefined" && body instanceof Blob ? body : null;
   const res = await fetch(path, {
     method,
     headers: {
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(raw ? { "Content-Type": raw.type || "application/octet-stream" } : body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
       ...(opts.auth === false ? {} : workspaceHeader()),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
@@ -97,19 +103,19 @@ async function call<T>(method: string, path: string, body?: unknown, opts: { aut
   return data as T;
 }
 
-export const listWorkspaces = () => call<{ workspaces: WorkspaceSummary[] }>("GET", "/api/workspaces/").then((r) => r.workspaces);
-export const getWorkspace = () => call<{ workspace: WorkspaceView }>("GET", "/api/workspace/").then((r) => r.workspace);
+export const listWorkspaces = () => apiCall<{ workspaces: WorkspaceSummary[] }>("GET", "/api/workspaces/").then((r) => r.workspaces);
+export const getWorkspace = () => apiCall<{ workspace: WorkspaceView }>("GET", "/api/workspace/").then((r) => r.workspace);
 export const updateWorkspace = (patch: { name?: string; kind?: WorkspaceKind }) =>
-  call<{ workspace: WorkspaceView }>("PATCH", "/api/workspace/", patch).then((r) => r.workspace);
+  apiCall<{ workspace: WorkspaceView }>("PATCH", "/api/workspace/", patch).then((r) => r.workspace);
 export const inviteToWorkspace = (email: string, role: InvitableRole) =>
-  call<{ invite: WorkspaceInvite; link: string; emailed: boolean }>("POST", "/api/workspace/invites/", { email, role });
-export const revokeInvite = (id: string) => call<{ ok: true }>("DELETE", `/api/workspace/invites/${encodeURIComponent(id)}/`);
+  apiCall<{ invite: WorkspaceInvite; link: string; emailed: boolean }>("POST", "/api/workspace/invites/", { email, role });
+export const revokeInvite = (id: string) => apiCall<{ ok: true }>("DELETE", `/api/workspace/invites/${encodeURIComponent(id)}/`);
 export const changeMemberRole = (userId: string, role: InvitableRole) =>
-  call<{ ok: true }>("PATCH", `/api/workspace/members/${encodeURIComponent(userId)}/`, { role });
-export const removeMember = (userId: string) => call<{ ok: true }>("DELETE", `/api/workspace/members/${encodeURIComponent(userId)}/`);
+  apiCall<{ ok: true }>("PATCH", `/api/workspace/members/${encodeURIComponent(userId)}/`, { role });
+export const removeMember = (userId: string) => apiCall<{ ok: true }>("DELETE", `/api/workspace/members/${encodeURIComponent(userId)}/`);
 export const previewInvite = (token: string) =>
-  call<{ invite: InvitePreview }>("GET", `/api/invites/?t=${encodeURIComponent(token)}`, undefined, { auth: false }).then((r) => r.invite);
-export const acceptInvite = (token: string) => call<{ workspace: WorkspaceSummary }>("POST", "/api/invites/", { token }).then((r) => r.workspace);
+  apiCall<{ invite: InvitePreview }>("GET", `/api/invites/?t=${encodeURIComponent(token)}`, undefined, { auth: false }).then((r) => r.invite);
+export const acceptInvite = (token: string) => apiCall<{ workspace: WorkspaceSummary }>("POST", "/api/invites/", { token }).then((r) => r.workspace);
 
 /**
  * Your workspaces and the one you're in. A remembered workspace you've since

@@ -59,6 +59,7 @@ export default function TeamPage() {
             if (next) qc.setQueryData(key, next);
             else void qc.invalidateQueries({ queryKey: ["workspace"] });
             void qc.invalidateQueries({ queryKey: ["workspaces"] });
+            void qc.invalidateQueries({ queryKey: ["clients"] });
           }}
           onLeft={() => setActiveWorkspace(null, { to: "/app/" })}
         />

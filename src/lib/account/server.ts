@@ -103,6 +103,8 @@ export async function countFixesShipped(db: SupabaseClient, userId: string): Pro
 
 export interface PublicShare {
   slug: string;
+  /** Whose site it is (server side only: never sent to the page). */
+  ownerId: string;
   owner: { name: string | null; avatarUrl: string | null };
   site: SiteProgress;
 }
@@ -120,6 +122,7 @@ export async function loadPublicShare(db: SupabaseClient, slug: string): Promise
   const p = profile as { display_name: string | null; avatar_path: string | null } | null;
   return {
     slug: share.slug as string,
+    ownerId: share.user_id as string,
     owner: share.show_name ? { name: p?.display_name ?? null, avatarUrl: avatarUrl(p?.avatar_path) } : { name: null, avatarUrl: null },
     site,
   };
@@ -131,7 +134,7 @@ export async function loadPublicShare(db: SupabaseClient, slug: string): Promise
 export async function exportUserData(db: SupabaseClient, userId: string, email: string | null): Promise<Record<string, unknown>> {
   const own = <T>(table: string, columns: string, limit = 1000) =>
     db.from(table).select(columns).eq("user_id", userId).limit(limit).then(({ data }) => (data ?? []) as T[]);
-  const [profile, subscriptions, analyses, reports, sites, scans, notifications, fixRuns, guided, alertChannels, connections, shares] = await Promise.all([
+  const [profile, subscriptions, analyses, reports, sites, scans, notifications, fixRuns, guided, alertChannels, connections, shares, clients, clientPages] = await Promise.all([
     db.from("profiles").select("email, display_name, avatar_path, notify_email, digest_email, created_at").eq("id", userId).maybeSingle().then(({ data }) => data),
     own("subscriptions", "polar_product_id, status, current_period_start, current_period_end, cancel_at_period_end"),
     db.from("analysis_jobs").select("id, site_url, input, status, created_at, completed_at").eq("user_id", userId).is("deleted_at", null).limit(500).then(({ data }) => data ?? []),
@@ -144,6 +147,8 @@ export async function exportUserData(db: SupabaseClient, userId: string, email: 
     own("alert_channels", "kind, label, kinds, active, created_at"),
     own("connections", "provider, provider_account_id, status, scopes, created_at"),
     own("progress_shares", "slug, show_name, views, created_at"),
+    own("clients", "id, name, website, contact_email, created_at"),
+    own("client_portals", "client_id, slug, views, created_at"),
   ]);
   return {
     exportedAt: new Date().toISOString(),
@@ -159,6 +164,8 @@ export async function exportUserData(db: SupabaseClient, userId: string, email: 
     alertChannels,
     connections,
     progressLinks: shares,
+    clients,
+    clientPages,
     note: "Payment receipts are kept by our payment provider, Polar. Webhook URLs, access tokens and signing secrets are not included.",
   };
 }
@@ -207,8 +214,8 @@ async function removeObjects(db: SupabaseClient, bucket: string, paths: string[]
 
 /**
  * "Delete my data": reports and analyses, sites and their weekly history,
- * scans and screenshots, the activity feed, guided fixes, pull-request checks
- * and progress links. The account, plan, purchases, connections, alert
+ * scans and screenshots, the activity feed, guided fixes, pull-request checks,
+ * progress links, and clients with their pages. The account, plan, purchases, connections, alert
  * channels and the fix-run record (what Olmene changed in your code) stay.
  *
  * Analyses are emptied and hidden rather than removed: the month's report
@@ -237,6 +244,8 @@ export async function deleteUserData(db: SupabaseClient, userId: string): Promis
     ["notifications", db.from("notifications").delete().eq("user_id", userId)],
     ["guided_runs", db.from("guided_runs").delete().eq("user_id", userId)],
     ["pr_checks", db.from("pr_checks").delete().eq("user_id", userId)],
+    ["client_portals", db.from("client_portals").delete().eq("user_id", userId)],
+    ["clients", db.from("clients").delete().eq("user_id", userId)],
   ];
   for (const [name, step] of steps) {
     const { error } = await step;
@@ -259,6 +268,13 @@ export async function deleteAccount(db: SupabaseClient, userId: string): Promise
   await deleteUserData(db, userId);
   const { data: files } = await db.storage.from(AVATAR_BUCKET).list(userId, { limit: 100 });
   await removeObjects(db, AVATAR_BUCKET, ((files ?? []) as { name: string }[]).map((f) => `${userId}/${f.name}`));
+  // The workspace's logo (brand-assets/<workspace id>/…) goes with it.
+  const { data: ws } = await db.from("workspaces").select("id").eq("owner_id", userId).maybeSingle();
+  if (ws) {
+    const wsId = (ws as { id: string }).id;
+    const { data: logos } = await db.storage.from("brand-assets").list(wsId, { limit: 100 });
+    await removeObjects(db, "brand-assets", ((logos ?? []) as { name: string }[]).map((f) => `${wsId}/${f.name}`));
+  }
   await db.from("engine_usage").update({ user_id: null }).eq("user_id", userId);
   const { error } = await db.auth.admin.deleteUser(userId);
   if (error) throw new Error(`auth: ${error.message}`);

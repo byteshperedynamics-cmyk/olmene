@@ -14,6 +14,9 @@ join by invitation and share all of it according to their role.
 Seats per plan (owner included) live in `src/lib/workspace/roles.ts`
 (`SEATS_BY_PLAN`): no plan or a one-off report = 1, Fix = 2, Team = 5.
 
+A workspace is a company or an agency (`workspaces.kind`). Agencies get a
+Clients page, client pages and their own branding: see [agency.md](agency.md).
+
 ## How it works
 
 - **Data stays keyed by the owner's user id** (every existing `user_id`

@@ -726,5 +726,12 @@
   "share.cta.button": "افحص موقعك مجانًا",
   "share.notFound.title": "هذا الرابط غير متاح",
   "share.notFound.body": "ربما أوقفه مالكه، أو أن العنوان يحتوي على خطأ.",
-  "share.notFound.cta": "انتقل إلى Olmene"
+  "share.notFound.cta": "انتقل إلى Olmene",
+  "portal.title": "{client}: تقدّم المواقع",
+  "portal.preparedBy": "أعدّته {agency}",
+  "portal.body": "حال كل موقع، يُحدَّث كل أسبوع.",
+  "portal.empty": "لا توجد مواقع في هذه الصفحة بعد.",
+  "portal.powered": "قيس باستخدام Olmene",
+  "portal.visit": "زيارة {agency}",
+  "portal.private": "شاركته {agency}. تبقى التقارير والنتائج وكل ما عدا ذلك خاصة."
 }

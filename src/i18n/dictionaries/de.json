@@ -726,5 +726,12 @@
   "share.cta.button": "Website kostenlos scannen",
   "share.notFound.title": "Dieser Link ist nicht verfügbar",
   "share.notFound.body": "Der Inhaber hat ihn vielleicht deaktiviert, oder die Adresse enthält einen Tippfehler.",
-  "share.notFound.cta": "Zu Olmene"
+  "share.notFound.cta": "Zu Olmene",
+  "portal.title": "{client}: Fortschritt der Websites",
+  "portal.preparedBy": "Erstellt von {agency}",
+  "portal.body": "Wie es um jede Website steht – jede Woche aktualisiert.",
+  "portal.empty": "Auf dieser Seite gibt es noch keine Websites.",
+  "portal.powered": "Gemessen mit Olmene",
+  "portal.visit": "Zu {agency}",
+  "portal.private": "Geteilt von {agency}. Berichte, Befunde und alles Weitere bleiben privat."
 }

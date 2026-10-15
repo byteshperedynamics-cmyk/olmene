@@ -726,5 +726,12 @@
   "share.cta.button": "Проверить сайт бесплатно",
   "share.notFound.title": "Эта ссылка недоступна",
   "share.notFound.body": "Возможно, владелец отключил её или в адресе опечатка.",
-  "share.notFound.cta": "Перейти на Olmene"
+  "share.notFound.cta": "Перейти на Olmene",
+  "portal.title": "{client}: прогресс сайтов",
+  "portal.preparedBy": "Подготовлено: {agency}",
+  "portal.body": "Как дела у каждого сайта — обновляется каждую неделю.",
+  "portal.empty": "На этой странице пока нет сайтов.",
+  "portal.powered": "Измерено с помощью Olmene",
+  "portal.visit": "Сайт {agency}",
+  "portal.private": "Поделились: {agency}. Отчёты, находки и всё остальное остаются закрытыми."
 }

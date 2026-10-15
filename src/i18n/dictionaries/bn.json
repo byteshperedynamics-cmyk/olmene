@@ -726,5 +726,12 @@
   "share.cta.button": "আপনার সাইট বিনামূল্যে স্ক্যান করুন",
   "share.notFound.title": "এই লিংকটি পাওয়া যাচ্ছে না",
   "share.notFound.body": "হয়তো মালিক এটি বন্ধ করে দিয়েছেন, অথবা ঠিকানায় ভুল আছে।",
-  "share.notFound.cta": "Olmene-এ যান"
+  "share.notFound.cta": "Olmene-এ যান",
+  "portal.title": "{client}: ওয়েবসাইটের অগ্রগতি",
+  "portal.preparedBy": "{agency} প্রস্তুত করেছে",
+  "portal.body": "প্রতিটি সাইট কেমন চলছে, প্রতি সপ্তাহে আপডেট হয়।",
+  "portal.empty": "এই পাতায় এখনও কোনো ওয়েবসাইট নেই।",
+  "portal.powered": "Olmene দিয়ে মাপা",
+  "portal.visit": "{agency} দেখুন",
+  "portal.private": "{agency} শেয়ার করেছে। রিপোর্ট, ফলাফল এবং বাকি সবকিছু গোপন থাকে।"
 }

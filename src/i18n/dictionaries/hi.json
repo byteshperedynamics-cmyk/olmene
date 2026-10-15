@@ -726,5 +726,12 @@
   "share.cta.button": "अपनी साइट मुफ़्त स्कैन करें",
   "share.notFound.title": "यह लिंक उपलब्ध नहीं है",
   "share.notFound.body": "हो सकता है इसके मालिक ने इसे बंद कर दिया हो, या पते में कोई गलती हो।",
-  "share.notFound.cta": "Olmene पर जाएँ"
+  "share.notFound.cta": "Olmene पर जाएँ",
+  "portal.title": "{client}: वेबसाइट की प्रगति",
+  "portal.preparedBy": "{agency} द्वारा तैयार",
+  "portal.body": "हर साइट का हाल, हर हफ़्ते अपडेट।",
+  "portal.empty": "इस पेज पर अभी कोई वेबसाइट नहीं है।",
+  "portal.powered": "Olmene से मापा गया",
+  "portal.visit": "{agency} पर जाएँ",
+  "portal.private": "{agency} द्वारा साझा किया गया। रिपोर्ट, निष्कर्ष और बाकी सब निजी रहते हैं।"
 }

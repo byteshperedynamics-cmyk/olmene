@@ -726,5 +726,12 @@
   "share.cta.button": "サイトを無料でスキャン",
   "share.notFound.title": "このリンクは利用できません",
   "share.notFound.body": "オーナーが無効にしたか、アドレスに誤りがある可能性があります。",
-  "share.notFound.cta": "Olmene へ"
+  "share.notFound.cta": "Olmene へ",
+  "portal.title": "{client}：ウェブサイトの進捗",
+  "portal.preparedBy": "{agency} が作成",
+  "portal.body": "各サイトの状況を毎週更新しています。",
+  "portal.empty": "このページにはまだサイトがありません。",
+  "portal.powered": "Olmene で計測",
+  "portal.visit": "{agency} を見る",
+  "portal.private": "{agency} が共有しています。レポートや指摘事項などはすべて非公開のままです。"
 }

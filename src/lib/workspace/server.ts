@@ -24,6 +24,7 @@ import {
   isUuid,
   roleRequiredMessage,
   seatLimit,
+  TeamError,
   type InvitableRole,
   type WorkspaceRole,
 } from "./roles";
@@ -231,16 +232,7 @@ export async function workspaceView(db: SupabaseClient, actor: Actor): Promise<W
 
 // ── Team changes ───────────────────────────────────────────────────────────
 
-export class TeamError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = "TeamError";
-  }
-}
+export { TeamError };
 
 function toHex(buf: ArrayBuffer): string {
   return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
