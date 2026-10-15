@@ -113,9 +113,12 @@ function mapJob(r: JobRow): Job {
 export async function listJobs(): Promise<Job[]> {
   const supabase = getSupabase();
   if (!supabase) return [];
+  // "Delete my data" empties an analysis and marks it deleted_at instead of
+  // removing it (it still counts toward the month's quota); it's gone for the user.
   const { data } = await supabase
     .from("analysis_jobs")
     .select(JOB_SELECT)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(50);
   return (data ?? []).map(mapJob);
@@ -124,7 +127,7 @@ export async function listJobs(): Promise<Job[]> {
 export async function getJob(id: string): Promise<Job | null> {
   const supabase = getSupabase();
   if (!supabase) return null;
-  const { data } = await supabase.from("analysis_jobs").select(JOB_SELECT).eq("id", id).maybeSingle();
+  const { data } = await supabase.from("analysis_jobs").select(JOB_SELECT).eq("id", id).is("deleted_at", null).maybeSingle();
   return data ? mapJob(data as JobRow) : null;
 }
 

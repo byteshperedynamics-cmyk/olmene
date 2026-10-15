@@ -81,18 +81,19 @@ export function MilestoneGrid({
           <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-rim bg-background">
             <NextIcon className="size-5" aria-hidden />
           </span>
-          <div className="grid min-w-0 flex-1 gap-0.5">
+          {/* min-w lets the button wrap under the text on phones instead of squeezing it to one word per line */}
+          <div className="grid min-w-[12rem] flex-1 gap-0.5">
             <p className="text-[12.5px] text-muted-foreground">Up next</p>
             <p className="text-[15px] font-medium">{nc.title}</p>
             <p className="text-[13.5px] leading-snug text-muted-foreground">{todo(next)}</p>
           </div>
           {nc.href && nc.cta && (
             nc.href === "#progress" && onShare ? (
-              <Button size="sm" onClick={onShare} className="shrink-0">
+              <Button size="sm" onClick={onShare} className="w-full shrink-0 sm:w-auto">
                 {nc.cta} <ArrowRight className="size-3.5" aria-hidden />
               </Button>
             ) : (
-              <Button asChild size="sm" className="shrink-0">
+              <Button asChild size="sm" className="w-full shrink-0 sm:w-auto">
                 <Link href={nc.href}>
                   {nc.cta} <ArrowRight className="size-3.5" aria-hidden />
                 </Link>

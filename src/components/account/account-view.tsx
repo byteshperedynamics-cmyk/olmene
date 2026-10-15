@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, BellRing, Download, KeyRound, LogOut, Mail, MonitorSmartphone, Share2, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -168,7 +169,12 @@ function SiteRow({ site, share, onShare }: { site: SiteProgress; share: ShareLin
 
 // ── Delete dialogs ─────────────────────────────────────────────────────────
 
+// Queries the account screen itself needs after "delete my data"; every other
+// cached list (analyses, sites, reports) still holds the deleted rows.
+const KEEP_AFTER_DATA_DELETE = new Set(["profile", "account-overview"]);
+
 function DeleteDataDialog({ open, onOpenChange, onDone }: { open: boolean; onOpenChange: (o: boolean) => void; onDone: () => void }) {
+  const qc = useQueryClient();
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -184,6 +190,8 @@ function DeleteDataDialog({ open, onOpenChange, onDone }: { open: boolean; onOpe
     setError(null);
     try {
       await deleteMyData();
+      // Drop them so the dashboard doesn't flash deleted reports before it refetches.
+      qc.removeQueries({ predicate: (q) => !KEEP_AFTER_DATA_DELETE.has(String(q.queryKey[0])) });
       toast.success("Your data is deleted. Your account is ready for a fresh start.");
       onOpenChange(false);
       onDone();
@@ -203,7 +211,7 @@ function DeleteDataDialog({ open, onOpenChange, onDone }: { open: boolean; onOpe
             <div className="grid gap-4 text-[14px] leading-relaxed">
               <div className="grid gap-1.5">
                 <p className="font-medium text-foreground">Deleted for good</p>
-                <p>Reports and analyses, watched sites and their weekly history, scans and screenshots, your activity feed, guided fixes and progress links.</p>
+                <p>Reports and analyses, watched sites and their weekly history, scans and screenshots, your activity feed, guided fixes, pull-request checks and progress links.</p>
               </div>
               <div className="grid gap-1.5">
                 <p className="font-medium text-foreground">Kept</p>
