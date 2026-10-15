@@ -19,7 +19,7 @@ function ctaHref(productId: string, loggedIn: boolean): string {
 }
 
 /** "€49 / month" → { amount: "€49", suffix: "/ month" } (display only). */
-function splitPrice(label: string): { amount: string; suffix: string } {
+export function splitPrice(label: string): { amount: string; suffix: string } {
   const m = label.match(/^\s*([^\d\s]*\s?[\d.,]+)\s*(.*)$/);
   return m ? { amount: m[1].replace(/\s/g, ""), suffix: m[2] } : { amount: label, suffix: "" };
 }
@@ -244,7 +244,7 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
   );
 }
 
-function TierCard({
+export function TierCard({
   name,
   amount,
   suffix,
