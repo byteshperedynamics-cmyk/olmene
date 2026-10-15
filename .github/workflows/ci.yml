@@ -40,6 +40,13 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npm run check:rls
+      # Migrations on a real Postgres (the runner image ships one), then the
+      # SQL tests in supabase/tests/: access rules checked as different users.
+      - name: SQL tests
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -qc "alter user postgres password 'postgres'"
+          PGHOST=localhost PGUSER=postgres PGPASSWORD=postgres npm run test:sql
       - run: bun test src/lib
       - run: node scripts/i18n_validate.js
       # Same build the Worker deploy runs, plus the startup/secret gate.
