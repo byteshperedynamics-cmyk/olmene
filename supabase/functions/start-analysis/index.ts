@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { z } from "npm:zod@4.6.5";
+import { actingOwner, WorkspaceAccessError } from "../_shared/workspace.ts";
 // ───────────── inlined: _shared/cors.ts ─────────────
 /**
  * CORS + JSON helpers for Edge Functions (spec §7 common rules).
@@ -370,8 +371,8 @@ Deno.serve(async (req)=>{
     }, 405, cors);
   }
   try {
-    const userId = await userIdFromRequest(req);
-    if (!userId) {
+    const authUserId = await userIdFromRequest(req);
+    if (!authUserId) {
       return json({
         error: {
           code: "unauthorized",
@@ -379,7 +380,8 @@ Deno.serve(async (req)=>{
         }
       }, 401, cors);
     }
-    const parsed = StartAnalysisInput.safeParse(await req.json().catch(()=>null));
+    const body = await req.json().catch(()=>null);
+    const parsed = StartAnalysisInput.safeParse(body);
     if (!parsed.success) {
       const first = parsed.error.issues[0];
       return json({
@@ -400,6 +402,23 @@ Deno.serve(async (req)=>{
       }, 400, cors);
     }
     const supabase = serviceClient();
+    // Workspaces: a member may start a report in a workspace they belong to
+    // (body.workspace = the owner's user id). Everything below (plan, quota,
+    // credits, the job itself) is then the owner's, as if they started it.
+    let userId;
+    try {
+      userId = await actingOwner(supabase, authUserId, body?.workspace, "member");
+    } catch (e) {
+      if (e instanceof WorkspaceAccessError) {
+        return json({
+          error: {
+            code: e.code,
+            message: e.message
+          }
+        }, 403, cors);
+      }
+      throw e;
+    }
     // Entitlement: active or trialing subscription (cancellation keeps
     // access until period end because Polar reports status until then).
     const findActiveSub = async ()=>{
@@ -510,6 +529,11 @@ Deno.serve(async (req)=>{
     if (error || !job) {
       throw new Error(`job insert failed: ${error?.message ?? "unknown"}`);
     }
+    // Who started it (the account is user_id). Best effort: the column
+    // arrives with the workspaces migration, which may land after this deploy.
+    await supabase.from("analysis_jobs").update({
+      created_by: authUserId
+    }).eq("id", job.id).then(()=>{}, ()=>{});
     // Claim the one-time credit for this job (task 24). If the claim is lost
     // (should be impossible under the 1-concurrent-job limit), cancel the
     // job and reject so the credit is never silently burned.

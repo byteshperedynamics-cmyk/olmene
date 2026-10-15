@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled, appUrl, githubWebBase } from "@/lib/agent/env";
-import { ERR, randomState, requireUser } from "@/lib/agent/http";
+import { ERR, randomState } from "@/lib/agent/http";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "admin");
+  if ("error" in r) return r.error;
+  const { actor } = r;
 
   const db = getServiceDb();
   const app = await loadGithubAppConfig(db);
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
 
   const state = randomState();
   const { error } = await db.from("agent_oauth_states").insert({
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     flow: "github-connect",
     state,
     payload: {},

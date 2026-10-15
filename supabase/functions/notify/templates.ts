@@ -117,6 +117,31 @@ export function render(kind: string, p: Payload, appUrl: string, footer: string)
         optional: true,
       };
     }
+    case "workspace_invite": {
+      // Sent to the invited address (notify/index.ts); the link is the only way in.
+      const link = typeof p.link === "string" && /^https:\/\/[^\s"<>]+$/.test(p.link) ? p.link : null;
+      if (!link) return null;
+      const roles: Record<string, string> = {
+        admin: "an admin. You'll manage the team and connections, and do every kind of work",
+        member: "a member. You'll run scans, reports and fixes",
+        viewer: "a viewer. You'll see the reports, sites and fixes",
+      };
+      const role = roles[String(p.role)] ?? roles.member;
+      const who = String(p.inviter ?? "").trim() || "Someone";
+      const workspace = String(p.workspace ?? "").trim() || "a workspace";
+      const until = typeof p.expiresAt === "string" && !Number.isNaN(Date.parse(p.expiresAt))
+        ? new Date(p.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })
+        : null;
+      return {
+        subject: `${who} invited you to ${workspace} on Olmene`,
+        text: `${who} invited you to join ${workspace} on Olmene as ${role}.\n\nOlmene finds what's costing a website customers and ships the fixes as pull requests the team reviews.\n\nJoin ${workspace}: ${link}${until ? `\n\nThe link works until ${until}.` : ""}`,
+        html: html(`Join ${workspace} on Olmene`, [
+          `<strong>${e(who)}</strong> invited you to join <strong>${e(workspace)}</strong> as ${e(role)}.`,
+          `Olmene finds what's costing a website customers and ships the fixes as pull requests the team reviews.${until ? ` The link works until ${e(until)}.` : ""}`,
+        ], { label: `Join ${workspace}`, url: link }),
+        optional: false,
+      };
+    }
     default:
       return null;
   }

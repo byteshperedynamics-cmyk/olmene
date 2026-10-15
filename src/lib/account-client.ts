@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
 import { SUPABASE_URL } from "./config";
 import { getSupabase } from "./supabase";
+import { workspaceHeader } from "./workspace/client";
 import { firstName, initials, type SiteProgress } from "./account/progress";
 
 export class AccountError extends Error {
@@ -35,6 +36,7 @@ async function call<T>(method: string, path: string, body?: unknown, init?: { ra
     headers: {
       ...(init?.raw ? { "Content-Type": init.raw.type } : body !== undefined ? { "Content-Type": "application/json" } : {}),
       ...(t ? { Authorization: `Bearer ${t}` } : {}),
+      ...workspaceHeader(),
     },
     body: init?.raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });

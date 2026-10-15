@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled } from "@/lib/agent/env";
-import { ERR, requireUser } from "@/lib/agent/http";
+import { ERR } from "@/lib/agent/http";
 import { readFlags } from "@/lib/agent/audit";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
 import { kickAgentJob } from "@/lib/agent/drive";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,9 @@ const ACTIVE_STATUSES = ["queued", "planning", "previewing", "applying", "verify
  */
 export async function GET(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "viewer");
+  if ("error" in r) return r.error;
+  const { actor } = r;
 
   const db = getServiceDb();
   const url = new URL(req.url);
@@ -25,7 +27,7 @@ export async function GET(req: Request) {
   const { data: jobs, error } = await db
     .from("agent_jobs")
     .select("id, status, current_step, input, step_outputs, error, created_at, completed_at, report_id, scan_id")
-    .eq("user_id", auth.user.id)
+    .eq("user_id", actor.ownerId)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) {
@@ -60,8 +62,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  */
 export async function POST(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "member");
+  if ("error" in r) return r.error;
+  const { actor } = r;
 
   let body: { jobId?: string; scanId?: string; targetRepo?: string };
   try {
@@ -94,18 +97,18 @@ export async function POST(req: Request) {
       .select("id, user_id, job_id")
       .eq("job_id", jobId)
       .maybeSingle();
-    if (!report || report.user_id !== auth.user.id) return ERR.notFound("report");
+    if (!report || report.user_id !== actor.ownerId) return ERR.notFound("report");
     reportId = report.id;
   } else {
     const { data: scan } = await db.from("scans").select("id, user_id, expires_at").eq("id", scanId!).maybeSingle();
-    if (!scan || (scan.user_id && scan.user_id !== auth.user.id) || (scan.expires_at && new Date(scan.expires_at) < new Date())) {
+    if (!scan || (scan.user_id && scan.user_id !== actor.ownerId) || (scan.expires_at && new Date(scan.expires_at) < new Date())) {
       return ERR.notFound("scan");
     }
     const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
     const { count: previews } = await db
       .from("agent_jobs")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", auth.user.id)
+      .eq("user_id", actor.ownerId)
       .not("scan_id", "is", null)
       .gte("created_at", dayAgo);
     if ((previews ?? 0) >= SCAN_PREVIEWS_PER_DAY) {
@@ -115,7 +118,7 @@ export async function POST(req: Request) {
       );
     }
     // The scan now belongs to this user and no longer expires.
-    await db.from("scans").update({ user_id: auth.user.id, expires_at: null }).eq("id", scan.id);
+    await db.from("scans").update({ user_id: actor.ownerId, expires_at: null }).eq("id", scan.id);
     scanRowId = scan.id;
   }
 
@@ -123,7 +126,7 @@ export async function POST(req: Request) {
   const { data: connection } = await db
     .from("connections")
     .select("id, status, resource_ids")
-    .eq("user_id", auth.user.id)
+    .eq("user_id", actor.ownerId)
     .eq("provider", "github")
     .eq("status", "active")
     .order("created_at", { ascending: false })
@@ -143,7 +146,7 @@ export async function POST(req: Request) {
   const { count: activeCount } = await db
     .from("agent_jobs")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", auth.user.id)
+    .eq("user_id", actor.ownerId)
     .in("status", ACTIVE_STATUSES);
   if ((activeCount ?? 0) > 0) {
     return ERR.badRequest("You already have a fix job running. Wait for it to finish first.");
@@ -154,7 +157,7 @@ export async function POST(req: Request) {
   const { count: recent } = await db
     .from("agent_jobs")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", auth.user.id)
+    .eq("user_id", actor.ownerId)
     .gte("created_at", hourAgo);
   if ((recent ?? 0) >= 10) {
     return NextResponse.json(
@@ -166,7 +169,8 @@ export async function POST(req: Request) {
   const { data: job, error } = await db
     .from("agent_jobs")
     .insert({
-      user_id: auth.user.id,
+      user_id: actor.ownerId,
+      created_by: actor.user.id,
       report_id: reportId,
       scan_id: scanRowId,
       connection_id: connection.id,
@@ -183,13 +187,13 @@ export async function POST(req: Request) {
 
   await db.from("agent_actions").insert({
     agent_job_id: job.id,
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     actor: "user",
     action_type: "plan",
     provider: "github",
     result: "success",
     target: { repo: targetRepo, report: reportId, scan: scanRowId },
-    detail: { started: true, source: reportId ? "report" : "scan" },
+    detail: { started: true, by: actor.user.id, source: reportId ? "report" : "scan" },
   });
 
   kickAgentJob(job.id);

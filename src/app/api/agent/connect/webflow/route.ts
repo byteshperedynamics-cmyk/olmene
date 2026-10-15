@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled } from "@/lib/agent/env";
-import { ERR, jsonError, requireUser } from "@/lib/agent/http";
+import { ERR, jsonError } from "@/lib/agent/http";
 import { connectWebflow, saveSiteConnection } from "@/lib/agent/channels";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "admin");
+  if ("error" in r) return r.error;
+  const { actor } = r;
   let body: { token?: string; siteUrl?: string };
   try {
     body = await req.json();
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
   if (!body.siteUrl || !/^https?:\/\//.test(body.siteUrl)) return ERR.badRequest("siteUrl is required (https://…).");
   try {
     const { site, host } = await connectWebflow(fetch, token, body.siteUrl);
-    const id = await saveSiteConnection(getServiceDb(), auth.user.id, "webflow", host, token, {
+    const id = await saveSiteConnection(getServiceDb(), actor.ownerId, "webflow", host, token, {
       siteId: site.id, siteName: site.displayName ?? site.shortName ?? null, domains: (site.customDomains ?? []).map((d) => d.url), siteUrl: body.siteUrl,
     });
     return NextResponse.json({ connection: { id, provider: "webflow", host, siteName: site.displayName ?? site.shortName ?? null } }, { status: 201 });

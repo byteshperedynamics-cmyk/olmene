@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled, isAgentAdmin } from "@/lib/agent/env";
-import { ERR, requireUser } from "@/lib/agent/http";
+import { ERR } from "@/lib/agent/http";
 import { loadGithubAppConfig } from "@/lib/agent/github/client";
 import { readFlags } from "@/lib/agent/audit";
 import { checkApplyEntitlement } from "@/lib/agent/entitlement";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "viewer");
+  if ("error" in r) return r.error;
+  const { actor } = r;
 
   const db = getServiceDb();
   const [app, flags] = await Promise.all([loadGithubAppConfig(db), readFlags(db)]);
@@ -23,11 +25,11 @@ export async function GET(req: Request) {
   const { data: connections } = await db
     .from("connections")
     .select("id, provider, status, provider_account_id, external_installation_id, resource_ids, created_at, last_verified_at")
-    .eq("user_id", auth.user.id)
+    .eq("user_id", actor.ownerId)
     .eq("provider", "github")
     .order("created_at", { ascending: false });
 
-  const entitlement = await checkApplyEntitlement(db, auth.user.id);
+  const entitlement = await checkApplyEntitlement(db, actor.ownerId);
 
   return NextResponse.json({
     enabled: true,
@@ -35,7 +37,7 @@ export async function GET(req: Request) {
     github: {
       configured: Boolean(app),
       // Only the owner sees the one-time "set up the GitHub app" action.
-      canRegister: !app && isAgentAdmin(auth.user.email),
+      canRegister: !app && isAgentAdmin(actor.user.email),
       appSlug: app?.appSlug ?? null,
       connections: (connections ?? []).map((c: Record<string, unknown>) => ({
         id: c.id,

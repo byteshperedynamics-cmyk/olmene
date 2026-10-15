@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled, githubApiBase } from "@/lib/agent/env";
-import { ERR, requireUser } from "@/lib/agent/http";
+import { ERR } from "@/lib/agent/http";
 import { loadGithubAppConfig, mintInstallationToken, GithubApiError } from "@/lib/agent/github/client";
 import { createAppJwt } from "@/lib/agent/github/jwt";
 import { githubHeaders } from "@/lib/agent/github/headers";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +15,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "admin");
+  if ("error" in r) return r.error;
+  const { actor } = r;
 
   const url = new URL(req.url);
   const state = url.searchParams.get("state");
@@ -31,7 +33,7 @@ export async function GET(req: Request) {
   if (!stateRow || stateRow.consumed_at || new Date(stateRow.expires_at) < new Date()) {
     return ERR.badRequest("This connect session expired. Start again from the Agent page.");
   }
-  if (stateRow.user_id !== auth.user.id) return ERR.forbidden();
+  if (stateRow.user_id !== actor.ownerId) return ERR.forbidden();
 
   const payload = stateRow.payload as { installations?: Array<{ id: number; login: string; type: string }> };
   return NextResponse.json({ installations: payload.installations ?? [] });
@@ -45,8 +47,9 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "admin");
+  if ("error" in r) return r.error;
+  const { actor } = r;
 
   let body: { state?: string; installationId?: number | string };
   try {
@@ -69,7 +72,7 @@ export async function POST(req: Request) {
   if (!stateRow || stateRow.consumed_at || new Date(stateRow.expires_at) < new Date()) {
     return ERR.badRequest("This connect session expired. Start again from the Agent page.");
   }
-  if (stateRow.user_id !== auth.user.id) return ERR.forbidden();
+  if (stateRow.user_id !== actor.ownerId) return ERR.forbidden();
 
   const payload = stateRow.payload as { installations?: Array<{ id: number; login: string; type: string }> };
   const discovered = payload.installations ?? [];
@@ -113,7 +116,7 @@ export async function POST(req: Request) {
   const { data: existing } = await db
     .from("connections")
     .select("id")
-    .eq("user_id", auth.user.id)
+    .eq("user_id", actor.ownerId)
     .eq("provider", "github")
     .eq("external_installation_id", String(instId))
     .maybeSingle();
@@ -121,7 +124,7 @@ export async function POST(req: Request) {
   // Update-or-insert (not .upsert): the conflict target must match a plain
   // unique constraint, and older databases only had an expression index.
   const connRow = {
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     provider: "github",
     status: "active",
     provider_account_id: accountLogin,
@@ -140,7 +143,7 @@ export async function POST(req: Request) {
 
   await db.from("agent_oauth_states").update({ consumed_at: new Date().toISOString() }).eq("id", stateRow.id);
   await db.from("agent_actions").insert({
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     actor: "user",
     action_type: "connect",
     provider: "github",

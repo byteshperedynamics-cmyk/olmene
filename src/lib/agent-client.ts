@@ -7,6 +7,7 @@
  */
 
 import { getSupabase } from "./supabase";
+import { workspaceHeader } from "./workspace/client";
 
 export class AgentApiError extends Error {
   status: number;
@@ -29,7 +30,7 @@ async function authHeaders(): Promise<Record<string, string>> {
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(path, {
     method,
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    headers: { "Content-Type": "application/json", ...(await authHeaders()), ...workspaceHeader() },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => null);

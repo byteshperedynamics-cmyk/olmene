@@ -1,25 +1,27 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled } from "@/lib/agent/env";
-import { ERR, jsonError, requireUser } from "@/lib/agent/http";
+import { ERR, jsonError } from "@/lib/agent/http";
 import { attachAutoPlans, CHANNEL_PLATFORMS, loadSiteConnection } from "@/lib/agent/channels";
 import type { GuidedRunRow } from "@/lib/agent/guided/service";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
 /** POST /api/agent/guided/[id]/auto — after connecting Webflow/WordPress: find which cards Olmene can apply for you. */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "member");
+  if ("error" in r) return r.error;
+  const { actor } = r;
   const { id } = await ctx.params;
   const db = getServiceDb();
   const { data } = await db.from("guided_runs").select("*").eq("id", id).maybeSingle();
   const run = data as GuidedRunRow | null;
-  if (!run || run.user_id !== auth.user.id) return ERR.notFound("guided fix list");
+  if (!run || run.user_id !== actor.ownerId) return ERR.notFound("guided fix list");
   const provider = CHANNEL_PLATFORMS[run.platform_id ?? ""];
   if (!provider) return jsonError(422, "no_channel", "Automatic changes are available for Webflow and WordPress sites.");
-  const conn = await loadSiteConnection(db, auth.user.id, provider, run.site_url);
+  const conn = await loadSiteConnection(db, actor.ownerId, provider, run.site_url);
   if (!conn) return jsonError(409, "not_connected", `Connect ${provider === "webflow" ? "Webflow" : "WordPress"} first.`);
   try {
     const fixes = await attachAutoPlans(conn, run.site_url, run.fixes, fetch);

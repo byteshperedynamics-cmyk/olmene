@@ -4,6 +4,7 @@ import { ERR, jsonError, requireUser } from "@/lib/agent/http";
 import { recordOpsEvent } from "@/lib/agent/ops";
 import { busyWith, countFixesShipped, deleteAccount, loadSiteProgress, renewingPlan } from "@/lib/account/server";
 import { cleanDisplayName } from "@/lib/account/progress";
+import { otherMembers, requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +14,18 @@ export const dynamic = "force-dynamic";
  * blocks deleting the account until it's cancelled).
  */
 export async function GET(req: Request) {
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  // Progress is the workspace's (whoever's account you're working in); the
+  // plan that blocks deleting an account is your own.
+  const r = await requireActor(req, "viewer");
+  if ("error" in r) return r.error;
   const db = getServiceDb();
-  const uid = auth.user.id;
+  const uid = r.actor.ownerId;
   const [sites, fixesShipped, { count: reports }, { data: shares }, plan] = await Promise.all([
     loadSiteProgress(db, uid),
     countFixesShipped(db, uid),
     db.from("reports").select("id", { count: "exact", head: true }).eq("user_id", uid),
     db.from("progress_shares").select("site_id, slug, show_name, views, created_at").eq("user_id", uid),
-    renewingPlan(db, uid),
+    renewingPlan(db, r.actor.user.id),
   ]);
   return NextResponse.json({
     sites,
@@ -104,6 +107,15 @@ export async function DELETE(req: Request) {
       409,
       "busy",
       busy === "analysis" ? "An analysis is still running. Wait for it to finish, then try again." : "A fix run is still in progress. Wait for it to finish, then try again.",
+    );
+  }
+  // Deleting an account deletes its workspace: nobody should lose access by surprise.
+  const others = await otherMembers(db, auth.user.id);
+  if (others > 0) {
+    return jsonError(
+      409,
+      "team_members",
+      `${others === 1 ? "One other person works" : `${others} other people work`} in your workspace. Remove them on the Team page first, then delete your account.`,
     );
   }
   try {

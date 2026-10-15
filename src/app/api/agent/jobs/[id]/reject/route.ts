@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled } from "@/lib/agent/env";
-import { ERR, requireUser } from "@/lib/agent/http";
+import { ERR } from "@/lib/agent/http";
 import { writeAudit } from "@/lib/agent/audit";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "member");
+  if ("error" in r) return r.error;
+  const { actor } = r;
   const { id } = await ctx.params;
 
   let body: { actionIds?: string[] | "all"; note?: string } = {};
@@ -26,7 +28,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const db = getServiceDb();
   const { data: job } = await db.from("agent_jobs").select("id, user_id, status, provider").eq("id", id).maybeSingle();
-  if (!job || job.user_id !== auth.user.id) return ERR.notFound("job");
+  if (!job || job.user_id !== actor.ownerId) return ERR.notFound("job");
   if (job.status !== "awaiting_approval") {
     return ERR.badRequest(`Job is ${job.status} — only jobs awaiting approval can be rejected.`);
   }
@@ -50,17 +52,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     agent_job_id: id,
     planned_action_ids: (selected as Array<{ id: string }>).map((a) => a.id),
     decision: "rejected",
-    decided_by: auth.user.id,
+    decided_by: actor.user.id,
     note: body.note ?? null,
   });
   await writeAudit(db, {
     agent_job_id: id,
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     actor: "user",
     action_type: "reject",
     provider: job.provider,
     result: "success",
-    detail: { rejected: (selected as Array<{ fixer_id: string }>).map((a) => a.fixer_id) },
+    detail: { by: actor.user.id, rejected: (selected as Array<{ fixer_id: string }>).map((a) => a.fixer_id) },
   });
 
   const remaining = planable.length - selected.length;

@@ -10,6 +10,7 @@ import { z } from "npm:zod@4.6.5";
 import * as cheerio from "npm:cheerio@1.2.0";
 import { enqueueNotification, recordOps, recordUsage, tokensFromUsage } from "../_shared/ledger.ts";
 import { looksLikeJsShell, renderPage } from "../_shared/render.ts";
+import { roleOn } from "../_shared/workspace.ts";
 import { analyzeBusiness } from "../free-audit/business.ts";
 import { detectPlatform } from "../free-audit/extras.ts";
 import { labSpeed } from "../_shared/speed.ts";
@@ -3947,7 +3948,8 @@ Deno.serve(async (req)=>{
           message: "Job not found."
         }
       }, 404, cors);
-      if (authUserId && row.user_id !== authUserId) {
+      // Anyone in the job's workspace may follow it (viewers included).
+      if (authUserId && row.user_id !== authUserId && !await roleOn(supabase, row.user_id, authUserId)) {
         return json({
           error: {
             code: "forbidden",
@@ -3961,7 +3963,7 @@ Deno.serve(async (req)=>{
         waitReason: row.wait_reason ?? null
       }, 200, cors);
     }
-    if (authUserId && job.user_id !== authUserId && !cronOk) {
+    if (authUserId && job.user_id !== authUserId && !cronOk && !await roleOn(supabase, job.user_id, authUserId)) {
       return json({
         error: {
           code: "forbidden",

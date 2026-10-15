@@ -56,6 +56,11 @@ create table if not exists public.workspace_invites (
 create unique index if not exists workspace_invites_open on public.workspace_invites (workspace_id, email) where accepted_at is null;
 alter table public.workspace_invites enable row level security; -- no policies: Worker only
 
+-- Who started a report or a fix run (the account is still user_id). Null for
+-- older rows and for runs started by the schedule.
+alter table public.analysis_jobs add column if not exists created_by uuid references auth.users(id) on delete set null;
+alter table public.agent_jobs add column if not exists created_by uuid references auth.users(id) on delete set null;
+
 -- ─────────────────────────────────────────────────────────────────────────
 -- 2. Helpers (security definer, so policies don't recurse into each other)
 -- ─────────────────────────────────────────────────────────────────────────

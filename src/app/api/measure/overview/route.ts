@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
-import { requireUser } from "@/lib/agent/http";
+
 import { googleClient, measureEnabled } from "@/lib/measure/google";
 import type { MeasureOverview } from "@/lib/measure/types";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/measure/overview/ — everything the impact dashboard needs, for the signed-in user only. */
 export async function GET(req: Request) {
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
-  const userId = auth.user.id;
+  const r = await requireActor(req, "viewer");
+  if ("error" in r) return r.error;
+  const { actor } = r;
+  const userId = actor.ownerId;
   const enabled = measureEnabled();
   const db = getServiceDb();
 

@@ -1,12 +1,19 @@
 "use client";
 
 import { getSupabase } from "./supabase";
+import { scopeOwnerId } from "./workspace/client";
 import { quotaWindow } from "./quota";
 import type { ReportData } from "./report-types";
 
 // ── DB-backed data layer (production mode) ──────────────────────────────
 // Mirrors the deployed app: reads analysis_jobs / reports / subscriptions /
 // plans directly via the publishable key + RLS.
+//
+// RLS lets you read every workspace you belong to, so lists are narrowed to
+// the one you're working in (its owner's user_id).
+
+const NO_ONE = "00000000-0000-0000-0000-000000000000";
+const workspaceOwner = async () => (await scopeOwnerId()) ?? NO_ONE;
 
 export interface Job {
   id: string;
@@ -118,6 +125,7 @@ export async function listJobs(): Promise<Job[]> {
   const { data } = await supabase
     .from("analysis_jobs")
     .select(JOB_SELECT)
+    .eq("user_id", await workspaceOwner())
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -157,9 +165,12 @@ export async function getEntitlement(): Promise<Entitlement> {
   };
   if (!supabase) return empty;
   const now = new Date().toISOString();
+  // The plan is the workspace owner's: everyone in a workspace shares it.
+  const owner = await workspaceOwner();
   const { data: subs } = await supabase
     .from("subscriptions")
     .select("status, polar_product_id, current_period_start, current_period_end, cancel_at_period_end, updated_at")
+    .eq("user_id", owner)
     .order("updated_at", { ascending: false })
     .limit(10);
   const sub = (subs ?? []).find(
@@ -173,6 +184,7 @@ export async function getEntitlement(): Promise<Entitlement> {
   const { data: creditRows } = await supabase
     .from("report_credits")
     .select("id, job_id, created_at, expires_at")
+    .eq("user_id", owner)
     .gt("expires_at", now)
     .order("created_at", { ascending: true })
     .limit(50);
@@ -198,7 +210,7 @@ export async function getEntitlement(): Promise<Entitlement> {
   // Any subscription row or any credit ever granted means Polar holds receipts.
   let hasPurchases = (subs ?? []).length > 0 || credits.length > 0;
   if (!hasPurchases) {
-    const { count: creditsEver } = await supabase.from("report_credits").select("id", { count: "exact", head: true });
+    const { count: creditsEver } = await supabase.from("report_credits").select("id", { count: "exact", head: true }).eq("user_id", owner);
     hasPurchases = (creditsEver ?? 0) > 0;
   }
 
@@ -210,6 +222,7 @@ export async function getEntitlement(): Promise<Entitlement> {
     const { count } = await supabase
       .from("analysis_jobs")
       .select("id", { count: "exact", head: true })
+      .eq("user_id", owner)
       .gte("created_at", since)
       .not("status", "in", "(failed,canceled)");
     return {
@@ -239,6 +252,7 @@ export async function getEntitlement(): Promise<Entitlement> {
   const { count } = await supabase
     .from("analysis_jobs")
     .select("id", { count: "exact", head: true })
+    .eq("user_id", owner)
     .gte("created_at", periodStart)
     .not("status", "in", "(failed,canceled)");
   return {
@@ -286,6 +300,7 @@ export async function listSites(): Promise<SiteRow[]> {
   const { data, error } = await supabase
     .from("sites")
     .select("id, url, host, monitor, last_scan_at, last_score, next_scan_at, created_at, ai_last")
+    .eq("user_id", await workspaceOwner())
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) return [];
@@ -307,6 +322,7 @@ export async function listNotifications(limit = 15): Promise<NotificationRow[]> 
   const { data, error } = await supabase
     .from("notifications")
     .select("id, kind, payload, status, created_at")
+    .eq("user_id", await workspaceOwner())
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) return [];

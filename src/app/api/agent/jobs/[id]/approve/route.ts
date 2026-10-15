@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServiceDb, } from "@/lib/agent/db";
 import { agentEnabled } from "@/lib/agent/env";
-import { ERR, requireUser } from "@/lib/agent/http";
+import { ERR } from "@/lib/agent/http";
 import { checkApplyEntitlement } from "@/lib/agent/entitlement";
 import { writeAudit } from "@/lib/agent/audit";
 import { kickAgentJob } from "@/lib/agent/drive";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "member");
+  if ("error" in r) return r.error;
+  const { actor } = r;
   const { id } = await ctx.params;
 
   let body: { actionIds?: string[] | "all"; note?: string };
@@ -31,7 +33,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const db = getServiceDb();
   const { data: job } = await db.from("agent_jobs").select("id, user_id, status, provider").eq("id", id).maybeSingle();
-  if (!job || job.user_id !== auth.user.id) return ERR.notFound("job");
+  if (!job || job.user_id !== actor.ownerId) return ERR.notFound("job");
   if (job.status !== "awaiting_approval") {
     return ERR.badRequest(`Job is ${job.status} — only jobs awaiting approval can be approved.`);
   }
@@ -51,11 +53,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const rejected = planable.filter((a: { id: string }) => !selected.some((s: { id: string }) => s.id === a.id));
 
   // Entitlement + quota (1 PR = 1 action; charged when the apply succeeds)
-  const entitlement = await checkApplyEntitlement(db, auth.user.id);
+  const entitlement = await checkApplyEntitlement(db, actor.ownerId);
   if (!entitlement.allowed) {
     await writeAudit(db, {
       agent_job_id: id,
-      user_id: auth.user.id,
+      user_id: actor.ownerId,
       actor: "user",
       action_type: "quota_block",
       provider: job.provider,
@@ -79,7 +81,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     agent_job_id: id,
     planned_action_ids: (selected as Array<{ id: string }>).map((a) => a.id),
     decision: "approved",
-    decided_by: auth.user.id,
+    decided_by: actor.user.id,
     note: note ?? null,
   });
   if (rejected.length > 0) {
@@ -87,18 +89,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       agent_job_id: id,
       planned_action_ids: (rejected as Array<{ id: string }>).map((a) => a.id),
       decision: "rejected",
-      decided_by: auth.user.id,
+      decided_by: actor.user.id,
       note: "not selected for approval",
     });
   }
   await writeAudit(db, {
     agent_job_id: id,
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     actor: "user",
     action_type: "approve",
     provider: job.provider,
     result: "success",
     detail: {
+      by: actor.user.id,
       approved: (selected as Array<{ fixer_id: string }>).map((a) => a.fixer_id),
       rejected: (rejected as Array<{ fixer_id: string }>).map((a) => a.fixer_id),
       quotaAfter: { used: entitlement.used, limit: entitlement.limit },

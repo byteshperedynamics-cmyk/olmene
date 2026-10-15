@@ -43,6 +43,9 @@ interface Row {
 
 /** Kinds that exist only for alert channels (no email). */
 const CHANNEL_ONLY = new Set(["channel_test"]);
+/** Kinds that never go to alert channels (they carry a link meant for one person). */
+const PRIVATE_KINDS = new Set(["workspace_invite"]);
+const INVITE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 /** Post one event to the user's Slack / Discord / webhook channels (one attempt each). */
 async function deliverToChannels(supabase: ReturnType<typeof db>, n: Row, appUrl: string): Promise<number> {
@@ -107,7 +110,8 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(BATCH);
     for (const n of (pending ?? []) as Row[]) {
-      channelOut.posted += await deliverToChannels(supabase, n, appUrl).catch(() => 0);
+      // Invitations carry a sign-up link meant for one person: never to channels.
+      if (!PRIVATE_KINDS.has(n.kind)) channelOut.posted += await deliverToChannels(supabase, n, appUrl).catch(() => 0);
       await supabase.from("notifications").update({ channels_done_at: new Date().toISOString(), ...(CHANNEL_ONLY.has(n.kind) ? { status: "sent", sent_at: new Date().toISOString() } : {}) }).eq("id", n.id);
     }
   }
@@ -129,21 +133,43 @@ Deno.serve(async (req) => {
       out.skipped++;
       continue;
     }
-    const { data: profile } = await supabase.from("profiles").select("email, notify_email, digest_email, unsubscribe_token").eq("id", n.user_id).maybeSingle();
-    if (!profile?.email) {
-      await mark({ status: "skipped", error: "no email on profile" });
-      out.skipped++;
-      continue;
+    // Who it goes to, and the footer that says why.
+    let to: string;
+    let footer: string;
+    let textFooter: string;
+    let unsubscribeUrl: string | undefined;
+    if (n.kind === "workspace_invite") {
+      // A workspace invitation goes to the address that was invited, who may
+      // not have an account yet; it's a one-off, so no unsubscribe.
+      const addr = typeof n.payload?.to === "string" ? n.payload.to.trim().toLowerCase() : "";
+      if (!INVITE_EMAIL.test(addr)) {
+        await mark({ status: "skipped", error: "invite without a valid address" });
+        out.skipped++;
+        continue;
+      }
+      to = addr;
+      footer = "You get this because someone invited this address to a workspace on Olmene. If you weren't expecting it, you can ignore it.";
+      textFooter = footer;
+    } else {
+      const { data: profile } = await supabase.from("profiles").select("email, notify_email, digest_email, unsubscribe_token").eq("id", n.user_id).maybeSingle();
+      if (!profile?.email) {
+        await mark({ status: "skipped", error: "no email on profile" });
+        out.skipped++;
+        continue;
+      }
+      const isDigest = n.kind === "weekly_digest" || n.kind === "competitor_change" || n.kind === "ai_visibility_change";
+      if (!profile.notify_email || (isDigest && !profile.digest_email)) {
+        await mark({ status: "skipped", error: "user opted out" });
+        out.skipped++;
+        continue;
+      }
+      const unsubAll = `${fnBase}?unsubscribe=${profile.unsubscribe_token}&list=all`;
+      const unsubDigest = `${fnBase}?unsubscribe=${profile.unsubscribe_token}&list=digest`;
+      to = profile.email;
+      footer = `You get this because you use Olmene. <a href="${isDigest ? unsubDigest : unsubAll}">${isDigest ? "Stop weekly emails" : "Stop update emails"}</a>.`;
+      textFooter = `${isDigest ? "Stop weekly emails" : "Stop update emails"}: ${isDigest ? unsubDigest : unsubAll}`;
+      unsubscribeUrl = unsubDigest;
     }
-    const isDigest = n.kind === "weekly_digest" || n.kind === "competitor_change" || n.kind === "ai_visibility_change";
-    if (!profile.notify_email || (isDigest && !profile.digest_email)) {
-      await mark({ status: "skipped", error: "user opted out" });
-      out.skipped++;
-      continue;
-    }
-    const unsubAll = `${fnBase}?unsubscribe=${profile.unsubscribe_token}&list=all`;
-    const unsubDigest = `${fnBase}?unsubscribe=${profile.unsubscribe_token}&list=digest`;
-    const footer = `You get this because you use Olmene. <a href="${isDigest ? unsubDigest : unsubAll}">${isDigest ? "Stop weekly emails" : "Stop update emails"}</a>.`;
     const mail = render(n.kind, n.payload, appUrl, footer);
     if (!mail) {
       await mark({ status: "skipped", error: `no template for ${n.kind}` });
@@ -151,15 +177,17 @@ Deno.serve(async (req) => {
       continue;
     }
     const res = await sendEmail({
-      to: profile.email,
+      to,
       subject: mail.subject,
       html: mail.html,
-      text: `${mail.text}\n\n—\n${isDigest ? "Stop weekly emails" : "Stop update emails"}: ${isDigest ? unsubDigest : unsubAll}`,
+      text: `${mail.text}\n\n—\n${textFooter}`,
       tag: n.kind,
-      unsubscribeUrl: mail.optional ? unsubDigest : undefined,
+      unsubscribeUrl: mail.optional ? unsubscribeUrl : undefined,
     });
     if (res.ok) {
-      await mark({ status: "sent", sent_at: new Date().toISOString(), attempts: n.attempts + 1, error: null });
+      // The invitation link has done its job: don't keep it in the database.
+      const sentPayload = n.kind === "workspace_invite" ? { ...n.payload, link: null } : undefined;
+      await mark({ status: "sent", sent_at: new Date().toISOString(), attempts: n.attempts + 1, error: null, ...(sentPayload ? { payload: sentPayload } : {}) });
       out.sent++;
     } else {
       const attempts = n.attempts + 1;

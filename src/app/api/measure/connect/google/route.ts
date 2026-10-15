@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { appUrl } from "@/lib/agent/env";
-import { randomState, requireUser } from "@/lib/agent/http";
+import { randomState } from "@/lib/agent/http";
 import { authUrl, googleClient, measureEnabled } from "@/lib/measure/google";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,9 @@ export async function POST(req: Request) {
   if (!measureEnabled()) {
     return NextResponse.json({ error: { code: "measure_disabled", message: "Measuring is not enabled yet." } }, { status: 503 });
   }
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "admin");
+  if ("error" in r) return r.error;
+  const { actor } = r;
   const client = googleClient();
   if (!client) {
     return NextResponse.json({ error: { code: "not_configured", message: "Search Console connection is not configured yet." } }, { status: 503 });
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
   const db = getServiceDb();
   const state = randomState();
   const { error } = await db.from("agent_oauth_states").insert({
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     flow: "google-gsc",
     state,
     payload: {},

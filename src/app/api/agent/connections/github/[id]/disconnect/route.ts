@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled, githubWebBase } from "@/lib/agent/env";
-import { ERR, requireUser } from "@/lib/agent/http";
+import { ERR } from "@/lib/agent/http";
 import { evictInstallationTokens, loadGithubAppConfig, mintInstallationToken, GithubApiError } from "@/lib/agent/github/client";
 import { agentLog } from "@/lib/agent/redact";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "admin");
+  if ("error" in r) return r.error;
+  const { actor } = r;
   const { id } = await ctx.params;
 
   const db = getServiceDb();
@@ -26,7 +28,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     .select("id, user_id, provider, status, provider_account_id, external_installation_id")
     .eq("id", id)
     .maybeSingle();
-  if (!connection || connection.user_id !== auth.user.id) return ERR.notFound("connection");
+  if (!connection || connection.user_id !== actor.ownerId) return ERR.notFound("connection");
   if (connection.provider !== "github") return ERR.badRequest("Not a GitHub connection.");
 
   const installationId = connection.external_installation_id ?? "";
@@ -77,13 +79,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   await db.from("revocations").insert({
     connection_id: id,
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     method: "connection_delete",
     verified,
     verification: evidence,
   });
   await db.from("agent_actions").insert({
-    user_id: auth.user.id,
+    user_id: actor.ownerId,
     actor: "user",
     action_type: "disconnect",
     provider: "github",

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServiceDb } from "@/lib/agent/db";
 import { agentEnabled } from "@/lib/agent/env";
-import { ERR, requireUser } from "@/lib/agent/http";
+import { ERR } from "@/lib/agent/http";
 import type { LiveCheckState } from "@/lib/agent/live-check";
+import { requireActor } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +13,14 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   if (!agentEnabled()) return ERR.disabled();
-  const auth = await requireUser(req);
-  if ("error" in auth) return auth.error;
+  const r = await requireActor(req, "viewer");
+  if ("error" in r) return r.error;
+  const { actor } = r;
   const { id } = await ctx.params;
 
   const db = getServiceDb();
   const { data: job } = await db.from("agent_jobs").select("id, user_id, pr_state, merged_at, step_outputs").eq("id", id).maybeSingle();
-  if (!job || job.user_id !== auth.user.id) return ERR.notFound("job");
+  if (!job || job.user_id !== actor.ownerId) return ERR.notFound("job");
 
   const { data: receipt } = await db
     .from("receipts")

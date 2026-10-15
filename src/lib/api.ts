@@ -2,6 +2,7 @@
 
 import { fnUrl } from "./config";
 import { getSupabase } from "./supabase";
+import { activeWorkspace } from "./workspace/client";
 
 export class ApiRequestError extends Error {
   status: number;
@@ -51,7 +52,9 @@ export interface StartAnalysisInput {
 }
 
 export async function startAnalysis(input: StartAnalysisInput): Promise<{ jobId: string }> {
-  return post("start-analysis", input);
+  // In a shared workspace the report is the workspace's (its plan and quota).
+  const workspace = activeWorkspace();
+  return post("start-analysis", workspace ? { ...input, workspace } : input);
 }
 
 export async function advanceAnalysis(jobId: string): Promise<unknown> {

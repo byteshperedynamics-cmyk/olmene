@@ -34,3 +34,19 @@ Deno.test("digests and competitor alerts are optional mail (one-click unsubscrib
   assert(render("weekly_digest", { sites: [] }, "https://olmene.com", footer)!.optional);
   assert(!render("pr_opened", { jobId: "a", repo: "a/b", prNumber: 1, prUrl: "https://x", fixes: 1 }, "https://olmene.com", footer)!.optional);
 });
+
+Deno.test("workspace invitations name who, where and the role, and only link over https", () => {
+  const p = { to: "ben@acme.example", workspace: "Acme <Studio>", inviter: "Ana", role: "viewer", link: "https://olmene.com/invite/?t=abc_DEF-123", expiresAt: "2026-10-29T10:00:00Z" };
+  const r = render("workspace_invite", p, "https://olmene.com", footer)!;
+  assert(r);
+  assertEquals(r.subject, "Ana invited you to Acme <Studio> on Olmene");
+  assert(r.text.includes("https://olmene.com/invite/?t=abc_DEF-123"));
+  assert(r.text.includes("as a viewer"));
+  assert(r.text.includes("29 October"));
+  assert(!r.html.includes("<Studio>"), "workspace name escaped");
+  assert(r.html.includes("Acme &lt;Studio&gt;"));
+  assert(!r.html.includes("&amp;lt;"), "not escaped twice");
+  assertEquals(render("workspace_invite", { ...p, link: "javascript:alert(1)" }, "https://olmene.com", footer), null);
+  assertEquals(render("workspace_invite", { ...p, link: undefined }, "https://olmene.com", footer), null);
+  assert(!render("workspace_invite", { ...p, role: "owner", inviter: "" }, "https://olmene.com", footer)!.text.includes("undefined"));
+});
