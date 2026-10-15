@@ -1,6 +1,7 @@
 // deno test --allow-all supabase/functions/notify/templates.test.ts
 import { assert, assertEquals } from "jsr:@std/assert@1";
 import { render } from "./templates.ts";
+import { textOn } from "../_shared/email.ts";
 
 const footer = "You get this because you use Olmene.";
 
@@ -49,4 +50,72 @@ Deno.test("workspace invitations name who, where and the role, and only link ove
   assertEquals(render("workspace_invite", { ...p, link: "javascript:alert(1)" }, "https://olmene.com", footer), null);
   assertEquals(render("workspace_invite", { ...p, link: undefined }, "https://olmene.com", footer), null);
   assert(!render("workspace_invite", { ...p, role: "owner", inviter: "" }, "https://olmene.com", footer)!.text.includes("undefined"));
+});
+
+Deno.test("client reports: the agency's name and colour, one line per site, the unsubscribe link, escaped", () => {
+  const report = {
+    client: "Bakery <Brothers>",
+    agency: "Northwind Studio",
+    brandColor: "#1f6feb",
+    logoUrl: "https://x.supabase.co/storage/v1/object/public/brand-assets/w/logo.png",
+    whiteLabel: false,
+    period: "this week",
+    cadence: "weekly",
+    sites: [
+      { host: "bakery.example", scoreNow: 82, scoreBefore: 78, checksPassing: 18, checksTotal: 21, fixed: 2 },
+      { host: "shop.bakery.example", scoreNow: 47, scoreBefore: null, checksPassing: 11, checksTotal: 21, fixed: 0 },
+    ],
+    pageUrl: "https://olmene.com/c/k7m2xq9pwdab/",
+    fromName: "Northwind Studio via Olmene",
+    replyTo: "ana@northwind.example",
+    test: false,
+    unsubscribeUrl: "https://x.supabase.co/functions/v1/notify?unsubscribe_client=" + "a".repeat(64),
+  };
+  const r = render("client_report", report, "https://olmene.com", "ignored")!;
+  assertEquals(r.subject, "Bakery <Brothers>: your websites this week");
+  assert(r.optional);
+  assert(!r.html.includes("<Brothers>") && r.html.includes("Bakery &lt;Brothers&gt;"), "client name escaped");
+  assert(r.html.includes("background:#1f6feb"), "accent colour");
+  assert(r.html.includes('src="https://x.supabase.co/storage/v1/object/public/brand-assets/w/logo.png"'), "logo");
+  assert(r.html.includes("Up 4 this week") && r.html.includes("First checked this week"), "change per site");
+  assert(r.html.includes("18 of 21 checks pass, 2 fixed this week."), "checks line");
+  assert(r.html.includes("See the full page") && r.html.includes("https://olmene.com/c/k7m2xq9pwdab/"), "client page button");
+  assert(r.html.includes(`unsubscribe_client=${"a".repeat(64)}`) && r.text.includes(`unsubscribe_client=${"a".repeat(64)}`), "unsubscribe in both");
+  assert(r.html.includes("Sent by Northwind Studio with Olmene."), "credit");
+  assert(r.text.includes("Questions? Reply to this email to reach Northwind Studio."), "reply line");
+  assert(!r.html.includes("ignored"), "brings its own footer");
+});
+
+Deno.test("client reports: white label drops Olmene's name; tests carry no unsubscribe; real ones need it", () => {
+  const base = {
+    client: "Harbor Dental",
+    agency: "Northwind Studio",
+    brandColor: "#f5d90a",
+    logoUrl: null,
+    whiteLabel: true,
+    period: "in October",
+    cadence: "monthly",
+    sites: [{ host: "harbordental.example", scoreNow: 61, scoreBefore: 61, checksPassing: 9, checksTotal: 21, fixed: 0 }],
+    pageUrl: null,
+    replyTo: null,
+    test: false,
+    unsubscribeUrl: "https://x.supabase.co/functions/v1/notify?unsubscribe_client=" + "b".repeat(64),
+  };
+  const wl = render("client_report", base, "https://olmene.com", "")!;
+  assertEquals(wl.subject, "Harbor Dental: your website in October");
+  assert(!/olmene/i.test(wl.html.replace(/https:\/\/[^\s"<>]+/g, "")), "no Olmene name outside links");
+  assert(wl.html.includes("No change in October"));
+  assert(!wl.html.includes("See the full page"), "no button without a client page");
+  const withPage = render("client_report", { ...base, pageUrl: "https://olmene.com/c/k7m2xq9pwdab/" }, "https://olmene.com", "")!;
+  assert(withPage.html.includes("background:#f5d90a;color:#1C1D1B;"), "dark text on a light accent");
+  assertEquals(textOn("#1f6feb"), "#FFFFFF");
+  assertEquals(textOn("#f5d90a"), "#1C1D1B");
+
+  const test = render("client_report", { ...base, test: true, unsubscribeUrl: null }, "https://olmene.com", "")!;
+  assertEquals(test.subject, "[Test] Harbor Dental: your website in October");
+  assert(!test.optional && !test.html.includes("unsubscribe_client"));
+  assert(test.html.includes("This is a test."));
+
+  assertEquals(render("client_report", { ...base, unsubscribeUrl: null }, "https://olmene.com", ""), null, "never without an unsubscribe link");
+  assertEquals(render("client_report", { ...base, sites: [] }, "https://olmene.com", ""), null, "nothing to report");
 });

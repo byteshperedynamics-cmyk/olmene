@@ -3,7 +3,8 @@
  * Copy follows Olmene's voice: say what happened and the one next step; no
  * hype, no invented numbers (everything shown comes from the payload).
  */
-import { escapeHtml, layout } from "../_shared/email.ts";
+import { brandedLayout, escapeHtml, layout } from "../_shared/email.ts";
+import { possessive, type ReportSite } from "../_shared/client-report.ts";
 
 export interface Rendered {
   subject: string;
@@ -140,6 +141,71 @@ export function render(kind: string, p: Payload, appUrl: string, footer: string)
           `Olmene finds what's costing a website customers and ships the fixes as pull requests the team reviews.${until ? ` The link works until ${e(until)}.` : ""}`,
         ], { label: `Join ${workspace}`, url: link }),
         optional: false,
+      };
+    }
+    case "client_report": {
+      // Built by notify (client-report.ts) and sent to someone the agency added,
+      // under the agency's name. The footer is this email's own: who sent it,
+      // why you get it, and the unsubscribe link (none on a test).
+      const client = String(p.client ?? "").trim();
+      const sites = (Array.isArray(p.sites) ? p.sites : []) as ReportSite[];
+      if (!client || !sites.length) return null;
+      const agency = typeof p.agency === "string" && p.agency.trim() ? p.agency.trim() : null;
+      const period = String(p.period ?? "this week");
+      const unsub = typeof p.unsubscribeUrl === "string" && /^https:\/\/[^\s"<>]+$/.test(p.unsubscribeUrl) ? p.unsubscribeUrl : null;
+      const page = typeof p.pageUrl === "string" && /^https:\/\/[^\s"<>]+$/.test(p.pageUrl) ? p.pageUrl : null;
+      const test = p.test === true;
+      if (!test && !unsub) return null; // every real one carries its unsubscribe link
+      const one = sites.length === 1;
+      const websites = one ? "website" : "websites";
+      const change = (s: ReportSite) => {
+        if (s.scoreNow == null) return "Not scored yet";
+        if (s.scoreBefore == null) return `First checked ${period}`;
+        const d = s.scoreNow - s.scoreBefore;
+        return d > 0 ? `Up ${d} ${period}` : d < 0 ? `Down ${-d} ${period}` : `No change ${period}`;
+      };
+      const checksLine = (s: ReportSite) =>
+        s.checksTotal > 0 ? `${s.checksPassing} of ${s.checksTotal} checks pass${s.fixed > 0 ? `, ${s.fixed} fixed ${period}` : ""}.` : "";
+      const intro = agency
+        ? `${agency} checks ${possessive(client)} ${websites} every week. Here's where ${one ? "it stands" : "they stand"}.`
+        : `Here's where ${possessive(client)} ${websites} ${one ? "stands" : "stand"}.`;
+      const reply = agency && p.replyTo ? `Questions? Reply to this email to reach ${agency}.` : "";
+      const sentBy = agency ? `Sent by ${agency}${p.whiteLabel ? "" : " with Olmene"}.` : "Sent with Olmene.";
+      const why = agency ? `You get this because ${agency} added you to ${possessive(client)} website reports.` : `You get this because you were added to ${possessive(client)} website reports.`;
+      const footerHtml = test
+        ? `This is a test. ${e(possessive(client))} recipients get the same email, with a link to unsubscribe.`
+        : `${e(sentBy)} ${e(why)} <a href="${e(unsub)}" style="color:#8A8882;">Unsubscribe</a>.`;
+      const rows = sites.map((s) => {
+        const c = checksLine(s);
+        return `<tr><td style="padding:14px 0;border-top:1px solid #E4E2DC;">
+<p style="margin:0;font-size:15px;font-weight:600;color:#1C1D1B;">${e(s.host)}</p>
+<p style="margin:6px 0 0 0;font-size:14px;color:#55534E;">${s.scoreNow == null ? "" : `<strong style="font-size:22px;font-weight:600;color:#1C1D1B;">${e(s.scoreNow)}</strong>/100&nbsp;&nbsp;`}${e(change(s))}</p>${
+          c ? `\n<p style="margin:4px 0 0 0;font-size:13px;color:#8A8882;">${e(c)}</p>` : ""
+        }
+</td></tr>`;
+      }).join("");
+      const body = `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#55534E;">${e(intro)}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-bottom:1px solid #E4E2DC;">${rows}</table>${
+        reply ? `\n<p style="margin:16px 0 0 0;font-size:14px;line-height:1.6;color:#55534E;">${e(reply)}</p>` : ""
+      }`;
+      const text = [
+        intro,
+        ...sites.map((s) => [s.host, `${s.scoreNow == null ? "" : `${s.scoreNow}/100. `}${change(s)}.`, checksLine(s)].filter(Boolean).join("\n")),
+        page ? `See the full page: ${page}` : "",
+        reply,
+        test ? `This is a test. ${possessive(client)} recipients get the same email, with a link to unsubscribe.` : `${sentBy} ${why}\nUnsubscribe: ${unsub}`,
+      ].filter(Boolean).join("\n\n");
+      return {
+        subject: `${test ? "[Test] " : ""}${client}: your ${websites} ${period}`,
+        text,
+        html: brandedLayout({
+          brand: { name: agency, color: typeof p.brandColor === "string" ? p.brandColor : null, logoUrl: typeof p.logoUrl === "string" ? p.logoUrl : null },
+          heading: `How your ${websites} did ${period}`,
+          body,
+          cta: page ? { label: "See the full page", url: page } : undefined,
+          footer: footerHtml,
+        }),
+        optional: !test,
       };
     }
     default:

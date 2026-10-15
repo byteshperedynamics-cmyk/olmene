@@ -134,7 +134,7 @@ export async function loadPublicShare(db: SupabaseClient, slug: string): Promise
 export async function exportUserData(db: SupabaseClient, userId: string, email: string | null): Promise<Record<string, unknown>> {
   const own = <T>(table: string, columns: string, limit = 1000) =>
     db.from(table).select(columns).eq("user_id", userId).limit(limit).then(({ data }) => (data ?? []) as T[]);
-  const [profile, subscriptions, analyses, reports, sites, scans, notifications, fixRuns, guided, alertChannels, connections, shares, clients, clientPages] = await Promise.all([
+  const [profile, subscriptions, analyses, reports, sites, scans, notifications, fixRuns, guided, alertChannels, connections, shares, clients, clientPages, reportRecipients] = await Promise.all([
     db.from("profiles").select("email, display_name, avatar_path, notify_email, digest_email, created_at").eq("id", userId).maybeSingle().then(({ data }) => data),
     own("subscriptions", "polar_product_id, status, current_period_start, current_period_end, cancel_at_period_end"),
     db.from("analysis_jobs").select("id, site_url, input, status, created_at, completed_at").eq("user_id", userId).is("deleted_at", null).limit(500).then(({ data }) => data ?? []),
@@ -147,8 +147,9 @@ export async function exportUserData(db: SupabaseClient, userId: string, email: 
     own("alert_channels", "kind, label, kinds, active, created_at"),
     own("connections", "provider, provider_account_id, status, scopes, created_at"),
     own("progress_shares", "slug, show_name, views, created_at"),
-    own("clients", "id, name, website, contact_email, created_at"),
+    own("clients", "id, name, website, contact_email, report_cadence, report_sent_at, created_at"),
     own("client_portals", "client_id, slug, views, created_at"),
+    own("client_recipients", "client_id, email, unsubscribed_at, created_at", 2000),
   ]);
   return {
     exportedAt: new Date().toISOString(),
@@ -166,7 +167,8 @@ export async function exportUserData(db: SupabaseClient, userId: string, email: 
     progressLinks: shares,
     clients,
     clientPages,
-    note: "Payment receipts are kept by our payment provider, Polar. Webhook URLs, access tokens and signing secrets are not included.",
+    clientReportRecipients: reportRecipients,
+    note: "Payment receipts are kept by our payment provider, Polar. Webhook URLs, access tokens, signing secrets and unsubscribe links are not included.",
   };
 }
 
@@ -245,6 +247,7 @@ export async function deleteUserData(db: SupabaseClient, userId: string): Promis
     ["guided_runs", db.from("guided_runs").delete().eq("user_id", userId)],
     ["pr_checks", db.from("pr_checks").delete().eq("user_id", userId)],
     ["client_portals", db.from("client_portals").delete().eq("user_id", userId)],
+    ["client_recipients", db.from("client_recipients").delete().eq("user_id", userId)],
     ["clients", db.from("clients").delete().eq("user_id", userId)],
   ];
   for (const [name, step] of steps) {

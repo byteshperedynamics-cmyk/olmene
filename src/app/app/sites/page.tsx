@@ -269,6 +269,12 @@ function describeActivity(n: NotificationRow): { text: string; href?: string; to
       return { text: `${p.competitor} changed their homepage`, tone: "warn" };
     case "weekly_digest":
       return { text: "Weekly summary", tone: "plain" };
+    case "client_report": {
+      const what = p.test ? `Test of ${p.client ?? "a client"}'s report` : `${p.client ?? "A client"}'s report`;
+      const to = String(p.to ?? (p.test ? "you" : "a recipient"));
+      const how = n.status === "sent" ? "sent to" : n.status === "pending" ? "on its way to" : n.status === "failed" ? "couldn't be sent to" : "not sent to";
+      return { text: `${what} ${how} ${to}`, href: "/app/clients/", tone: n.status === "failed" ? "bad" : "plain" };
+    }
     case "workspace_invite":
       return { text: `${p.inviter ?? "Someone"} invited ${p.to ?? "a teammate"} to the team`, href: "/app/team/", tone: "plain" };
     default:

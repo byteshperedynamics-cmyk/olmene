@@ -8,8 +8,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseUrl } from "@/lib/agent/env";
 import { loadSiteProgress } from "@/lib/account/server";
 import { ensureWorkspace, ownerPlanSlug, TeamError, type Actor } from "@/lib/workspace/server";
-import { canWhiteLabel, LOGO_MAX_BYTES, newPortalSlug, sniffImage, type BrandInput, type ClientInput } from "./rules";
-import type { Brand, Client, ClientSite, ClientsView, PortalView } from "./types";
+import {
+  canWhiteLabel,
+  cleanRecipientEmail,
+  LOGO_MAX_BYTES,
+  newPortalSlug,
+  nextReportAt,
+  RECIPIENTS_PER_CLIENT,
+  RECIPIENTS_PER_WORKSPACE,
+  sniffImage,
+  type BrandInput,
+  type ClientInput,
+  type ReportCadence,
+} from "./rules";
+import type { Brand, Client, ClientRecipient, ClientSite, ClientsView, PortalView } from "./types";
 
 export { cleanBrandInput, cleanClientInput, isPortalSlug } from "./rules";
 
@@ -67,34 +79,65 @@ interface SiteRow {
   client_id: string | null;
 }
 
+interface ClientRow {
+  id: string;
+  name: string;
+  website: string | null;
+  contact_email: string | null;
+  created_at: string;
+  report_cadence: ReportCadence;
+  report_next_at: string | null;
+  report_sent_at: string | null;
+}
+
+interface RecipientRow {
+  id: string;
+  client_id: string;
+  email: string;
+  unsubscribed_at: string | null;
+  created_at: string;
+}
+
 export async function clientsView(db: SupabaseClient, actor: Actor): Promise<ClientsView> {
   const ownerId = actor.ownerId;
-  const [row, plan, clientsRes, sitesRes, portalsRes] = await Promise.all([
+  const [row, plan, clientsRes, sitesRes, portalsRes, recipientsRes] = await Promise.all([
     brandRow(db, ownerId),
     ownerPlanSlug(db, ownerId),
-    db.from("clients").select("id, name, website, contact_email, created_at").eq("user_id", ownerId).order("name").limit(500),
+    db
+      .from("clients")
+      .select("id, name, website, contact_email, created_at, report_cadence, report_next_at, report_sent_at")
+      .eq("user_id", ownerId)
+      .order("name")
+      .limit(500),
     db.from("sites").select("id, host, url, last_score, client_id").eq("user_id", ownerId).order("host").limit(1000),
     db.from("client_portals").select("client_id, slug, views, created_at").eq("user_id", ownerId).limit(500),
+    db.from("client_recipients").select("id, client_id, email, unsubscribed_at, created_at").eq("user_id", ownerId).order("created_at").limit(2000),
   ]);
   const sites = (sitesRes.data ?? []) as SiteRow[];
   const portals = new Map(
     ((portalsRes.data ?? []) as { client_id: string; slug: string; views: number; created_at: string }[]).map((p) => [p.client_id, p]),
   );
+  const recipients = (recipientsRes.data ?? []) as RecipientRow[];
   const site = (s: SiteRow): ClientSite => ({ id: s.id, host: s.host, url: s.url, lastScore: s.last_score });
-  const clients: Client[] = ((clientsRes.data ?? []) as { id: string; name: string; website: string | null; contact_email: string | null; created_at: string }[]).map(
-    (c) => {
-      const p = portals.get(c.id);
-      return {
-        id: c.id,
-        name: c.name,
-        website: c.website,
-        contactEmail: c.contact_email,
-        createdAt: c.created_at,
-        sites: sites.filter((s) => s.client_id === c.id).map(site),
-        portal: p ? { slug: p.slug, views: p.views, createdAt: p.created_at } : null,
-      };
-    },
-  );
+  const recipient = (r: RecipientRow): ClientRecipient => ({ id: r.id, email: r.email, unsubscribedAt: r.unsubscribed_at, createdAt: r.created_at });
+  const clients: Client[] = ((clientsRes.data ?? []) as ClientRow[]).map((c) => {
+    const p = portals.get(c.id);
+    return {
+      id: c.id,
+      name: c.name,
+      website: c.website,
+      contactEmail: c.contact_email,
+      createdAt: c.created_at,
+      sites: sites.filter((s) => s.client_id === c.id).map(site),
+      portal: p ? { slug: p.slug, views: p.views, createdAt: p.created_at } : null,
+      report: {
+        cadence: c.report_cadence ?? "off",
+        nextAt: c.report_cadence && c.report_cadence !== "off" ? c.report_next_at : null,
+        sentAt: c.report_sent_at,
+        recipients: recipients.filter((r) => r.client_id === c.id).map(recipient),
+      },
+    };
+  });
   const whiteLabelAvailable = canWhiteLabel(plan);
   return {
     kind: row?.kind ?? "company",
@@ -120,13 +163,94 @@ export async function createClient(db: SupabaseClient, actor: Actor, input: Clie
   return (data as { id: string }).id;
 }
 
-export async function updateClient(db: SupabaseClient, actor: Actor, id: string, input: ClientInput): Promise<void> {
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+export async function updateClient(db: SupabaseClient, actor: Actor, id: string, input: ClientInput, now = new Date()): Promise<void> {
+  const patch: Record<string, unknown> = { updated_at: now.toISOString() };
   if (input.name !== undefined) patch.name = input.name;
   if (input.website !== undefined) patch.website = input.website;
   if (input.contactEmail !== undefined) patch.contact_email = input.contactEmail;
+  if (input.reportCadence !== undefined) {
+    // A new cadence starts at its next slot (the next Monday or 1st), so
+    // there's time to add everyone before the first one goes out.
+    const { data: cur } = await db.from("clients").select("report_cadence").eq("id", id).eq("user_id", actor.ownerId).maybeSingle();
+    if (!cur) throw new TeamError(404, "not_found", "That client doesn't exist any more.");
+    if ((cur as { report_cadence: string }).report_cadence !== input.reportCadence) {
+      patch.report_cadence = input.reportCadence;
+      patch.report_next_at = nextReportAt(input.reportCadence, now)?.toISOString() ?? null;
+    }
+  }
   const { data } = await db.from("clients").update(patch).eq("id", id).eq("user_id", actor.ownerId).select("id");
   if (!data?.length) throw new TeamError(404, "not_found", "That client doesn't exist any more.");
+}
+
+// ── Report recipients ──────────────────────────────────────────────────────
+
+async function clientOf(db: SupabaseClient, actor: Actor, clientId: string): Promise<{ id: string; name: string; report_cadence: ReportCadence }> {
+  const { data } = await db.from("clients").select("id, name, report_cadence").eq("id", clientId).eq("user_id", actor.ownerId).maybeSingle();
+  if (!data) throw new TeamError(404, "not_found", "That client doesn't exist any more.");
+  return data as { id: string; name: string; report_cadence: ReportCadence };
+}
+
+/** Add someone to a client's report. Someone who unsubscribed can't be added back. Members and up. */
+export async function addRecipient(db: SupabaseClient, actor: Actor, clientId: string, rawEmail: unknown): Promise<void> {
+  const email = cleanRecipientEmail(rawEmail);
+  await clientOf(db, actor, clientId);
+  const { data: existing } = await db.from("client_recipients").select("id, unsubscribed_at").eq("client_id", clientId).eq("email", email).maybeSingle();
+  if (existing) {
+    if ((existing as { unsubscribed_at: string | null }).unsubscribed_at) {
+      throw new TeamError(409, "unsubscribed", `${email} unsubscribed from these reports, so Olmene won't email them again.`);
+    }
+    throw new TeamError(409, "already_added", `${email} already gets this report.`);
+  }
+  const [{ count: forClient }, { count: forWorkspace }] = await Promise.all([
+    db.from("client_recipients").select("id", { count: "exact", head: true }).eq("client_id", clientId).is("unsubscribed_at", null),
+    db.from("client_recipients").select("id", { count: "exact", head: true }).eq("user_id", actor.ownerId).is("unsubscribed_at", null),
+  ]);
+  if ((forClient ?? 0) >= RECIPIENTS_PER_CLIENT) {
+    throw new TeamError(409, "too_many_recipients", `A report can go to ${RECIPIENTS_PER_CLIENT} people. Remove someone first.`);
+  }
+  if ((forWorkspace ?? 0) >= RECIPIENTS_PER_WORKSPACE) {
+    throw new TeamError(409, "too_many_recipients", `Reports in this workspace go to ${RECIPIENTS_PER_WORKSPACE} people at most. Remove someone first.`);
+  }
+  const { error } = await db.from("client_recipients").insert({ user_id: actor.ownerId, client_id: clientId, email, added_by: actor.user.id });
+  if (error?.code === "23505") throw new TeamError(409, "already_added", `${email} already gets this report.`);
+  if (error) throw new TeamError(500, "save_failed", "Couldn't add them. Try again in a moment.");
+}
+
+/** Take someone off a client's report. Those who unsubscribed stay listed. Members and up. */
+export async function removeRecipient(db: SupabaseClient, actor: Actor, clientId: string, recipientId: string): Promise<void> {
+  const { data } = await db
+    .from("client_recipients")
+    .delete()
+    .eq("id", recipientId)
+    .eq("client_id", clientId)
+    .eq("user_id", actor.ownerId)
+    .is("unsubscribed_at", null)
+    .select("id");
+  if (data?.length) return;
+  const { data: kept } = await db.from("client_recipients").select("id").eq("id", recipientId).eq("user_id", actor.ownerId).maybeSingle();
+  if (kept) throw new TeamError(409, "unsubscribed", "They unsubscribed, so they stay on the list to make sure they aren't added back.");
+  throw new TeamError(404, "not_found", "They aren't on this report any more.");
+}
+
+/**
+ * Email the signed-in person the report as the client's recipients would get
+ * it (the notify function builds it). At most one a minute per client.
+ */
+export async function queueReportTest(db: SupabaseClient, actor: Actor, clientId: string, now = Date.now()): Promise<{ to: string }> {
+  const to = actor.user.email?.trim().toLowerCase();
+  if (!to) throw new TeamError(400, "no_email", "Your account has no email address to send the test to.");
+  const client = await clientOf(db, actor, clientId);
+  const { count } = await db.from("sites").select("id", { count: "exact", head: true }).eq("user_id", actor.ownerId).eq("client_id", clientId).not("last_score", "is", null);
+  if (!count) throw new TeamError(409, "nothing_to_report", `Give ${client.name} a site with a finished scan first.`);
+  const { error } = await db.from("notifications").insert({
+    user_id: actor.ownerId,
+    kind: "client_report",
+    payload: { clientId, client: client.name, to, test: true, cadence: client.report_cadence === "monthly" ? "monthly" : "weekly" },
+    dedupe_key: `client_report_test:${clientId}:${actor.user.id}:${Math.floor(now / 60_000)}`,
+  });
+  if (error?.code === "23505") throw new TeamError(429, "slow_down", "A test is already on its way. Check your inbox in a minute.");
+  if (error) throw new TeamError(500, "queue_failed", "Couldn't send the test. Try again in a moment.");
+  return { to };
 }
 
 /** Removes the client; its sites stay (unassigned) and its portal link stops working. */

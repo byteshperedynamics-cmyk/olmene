@@ -12,13 +12,26 @@ of each other, and **a push to `main` deploys production** (Workers Builds
 runs `supabase db push` and deploys). Never merge or push to `main` without
 Hermes saying yes.
 
+**Update, evening of 15 Oct (Claude on Hermes's PC):** Hermes said yes to
+releasing `profile-fixes` → `workspaces` → `agency`. `design/mono` was
+fast-forwarded to `agency` (982aad6) and pushed; Hermes releases it with
+`bash ~/Documents/Olmene/deploy-site.sh` (it needs `olmene-design/` on
+`design/mono`). Check `git log origin/main` to see whether he has. The repo
+had no `SUPABASE_ACCESS_TOKEN` Actions secret, so "Deploy edge functions"
+skipped every step on main pushes; Hermes added it on 15 Oct. Check that the
+first run after the release really deployed (its steps aren't "skipped"):
+this stack changes `notify`, `start-analysis` and `advance-analysis`. 2b
+(emailed client reports) is done on branch `client-reports`, stacked on
+`agency`, in worktree `olmene-reports/`.
+
 ## Branches (all pushed to github.com/byteshperedynamics-cmyk/olmene)
 
 ```
 main ─ ce5a8e5  (live: GLM's accounts/profile feature)
   └─ profile-fixes ─ 0867b70, 445ed9e          CI green, WAITING FOR HERMES'S OK TO MERGE
        └─ workspaces ─ 3b61902, 2e673aa, c1d2cb4   CI green
-            └─ agency ─ (this handoff's commit)   CI: check it
+            └─ agency ─ 7eab556, 982aad6        CI green; design/mono = this, release pending
+                 └─ client-reports ─ 2b           CI: check it
 ```
 
 - **profile-fixes**: fixes to GLM's profile work that is already live:
@@ -38,8 +51,9 @@ To pick up: `git fetch origin && git switch agency` (track it if needed:
 1. **Workspaces**: members, roles, invitations. DONE (branch `workspaces`).
 2. **Agency features**:
    - a. Clients, client pages `/c/<slug>/`, own branding, white label. DONE
-     (branch `agency`, needs final checks below).
-   - b. Scheduled client reports by email. TODO (design below).
+     (branch `agency`; release approved 15 Oct).
+   - b. Scheduled client reports by email. DONE (branch `client-reports`;
+     see "2b" below and `docs/agency.md`).
    - c. Agency overview screen (all clients at a glance). TODO.
    - d. Branded scan box agencies embed on their own site (lead capture). TODO.
 3. **Company features**: Microsoft sign-in, GitLab (fix runs open merge
@@ -157,49 +171,29 @@ white label comes with Team (and a future Agency plan).
    Merge order when he says yes: `profile-fixes` → `workspaces` → `agency`
    (each is based on the previous one).
 
-## Next: 2b. Scheduled client reports (design, not started)
+## 2b. Emailed client reports (done, branch `client-reports`)
 
-Goal: each client can get a branded email (weekly or monthly) with their
-sites' progress, sent to people the agency adds.
+Read `docs/agency.md` ("Emailed client reports"). Where it differs from the
+first design:
 
-- **Data** (new migration, additive and idempotent like the others):
-  - `clients.report_cadence text not null default 'off'` check in
-    (`off`, `weekly`, `monthly`); `clients.report_sent_at timestamptz`.
-  - `client_recipients (id uuid pk, user_id uuid → auth.users on delete
-    cascade, client_id → clients on delete cascade, email text lower-case,
-    unsub_token text unique (random, e.g. two gen_random_uuid() without
-    dashes), unsubscribed_at timestamptz, created_at)`, unique
-    (client_id, email). RLS on, workspace read policy, writes via Worker only.
-    Add to `check:rls` expectations, export, and data deletion.
-- **Queueing**: in `supabase/functions/monitor/index.ts`, next to
-  `queueDigests`, add `queueClientReports`: clients whose cadence is due
-  (weekly: 7 days since `report_sent_at`; monthly: calendar month), with at
-  least one recipient not unsubscribed and at least one site scanned recently.
-  Insert one `notifications` row per client, kind `client_report`, payload
-  `{ to: [{email, unsubToken}], client, brand, sites: [{host, scoreNow,
-  scoreBefore, checksPassing, checksTotal, fixed}], pageUrl|null, period }`,
-  `dedupeKey: client_report:<clientId>:<period>`. Only for agencies whose
-  plan is active (reuse `subscribed()` in monitor).
-- **Sending**: in `supabase/functions/notify/index.ts` add `client_report` to
-  `PRIVATE_KINDS`, send one email per recipient (like `workspace_invite` uses
-  `payload.to`), From name = agency name (+ " via Olmene" unless white
-  label; Brevo sender email stays `NOTIFY_FROM_EMAIL`), Reply-To = workspace
-  owner's email. `_shared/email.ts sendEmail` needs optional `fromName` and
-  `replyTo`. New template in `notify/templates.ts` with a branded header
-  (logo URL from the public bucket, accent colour bar), a row per site, a
-  "See the full page" button when the client page is on, footer "Sent by
-  {agency}" + unsubscribe link. Add a test in `templates.test.ts`.
-- **Unsubscribe**: extend notify's GET handler with
-  `?unsubscribe_client=<token>` → set `unsubscribed_at`; also send
-  `List-Unsubscribe` headers (RFC 8058) with that URL.
-- **UI**: in each client card a "Reports" section: Off / Weekly / Monthly,
-  recipients (add/remove, max ~10, shows "unsubscribed" state), last sent,
-  "Send me a test" (queues a one-off to the signed-in person). Members and up.
-  API: `PATCH /api/clients/[id]` grows `reportCadence`; new
-  `POST/DELETE /api/clients/[id]/recipients`; `POST /api/clients/[id]/report-test`.
-  Add the routes to the dev fake API so `/dev/clients/` keeps working.
+- **One notification per recipient**, not one per client with a `to` list:
+  each row then retries, goes stale and is marked on its own, and nobody
+  gets a second copy because someone else's address bounced.
+- **Built when sent**, by `notify` (`notify/client-report.ts`), not when
+  queued: "Send me a test" and the scheduled email are the same code, and
+  the Worker doesn't need a second copy of the report logic.
+- **Fixed slots** (`clients.report_next_at`): Mondays or the 1st at 08:00
+  UTC, set when the cadence is chosen. Agencies get time to add people, and
+  the first email doesn't fire ten minutes after the first click.
+- **Unsubscribed people stay listed** and can't be added back or removed;
+  their tokens are hidden from browsers with column grants.
 
-## Then 2c, 2d (ideas agreed in principle)
+Not done, worth considering: a "reports sent" history on the client card
+(the activity feed on `/app/sites/` lists them); per-recipient language
+(emails are English, like every other Olmene email); a custom sender domain
+for white-label agencies (the From address is still Olmene's).
+
+## Next: 2c, then 2d (ideas agreed in principle)
 
 - **2c Overview**: top of `/app/clients/` (or its own tab): totals (clients,
   sites, average score), "needs attention" (score dropped since last scan,
@@ -231,6 +225,9 @@ sites' progress, sent to people the agency adds.
 ## Things Hermes should know / do (remind him)
 
 - He pasted a GitHub token in chat earlier; it should be revoked on GitHub.
+- On 15 Oct he pasted the Supabase access token into chat to add it as the
+  `SUPABASE_ACCESS_TOKEN` secret; after the release, worth rotating it
+  (Supabase → Account → Access Tokens) and updating the secret.
 - Production has `plans.one_time` and table `report_credits` that no
   migration creates (made by hand). `scripts/test-sql.mjs` adds `one_time`
   before `20261010`; the workspace migration only touches `report_credits`

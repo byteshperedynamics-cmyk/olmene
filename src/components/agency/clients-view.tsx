@@ -21,6 +21,7 @@ import { TeamApiError, updateWorkspace } from "@/lib/workspace/client";
 import { addClient, clientPageUrl, editClient, moveSite, removeClient, turnOffClientPage, turnOnClientPage, type ClientFields } from "@/lib/agency/client";
 import type { Client, ClientSite, ClientsView } from "@/lib/agency/types";
 import { BrandSettings } from "./brand-settings";
+import { ClientReports } from "./client-reports";
 
 const message = (e: unknown, fallback: string) => (e instanceof TeamApiError || e instanceof Error ? e.message : fallback);
 
@@ -445,6 +446,7 @@ function ClientCard({
       </div>
 
       <ClientPageLink client={client} canEdit={canEdit} onView={onView} />
+      <ClientReports client={client} canEdit={canEdit} onView={onView} />
     </article>
   );
 }
@@ -533,6 +535,7 @@ function AgencyIntro({ view, onOn }: { view: ClientsView; onOn: () => void }) {
         {[
           "Group sites by client.",
           "Give each client a page with their sites' scores and progress, updated every week.",
+          "Email each client a short report every week or month, under your name.",
           "Put your agency's name, logo and colour on everything clients see.",
         ].map((line) => (
           <li key={line} className="flex gap-2.5">

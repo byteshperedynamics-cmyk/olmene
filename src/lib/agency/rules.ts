@@ -30,6 +30,51 @@ export function portalPath(slug: string): string {
   return `/c/${slug}/`;
 }
 
+// ── Client reports (emailed weekly or monthly) ─────────────────────────────
+
+export type ReportCadence = "off" | "weekly" | "monthly";
+
+export function isReportCadence(v: unknown): v is ReportCadence {
+  return v === "off" || v === "weekly" || v === "monthly";
+}
+
+/** People one client's report goes to (those who unsubscribed don't count). */
+export const RECIPIENTS_PER_CLIENT = 10;
+/** And across a workspace, so reports can't become a mailing list. */
+export const RECIPIENTS_PER_WORKSPACE = 250;
+/** Reports go out at 08:00 UTC. */
+export const REPORT_HOUR_UTC = 8;
+
+/**
+ * When the next report goes out after `from`: the next Monday (weekly) or
+ * 1st of the month (monthly) at 08:00 UTC; null when reports are off.
+ * Mirrored in supabase/functions/_shared/client-report.ts (the monitor
+ * function moves it on after each one).
+ */
+export function nextReportAt(cadence: ReportCadence, from: Date): Date | null {
+  if (cadence === "weekly") {
+    const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate(), REPORT_HOUR_UTC));
+    d.setUTCDate(d.getUTCDate() + ((8 - d.getUTCDay()) % 7)); // Sunday 0, Monday 1
+    if (d <= from) d.setUTCDate(d.getUTCDate() + 7);
+    return d;
+  }
+  if (cadence === "monthly") {
+    const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1, REPORT_HOUR_UTC));
+    if (d <= from) d.setUTCMonth(d.getUTCMonth() + 1);
+    return d;
+  }
+  return null;
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/** A report recipient's address, lower-cased; throws TeamError(400) with a message to show. */
+export function cleanRecipientEmail(raw: unknown): string {
+  const e = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (!e || e.length > 254 || !EMAIL.test(e)) throw new TeamError(400, "bad_email", "That email address doesn't look right.");
+  return e;
+}
+
 // ── What people type ───────────────────────────────────────────────────────
 
 /** One line of text: collapsed whitespace, trimmed. */
@@ -61,6 +106,7 @@ export interface ClientInput {
   name?: string;
   website?: string | null;
   contactEmail?: string | null;
+  reportCadence?: ReportCadence;
 }
 
 /** Trim and check a client form; throws TeamError(400) with a message to show. */
@@ -83,9 +129,13 @@ export function cleanClientInput(raw: Record<string, unknown>, requireName: bool
   if (raw.contactEmail !== undefined && raw.contactEmail !== null) {
     const e = typeof raw.contactEmail === "string" ? raw.contactEmail.trim().toLowerCase() : "";
     if (!e) out.contactEmail = null;
-    else if (e.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) throw new TeamError(400, "bad_email", "That email address doesn't look right.");
+    else if (e.length > 254 || !EMAIL.test(e)) throw new TeamError(400, "bad_email", "That email address doesn't look right.");
     else out.contactEmail = e;
   } else if (raw.contactEmail === null) out.contactEmail = null;
+  if (raw.reportCadence !== undefined) {
+    if (!isReportCadence(raw.reportCadence)) throw new TeamError(400, "bad_cadence", "Reports go out weekly, monthly, or not at all.");
+    out.reportCadence = raw.reportCadence;
+  }
   return out;
 }
 

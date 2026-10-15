@@ -7,7 +7,17 @@
  * memory. Installed by the preview, removed when it unmounts.
  */
 
-import { canWhiteLabel, cleanBrandInput, cleanClientInput, LOGO_MAX_BYTES, newPortalSlug, sniffImage } from "@/lib/agency/rules";
+import {
+  canWhiteLabel,
+  cleanBrandInput,
+  cleanClientInput,
+  cleanRecipientEmail,
+  LOGO_MAX_BYTES,
+  newPortalSlug,
+  nextReportAt,
+  RECIPIENTS_PER_CLIENT,
+  sniffImage,
+} from "@/lib/agency/rules";
 import type { Client, ClientSite, ClientsView } from "@/lib/agency/types";
 import { atLeast, roleRequiredMessage, TeamError, type WorkspaceRole } from "@/lib/workspace/roles";
 
@@ -48,7 +58,15 @@ export function installFakeClientsApi(initial: ClientsView): () => void {
       need("member");
       const input = cleanClientInput(await body(), true);
       const id = `c${Date.now()}`;
-      clients.push({ id, name: input.name!, website: input.website ?? null, contactEmail: input.contactEmail ?? null, createdAt: new Date().toISOString(), portal: null });
+      clients.push({
+        id,
+        name: input.name!,
+        website: input.website ?? null,
+        contactEmail: input.contactEmail ?? null,
+        createdAt: new Date().toISOString(),
+        portal: null,
+        report: { cadence: "off", nextAt: null, sentAt: null, recipients: [] },
+      });
       return json({ id, view: snapshot() }, 201);
     }
     if ((m = path.match(/^\/api\/clients\/([^/]+)\/portal\/$/))) {
@@ -58,6 +76,36 @@ export function installFakeClientsApi(initial: ClientsView): () => void {
       else c.portal = null;
       return json({ view: snapshot() }, method === "POST" ? 201 : 200);
     }
+    if ((m = path.match(/^\/api\/clients\/([^/]+)\/recipients\/$/)) && method === "POST") {
+      need("member");
+      const c = client(m[1]);
+      const email = cleanRecipientEmail((await body()).email);
+      const existing = c.report.recipients.find((r) => r.email === email);
+      if (existing?.unsubscribedAt) throw new TeamError(409, "unsubscribed", `${email} unsubscribed from these reports, so Olmene won't email them again.`);
+      if (existing) throw new TeamError(409, "already_added", `${email} already gets this report.`);
+      if (c.report.recipients.filter((r) => !r.unsubscribedAt).length >= RECIPIENTS_PER_CLIENT) {
+        throw new TeamError(409, "too_many_recipients", `A report can go to ${RECIPIENTS_PER_CLIENT} people. Remove someone first.`);
+      }
+      c.report.recipients.push({ id: `r${Date.now()}`, email, unsubscribedAt: null, createdAt: new Date().toISOString() });
+      return json({ view: snapshot() }, 201);
+    }
+    if ((m = path.match(/^\/api\/clients\/([^/]+)\/recipients\/([^/]+)\/$/)) && method === "DELETE") {
+      need("member");
+      const c = client(m[1]);
+      const r = c.report.recipients.find((x) => x.id === m![2]);
+      if (!r) throw new TeamError(404, "not_found", "They aren't on this report any more.");
+      if (r.unsubscribedAt) throw new TeamError(409, "unsubscribed", "They unsubscribed, so they stay on the list to make sure they aren't added back.");
+      c.report.recipients.splice(c.report.recipients.indexOf(r), 1);
+      return json({ view: snapshot() });
+    }
+    if ((m = path.match(/^\/api\/clients\/([^/]+)\/report-test\/$/)) && method === "POST") {
+      need("member");
+      const c = client(m[1]);
+      if (!sites.some((s) => s.clientId === c.id && s.lastScore != null)) {
+        throw new TeamError(409, "nothing_to_report", `Give ${c.name} a site with a finished scan first.`);
+      }
+      return json({ to: "you@northwind.example" }, 202);
+    }
     if ((m = path.match(/^\/api\/clients\/([^/]+)\/$/))) {
       if (method === "PATCH") {
         need("member");
@@ -66,6 +114,10 @@ export function installFakeClientsApi(initial: ClientsView): () => void {
         if (input.name !== undefined) c.name = input.name;
         if (input.website !== undefined) c.website = input.website;
         if (input.contactEmail !== undefined) c.contactEmail = input.contactEmail;
+        if (input.reportCadence !== undefined && input.reportCadence !== c.report.cadence) {
+          c.report.cadence = input.reportCadence;
+          c.report.nextAt = nextReportAt(input.reportCadence, new Date())?.toISOString() ?? null;
+        }
         return json({ view: snapshot() });
       }
       if (method === "DELETE") {

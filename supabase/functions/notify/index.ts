@@ -6,8 +6,11 @@
 // nothing, and rows older than 48 h are marked stale instead of sent late.
 //
 // GET/POST ?unsubscribe=<token>&list=digest|all — one-click opt-out.
+// GET/POST ?unsubscribe_client=<token> — stop one client report (the person an agency added).
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
 import { emailConfigured, sendEmail } from "../_shared/email.ts";
+import type { Cadence } from "../_shared/client-report.ts";
+import { type ClientReportView, loadClientReport } from "./client-report.ts";
 import { render } from "./templates.ts";
 import { type AlertChannel, allowedHookUrl, discordBody, MAX_FAILURES, signBody, slackBody, wants, webhookBody } from "./channels.ts";
 import { privateIp } from "../monitor/logic.ts";
@@ -43,9 +46,66 @@ interface Row {
 
 /** Kinds that exist only for alert channels (no email). */
 const CHANNEL_ONLY = new Set(["channel_test"]);
-/** Kinds that never go to alert channels (they carry a link meant for one person). */
-const PRIVATE_KINDS = new Set(["workspace_invite"]);
+/** Kinds that never go to alert channels (they carry a link meant for one person, or go to the agency's clients). */
+const PRIVATE_KINDS = new Set(["workspace_invite", "client_report"]);
 const INVITE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const REPORT_TOKEN = /^[0-9a-f]{64}$/;
+
+type Outcome = { status: "sent" } | { status: "skipped" | "failed"; error: string };
+
+/**
+ * One client report to one person: a recipient the agency added (with an
+ * unsubscribe link), or a test to whoever asked for it. The report itself is
+ * built once per client and period, however many people it goes to.
+ */
+async function sendClientReport(
+  supabase: ReturnType<typeof db>,
+  n: Row,
+  appUrl: string,
+  fnBase: string,
+  built: Map<string, Promise<ClientReportView | null | undefined>>,
+): Promise<Outcome> {
+  const p = n.payload ?? {};
+  const clientId = typeof p.clientId === "string" && UUID.test(p.clientId) ? p.clientId : null;
+  if (!clientId) return { status: "skipped", error: "report without a client" };
+  const cadence: Cadence = p.cadence === "monthly" ? "monthly" : "weekly";
+  const test = p.test === true;
+  let to: string;
+  let unsubscribeUrl: string | null = null;
+  if (test) {
+    to = typeof p.to === "string" ? p.to.trim().toLowerCase() : "";
+    if (!INVITE_EMAIL.test(to)) return { status: "skipped", error: "test without a valid address" };
+  } else {
+    const rid = typeof p.recipientId === "string" && UUID.test(p.recipientId) ? p.recipientId : null;
+    const { data: rec } = rid
+      ? await supabase.from("client_recipients").select("email, unsub_token, unsubscribed_at, client_id").eq("id", rid).maybeSingle()
+      : { data: null };
+    if (!rec || rec.client_id !== clientId) return { status: "skipped", error: "recipient removed" };
+    if (rec.unsubscribed_at) return { status: "skipped", error: "recipient unsubscribed" };
+    to = rec.email as string;
+    unsubscribeUrl = `${fnBase}?unsubscribe_client=${rec.unsub_token}`;
+  }
+  const end = typeof p.periodEnd === "string" && !Number.isNaN(Date.parse(p.periodEnd)) ? new Date(p.periodEnd) : new Date(n.created_at);
+  const key = `${clientId}:${cadence}:${end.toISOString()}`;
+  if (!built.has(key)) {
+    built.set(key, loadClientReport(supabase, { ownerId: n.user_id, clientId, cadence, end, appUrl, storageUrl: Deno.env.get("SUPABASE_URL") ?? "" }).catch(() => undefined));
+  }
+  const report = await built.get(key)!;
+  if (report === undefined) return { status: "failed", error: "couldn't read the report" };
+  const mail = report ? render("client_report", { ...report, test, unsubscribeUrl }, appUrl, "") : null;
+  if (!report || !mail) return { status: "skipped", error: "nothing to report" };
+  const res = await sendEmail({
+    to,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    tag: "client_report",
+    unsubscribeUrl: unsubscribeUrl ?? undefined,
+    fromName: report.fromName,
+    replyTo: report.replyTo ?? undefined,
+  });
+  return res.ok ? { status: "sent" } : { status: "failed", error: res.error ?? "send failed" };
+}
 
 /** Post one event to the user's Slack / Discord / webhook channels (one attempt each). */
 async function deliverToChannels(supabase: ReturnType<typeof db>, n: Row, appUrl: string): Promise<number> {
@@ -95,6 +155,18 @@ Deno.serve(async (req) => {
     return text(list === "digest" ? "Done: no more weekly summaries from Olmene." : "Done: Olmene won't email you updates any more. Sign-in links still arrive when you ask for one.");
   }
 
+  // ── One-click unsubscribe from a client report (the agency's link in its footer) ──
+  const clientToken = url.searchParams.get("unsubscribe_client");
+  if (clientToken) {
+    if (!REPORT_TOKEN.test(clientToken)) return text("That unsubscribe link isn't valid.", 400);
+    const { data: rec } = await supabase.from("client_recipients").select("id, client_id, unsubscribed_at").eq("unsub_token", clientToken).maybeSingle();
+    // Unknown (the agency removed the client): nothing will be sent to it either.
+    if (!rec) return text("Done: you won't get these reports any more.");
+    if (!rec.unsubscribed_at) await supabase.from("client_recipients").update({ unsubscribed_at: new Date().toISOString() }).eq("id", rec.id);
+    const { data: c } = await supabase.from("clients").select("name").eq("id", rec.client_id).maybeSingle();
+    return text(`Done: you won't get website reports${c?.name ? ` for ${c.name}` : ""} any more.`);
+  }
+
   if (req.method !== "POST") return text("POST only.", 405);
   if (!cronAuthorized(req)) return text("Bad cron secret.", 401);
   const appUrl = Deno.env.get("APP_URL") ?? "https://olmene.com";
@@ -126,11 +198,27 @@ Deno.serve(async (req) => {
     .limit(BATCH);
 
   const out = { sent: 0, skipped: 0, failed: 0 };
+  const reports = new Map<string, Promise<ClientReportView | null | undefined>>();
   for (const n of (rows ?? []) as Row[]) {
     const mark = (patch: Record<string, unknown>) => supabase.from("notifications").update(patch).eq("id", n.id);
     if (Date.now() - new Date(n.created_at).getTime() > STALE_MS) {
       await mark({ status: "skipped", error: "stale (older than 48 h)" });
       out.skipped++;
+      continue;
+    }
+    if (n.kind === "client_report") {
+      const r = await sendClientReport(supabase, n, appUrl, fnBase, reports);
+      if (r.status === "sent") {
+        await mark({ status: "sent", sent_at: new Date().toISOString(), attempts: n.attempts + 1, error: null });
+        out.sent++;
+      } else if (r.status === "skipped") {
+        await mark({ status: "skipped", error: r.error });
+        out.skipped++;
+      } else {
+        const attempts = n.attempts + 1;
+        await mark({ status: attempts >= MAX_ATTEMPTS ? "failed" : "pending", attempts, error: r.error });
+        out.failed++;
+      }
       continue;
     }
     // Who it goes to, and the footer that says why.

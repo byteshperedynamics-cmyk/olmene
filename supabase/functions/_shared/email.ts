@@ -12,6 +12,15 @@ export interface Email {
   tag: string;
   /** One-click unsubscribe (RFC 8058) for optional mail such as digests. */
   unsubscribeUrl?: string;
+  /** Sender name (an agency's, for client reports); the address stays NOTIFY_FROM_EMAIL. */
+  fromName?: string;
+  /** Where replies go (the agency, for client reports). */
+  replyTo?: string;
+}
+
+/** A display name that can't break the From header: no quotes, angle brackets or line breaks. */
+export function safeFromName(name: string): string {
+  return name.replace(/["<>\r\n]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 70) || "Olmene";
 }
 
 export function emailConfigured(): boolean {
@@ -27,8 +36,9 @@ export async function sendEmail(mail: Email): Promise<{ ok: boolean; error?: str
       method: "POST",
       headers: { "api-key": key, "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
-        sender: { name: Deno.env.get("NOTIFY_FROM_NAME") ?? "Olmene", email: from },
+        sender: { name: mail.fromName ? safeFromName(mail.fromName) : (Deno.env.get("NOTIFY_FROM_NAME") ?? "Olmene"), email: from },
         to: [{ email: mail.to }],
+        ...(mail.replyTo ? { replyTo: { email: mail.replyTo } } : {}),
         subject: mail.subject,
         htmlContent: mail.html,
         textContent: mail.text,
@@ -73,6 +83,51 @@ export function layout(opts: { heading: string; paragraphs: string[]; cta?: { la
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border:1px solid #E4E2DC;border-radius:16px;">
 <tr><td style="padding:32px 32px 8px 32px;"><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;color:#2F6B45;">&#10047; olmene</p></td></tr>
 <tr><td style="padding:16px 32px 0 32px;">${eyebrow}<h1 style="margin:0 0 12px 0;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;font-weight:500;color:#1C1D1B;">${escapeHtml(opts.heading)}</h1>${p}${cta}</td></tr>
+<tr><td style="padding:24px 32px 32px 32px;"><p style="margin:0;padding-top:16px;border-top:1px solid #E4E2DC;font-size:12px;line-height:1.6;color:#8A8882;">${opts.footer}</p></td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+/** Text colour that reads on a #rrggbb background (WCAG relative luminance). */
+export function textOn(hex: string): "#FFFFFF" | "#1C1D1B" {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return "#FFFFFF";
+  const lin = (c: string) => {
+    const v = parseInt(c, 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const l = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+  // Contrast against white vs. against near-black: pick the larger.
+  return 1.05 / (l + 0.05) >= (l + 0.05) / 0.062 ? "#FFFFFF" : "#1C1D1B"; // #1C1D1B: L ≈ 0.012
+}
+
+/**
+ * The shell for mail an agency's clients get: the agency's logo (or name)
+ * on top over its accent colour, the same quiet card as Olmene's own mail,
+ * and the button in the accent colour. `body` is trusted HTML: callers
+ * escape user content.
+ */
+export function brandedLayout(opts: {
+  brand: { name: string | null; color: string | null; logoUrl: string | null };
+  heading: string;
+  body: string;
+  cta?: { label: string; url: string };
+  footer: string;
+}): string {
+  const color = opts.brand.color && /^#[0-9a-f]{6}$/i.test(opts.brand.color) ? opts.brand.color : "#2F6B45";
+  const head = opts.brand.logoUrl
+    ? `<img src="${escapeHtml(opts.brand.logoUrl)}" alt="${escapeHtml(opts.brand.name ?? "")}" height="36" style="display:block;height:36px;width:auto;max-width:200px;border:0;">`
+    : opts.brand.name
+      ? `<p style="margin:0;font-size:19px;font-weight:600;color:#1C1D1B;">${escapeHtml(opts.brand.name)}</p>`
+      : `<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:600;color:#2F6B45;">&#10047; olmene</p>`;
+  const cta = opts.cta
+    ? `<p style="margin:20px 0 0 0;"><a href="${escapeHtml(opts.cta.url)}" style="display:inline-block;background:${color};color:${textOn(color)};text-decoration:none;font-size:15px;font-weight:600;padding:12px 22px;border-radius:10px;">${escapeHtml(opts.cta.label)}</a></p>`
+    : "";
+  return `<!doctype html><html lang="en"><body style="margin:0;padding:0;background:#F6F5F1;font-family:Inter,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1C1D1B;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F5F1;padding:40px 16px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border:1px solid #E4E2DC;border-radius:16px;overflow:hidden;">
+<tr><td style="height:4px;line-height:4px;font-size:0;background:${color};">&nbsp;</td></tr>
+<tr><td style="padding:28px 32px 8px 32px;">${head}</td></tr>
+<tr><td style="padding:16px 32px 0 32px;"><h1 style="margin:0 0 12px 0;font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2;font-weight:500;color:#1C1D1B;">${escapeHtml(opts.heading)}</h1>${opts.body}${cta}</td></tr>
 <tr><td style="padding:24px 32px 32px 32px;"><p style="margin:0;padding-top:16px;border-top:1px solid #E4E2DC;font-size:12px;line-height:1.6;color:#8A8882;">${opts.footer}</p></td></tr>
 </table></td></tr></table></body></html>`;
 }

@@ -7,7 +7,7 @@ import { requireActor, teamErrorResponse } from "@/lib/workspace/server";
 
 export const dynamic = "force-dynamic";
 
-/** PATCH /api/clients/[id] { name?, website?, contactEmail? } — members and up. */
+/** PATCH /api/clients/[id] { name?, website?, contactEmail?, reportCadence? } — members and up. */
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const r = await requireActor(req, "member");
   if ("error" in r) return r.error;

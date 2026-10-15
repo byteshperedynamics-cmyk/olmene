@@ -2,9 +2,11 @@
 // small batches). For each due site: re-scan it through free-audit (cron
 // mode: no per-IP limit, saved as a monitor scan), compare with last week,
 // alert on checks that got worse, snapshot up to 3 competitor homepages and
-// alert on headline/price changes. Then queue one weekly digest per user.
+// alert on headline/price changes. Then queue one weekly digest per user,
+// and the client reports agencies have due (Mondays, or the 1st).
 // Sites come from completed reports (advance-analysis upserts them).
 import { createClient } from "npm:@supabase/supabase-js@2.117.1";
+import { type Cadence, nextReportAt, periodStart, RECIPIENTS_PER_CLIENT } from "../_shared/client-report.ts";
 import { enqueueNotification, recordOps } from "../_shared/ledger.ts";
 import { type Check, competitorChanges, type CompetitorSnapshot, isoWeek, privateIp, publicUrl, regressions, snapshotOf } from "./logic.ts";
 import { groundedAnswer, smallJsonCall } from "../_shared/llm.ts";
@@ -246,6 +248,65 @@ async function queueDigests(supabase: ReturnType<typeof db>): Promise<number> {
   return queued;
 }
 
+const CLIENT_REPORTS_PER_RUN = 20;
+
+interface DueClient {
+  id: string;
+  user_id: string;
+  name: string;
+  report_cadence: Cadence;
+  report_next_at: string;
+}
+
+/**
+ * Whether one due client report goes out: the workspace is a paying agency,
+ * a site of the client's was scanned during the period, and someone is
+ * still subscribed. Then one notification per recipient; notify builds and
+ * sends them under the agency's name.
+ */
+async function queueClientReport(supabase: ReturnType<typeof db>, c: DueClient, slot: Date): Promise<boolean> {
+  const { data: ws } = await supabase.from("workspaces").select("kind").eq("owner_id", c.user_id).maybeSingle();
+  if (ws?.kind !== "agency" || !(await subscribed(supabase, c.user_id))) return false;
+  const since = periodStart(c.report_cadence, slot).toISOString();
+  const { count } = await supabase.from("sites").select("id", { count: "exact", head: true }).eq("user_id", c.user_id).eq("client_id", c.id).gte("last_scan_at", since);
+  if (!count) return false;
+  const { data: recipients } = await supabase.from("client_recipients").select("id, email").eq("client_id", c.id).is("unsubscribed_at", null).order("created_at").limit(RECIPIENTS_PER_CLIENT);
+  if (!recipients?.length) return false;
+  const day = slot.toISOString().slice(0, 10);
+  for (const r of recipients as { id: string; email: string }[]) {
+    await enqueueNotification(supabase, {
+      userId: c.user_id,
+      kind: "client_report",
+      payload: { clientId: c.id, client: c.name, recipientId: r.id, to: r.email, cadence: c.report_cadence, periodEnd: slot.toISOString() },
+      dedupeKey: `client_report:${r.id}:${day}`,
+    });
+  }
+  return true;
+}
+
+/** Client reports whose time has come; each moves on to its next slot whether or not it went out. */
+async function queueClientReports(supabase: ReturnType<typeof db>): Promise<number> {
+  const now = new Date();
+  const { data: due } = await supabase.from("clients").select("id, user_id, name, report_cadence, report_next_at")
+    .neq("report_cadence", "off").lte("report_next_at", now.toISOString()).order("report_next_at", { ascending: true }).limit(CLIENT_REPORTS_PER_RUN);
+  let queued = 0;
+  for (const c of (due ?? []) as DueClient[]) {
+    if (c.report_cadence !== "weekly" && c.report_cadence !== "monthly") continue;
+    let sent = false;
+    try {
+      sent = await queueClientReport(supabase, c, new Date(c.report_next_at));
+    } catch (e) {
+      await recordOps(supabase, "monitor", "client report crashed", { clientId: c.id, error: String(e).slice(0, 200) });
+    }
+    // From now, not from the missed slot: a monitor outage never sends a burst.
+    await supabase.from("clients")
+      .update({ report_next_at: nextReportAt(c.report_cadence, now).toISOString(), ...(sent ? { report_sent_at: now.toISOString() } : {}) })
+      .eq("id", c.id).eq("report_next_at", c.report_next_at);
+    if (sent) queued++;
+  }
+  return queued;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("POST only.", { status: 405 });
   if (!cronAuthorized(req)) return new Response("Bad cron secret.", { status: 401 });
@@ -258,7 +319,7 @@ Deno.serve(async (req) => {
     .order("next_scan_at", { ascending: true })
     .limit(SITES_PER_RUN * 3);
 
-  const out = { scanned: 0, skippedUnpaid: 0, failed: 0, regressions: 0, competitorAlerts: 0, digests: 0 };
+  const out = { scanned: 0, skippedUnpaid: 0, failed: 0, regressions: 0, competitorAlerts: 0, digests: 0, clientReports: 0 };
   for (const site of (due ?? []) as Site[]) {
     if (out.scanned >= SITES_PER_RUN) break;
     if (!(await subscribed(supabase, site.user_id))) {
@@ -283,5 +344,6 @@ Deno.serve(async (req) => {
     return { checked: 0, alerts: 0 };
   });
   out.digests = await queueDigests(supabase).catch(() => 0);
+  out.clientReports = await queueClientReports(supabase).catch(() => 0);
   return Response.json({ ok: true, ...out, aiVisibility: ai });
 });

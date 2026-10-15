@@ -10,7 +10,7 @@ Clients page; nothing is deleted.
 | Who | Can |
 |---|---|
 | Viewer | See clients, their sites, page links and branding; copy a link. |
-| Member | Add and edit clients, give sites to clients, create and turn off client pages. |
+| Member | Add and edit clients, give sites to clients, create and turn off client pages, set up emailed reports and send a test. |
 | Admin, owner | Also remove clients and change branding (name, logo, colour, website, white label). |
 
 ## What clients see
@@ -33,6 +33,45 @@ Clients page; nothing is deleted.
   (`data-agency-page`, `src/lib/consent.ts`): those visitors are the
   agency's clients.
 
+## Emailed client reports
+
+Each client can get a short email, **weekly** (Mondays) or **monthly** (the
+1st), at 08:00 UTC: every site's score, the change over the period, checks
+passing and checks fixed, and a "See the full page" button when the client
+page is on. It goes to people the agency adds on the client's card (up to 10
+per client, 250 per workspace).
+
+- **Under the agency's name**: the From name is "{agency} via Olmene" (just
+  "{agency}" with white label); the address stays `NOTIFY_FROM_EMAIL`, so
+  the domain is still Olmene's. Replies go to the workspace owner. The
+  header shows the agency's logo (PNG/JPEG; WebP falls back to the name,
+  since many mail apps can't show it) over its accent colour; the button
+  uses that colour with readable text (`textOn`).
+- **Schedule**: choosing a cadence sets `clients.report_next_at` to the
+  next slot, so there's time to add everyone before the first one. The
+  `monitor` function (every 10 minutes) queues due clients: only paying
+  agencies, only when a site of the client's was scanned during the period,
+  only to people still subscribed. One `notifications` row per recipient
+  (`client_report`, dedupe `client_report:<recipient>:<day>`), then the slot
+  moves on from *now*, so an outage never sends a burst.
+- **Sending**: `notify` builds the report when it sends (so a test and the
+  real one are the same email), never posts it to Slack/Discord/webhooks,
+  and skips anyone removed or unsubscribed since it was queued.
+- **Unsubscribe**: one click from the footer or the mail app's button
+  (`List-Unsubscribe`, RFC 8058) hits `notify?unsubscribe_client=<token>`.
+  The person stays listed as unsubscribed so the agency can't add them back.
+  Tokens are 64 hex characters, readable by the service role only (column
+  grants), and left out of the data export.
+- **Send me a test**: emails the signed-in person ("[Test]", no unsubscribe
+  link), at most once a minute per client.
+
+Code: `src/components/agency/client-reports.tsx` (the card section),
+`src/lib/agency/server.ts` (recipients, cadence, test),
+`supabase/functions/_shared/client-report.ts` (schedule and per-site
+summary, mirrored in `src/lib/agency/rules.ts`),
+`supabase/functions/notify/client-report.ts` (reads a report) and
+`notify/templates.ts` (`client_report`).
+
 ## Data
 
 Migration `20261023_agency.sql`, keyed by the workspace owner's user id like
@@ -48,8 +87,14 @@ everything else:
   JPEG or WebP up to 512 KB, checked by their first bytes on the Worker. No
   SVG (it can carry script). Account deletion removes them.
 
-Members read all of it through `readable_owner_ids()`; every change goes
-through the Worker. Data export includes clients and client pages.
+Migration `20261024_client_reports.sql` adds `clients.report_cadence`
+(`off` / `weekly` / `monthly`), `report_next_at`, `report_sent_at`, and
+`client_recipients` (address, `unsub_token`, `unsubscribed_at`, who added
+them; one row per address per client).
+
+Members read all of it through `readable_owner_ids()` (except recipients'
+unsubscribe tokens); every change goes through the Worker. Data export
+includes clients, client pages and report recipients.
 
 ## API
 
@@ -57,7 +102,10 @@ through the Worker. Data export includes clients and client pages.
 |---|---|
 | `GET /api/clients/` | viewer+: branding, clients with sites and page links, unassigned sites, your role |
 | `POST /api/clients/` `{ name, website?, contactEmail? }` | member+ |
-| `PATCH /api/clients/[id]` `{ name?, website?, contactEmail? }` | member+ |
+| `PATCH /api/clients/[id]` `{ name?, website?, contactEmail?, reportCadence? }` | member+ |
+| `POST /api/clients/[id]/recipients` `{ email }` | member+: add someone to the report (409 if they unsubscribed) |
+| `DELETE /api/clients/[id]/recipients/[recipientId]` | member+ (not those who unsubscribed) |
+| `POST /api/clients/[id]/report-test` | member+: email yourself the report (202; 429 within a minute) |
 | `DELETE /api/clients/[id]` | admin+ |
 | `POST` / `DELETE /api/clients/[id]/portal` | member+: turn the client page on / off |
 | `PUT /api/sites/[id]/client` `{ clientId \| null }` | member+ |
@@ -79,6 +127,7 @@ an in-memory copy of the API):
 ## Tests
 
 ```bash
-npm run test:sql        # supabase/tests/agency.test.sql: who reads what, rules, views, removal
-bun test src/lib/agency # input rules, slugs, logo sniffing, white label
+npm run test:sql        # agency.test.sql, client_reports.test.sql: who reads what, rules, views, removal
+bun test src/lib/agency # input rules, slugs, logo sniffing, white label, report schedule
+deno test --allow-all --config supabase/functions/deno.json supabase/functions/_shared/client-report.test.ts supabase/functions/notify
 ```

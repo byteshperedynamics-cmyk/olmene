@@ -1,6 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { TeamError } from "@/lib/workspace/roles";
-import { canWhiteLabel, cleanBrandInput, cleanClientInput, isPortalSlug, newPortalSlug, normalizeWebsite, portalPath, sniffImage } from "../rules";
+import {
+  canWhiteLabel,
+  cleanBrandInput,
+  cleanClientInput,
+  cleanRecipientEmail,
+  isPortalSlug,
+  newPortalSlug,
+  nextReportAt,
+  normalizeWebsite,
+  portalPath,
+  sniffImage,
+} from "../rules";
 
 function refused(fn: () => unknown): TeamError {
   try {
@@ -129,5 +140,39 @@ describe("logo files", () => {
     expect(sniffImage(new Uint8Array(0))).toBeNull();
     // A PNG signature cut short isn't a PNG.
     expect(sniffImage(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0b, 0, 0]))).toBeNull();
+  });
+});
+
+describe("client reports", () => {
+  // The same cases are in supabase/functions/_shared/client-report.test.ts: the Worker sets the first slot, the monitor the ones after.
+  const SCHEDULE: Array<["weekly" | "monthly", string, string]> = [
+    ["weekly", "2026-10-15T12:00:00Z", "2026-10-19T08:00:00.000Z"], // Thursday → Monday
+    ["weekly", "2026-10-19T07:59:00Z", "2026-10-19T08:00:00.000Z"], // Monday before eight → that morning
+    ["weekly", "2026-10-19T08:00:00Z", "2026-10-26T08:00:00.000Z"], // Monday at eight → next week
+    ["weekly", "2026-10-18T23:00:00Z", "2026-10-19T08:00:00.000Z"], // Sunday night → Monday
+    ["monthly", "2026-10-15T12:00:00Z", "2026-11-01T08:00:00.000Z"],
+    ["monthly", "2026-11-01T07:00:00Z", "2026-11-01T08:00:00.000Z"],
+    ["monthly", "2026-11-01T08:00:00Z", "2026-12-01T08:00:00.000Z"],
+    ["monthly", "2026-12-20T00:00:00Z", "2027-01-01T08:00:00.000Z"],
+  ];
+
+  test("go out Mondays or the 1st at 08:00 UTC, always after now; none when off", () => {
+    for (const [cadence, from, want] of SCHEDULE) expect(nextReportAt(cadence, new Date(from))?.toISOString()).toBe(want);
+    expect(nextReportAt("off", new Date())).toBeNull();
+  });
+
+  test("the cadence is off, weekly or monthly", () => {
+    expect(cleanClientInput({ reportCadence: "weekly" }, false)).toEqual({ reportCadence: "weekly" });
+    expect(cleanClientInput({ reportCadence: "off" }, false)).toEqual({ reportCadence: "off" });
+    expect(cleanClientInput({ name: "Bakery" }, false)).toEqual({ name: "Bakery" });
+    expect(refused(() => cleanClientInput({ reportCadence: "daily" }, false)).code).toBe("bad_cadence");
+    expect(refused(() => cleanClientInput({ reportCadence: null }, false)).code).toBe("bad_cadence");
+  });
+
+  test("recipient addresses are trimmed and lower-cased, and must look like one", () => {
+    expect(cleanRecipientEmail("  Owner@Bakery.Example ")).toBe("owner@bakery.example");
+    for (const bad of ["", "owner", "owner@bakery", "a b@c.de", `${"x".repeat(250)}@c.de`, 42, null]) {
+      expect(refused(() => cleanRecipientEmail(bad)).code).toBe("bad_email");
+    }
   });
 });

@@ -1,4 +1,5 @@
-import type { Brand, ClientsView } from "@/lib/agency/types";
+import { nextReportAt } from "@/lib/agency/rules";
+import type { Brand, ClientReport, ClientsView } from "@/lib/agency/types";
 import type { WorkspaceRole } from "@/lib/workspace/roles";
 
 // Example data only (an invented agency and invented clients), for the
@@ -22,6 +23,8 @@ export const BRAND: Brand = {
 export const NO_BRAND: Brand = { name: null, color: null, url: null, logoUrl: null, whiteLabel: false };
 
 const site = (id: string, host: string, lastScore: number | null) => ({ id, host, url: `https://${host}/`, lastScore });
+
+const REPORT_OFF: ClientReport = { cadence: "off", nextAt: null, sentAt: null, recipients: [] };
 
 export function clientsFixture(opts: { role?: WorkspaceRole; state?: string | null; brand?: string | null; plan?: string | null } = {}): ClientsView {
   const role = opts.role ?? "admin";
@@ -55,6 +58,7 @@ export function clientsFixture(opts: { role?: WorkspaceRole; state?: string | nu
         createdAt: day(2),
         sites: [],
         portal: null,
+        report: REPORT_OFF,
       },
       {
         id: "c2",
@@ -64,6 +68,15 @@ export function clientsFixture(opts: { role?: WorkspaceRole; state?: string | nu
         createdAt: day(40),
         sites: [site("s1", "bakerybrothers.example", 82), site("s2", "shop.bakerybrothers.example", 64)],
         portal: { slug: "k7m2xq9pwdab", views: 14, createdAt: day(30) },
+        report: {
+          cadence: "weekly",
+          nextAt: nextReportAt("weekly", new Date())!.toISOString(),
+          sentAt: day(5),
+          recipients: [
+            { id: "r1", email: "owner@bakerybrothers.example", unsubscribedAt: null, createdAt: day(30) },
+            { id: "r2", email: "finance@bakerybrothers.example", unsubscribedAt: day(9), createdAt: day(30) },
+          ],
+        },
       },
       {
         id: "c3",
@@ -73,6 +86,7 @@ export function clientsFixture(opts: { role?: WorkspaceRole; state?: string | nu
         createdAt: day(12),
         sites: [site("s3", "harbordental.example", 47)],
         portal: null,
+        report: REPORT_OFF,
       },
     ],
     unassigned: [site("s4", "greenleaf-yoga.example", 71), site("s5", "citymotors.example", null)],
