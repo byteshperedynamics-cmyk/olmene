@@ -27,7 +27,7 @@ Four pieces, one migration:
 
 - **None for env/secrets** — no new env vars. Avatar writes and the Google-photo import use the existing service-role key; `.env.production` already has everything the client needs.
 - The `polar-webhook` edge function changed (see below) — if function deploys aren't wired to push to main, run `supabase functions deploy polar-webhook`. Without it, Polar keeps retrying webhooks for deleted users (harmless but noisy; the endpoint can get auto-disabled).
-- Optionally re-run `npm run check:rls` after the migration applies (36 tables expected).
+- Nothing to re-run for RLS: `npm run check:rls` reads the migration files, not the live database, and already counts `progress_shares` (35 tables on main, 36 here).
 
 ## Files added (26)
 
@@ -78,18 +78,29 @@ Four pieces, one migration:
 - `src/i18n/dictionaries/{ar,bn,de,el,en,es,fr,hi,id,ja,pt,ru,tr,ur,zh}.json` — the new `account.*` / `login.*signup*` keys, 15 languages, all +66 lines.
 - `src/lib/session.ts` — see above.
 - `supabase/functions/polar-webhook/index.ts` — webhook events for a deleted user (FK 23503) are acknowledged `ok` instead of erroring, so Polar doesn't retry-storm or disable the endpoint.
-- `tsconfig.json` — include `src/lib/account/__tests__` in typecheck.
+- `tsconfig.json` — adds `src/lib/account/__tests__` to `exclude`, like the other bun test folders (they use `bun:test` types; `bun test` checks them).
 - `src/app/dev/components/gallery.tsx` — AppHeader cell passes the new required `identity` prop.
 
 ## Finished
 
 - Everything above compiles, typechecks, lints; the pure-logic tests pass. All four API routes are complete with auth, confirmation and error paths. Migration is written, additive, idempotent.
 
-## Half-done / to verify by hand
+## Second pass (Claude, 15 Oct)
 
-- **No end-to-end click-through was done** before handoff (I only ran static checks + unit tests). Worth a manual pass: avatar upload+crop, Google import, welcome dialog on first login, share-link create → open in incognito → view count, delete-my-data vs delete-account (use a throwaway account).
-- The **`check:rls` count will change** (36 → 37) once `progress_shares` exists in the live database the script points at — expected, not a failure.
-- `login/page.tsx` was heavily reworked (+441 lines) — the `?next=` handling deserves a second pair of eyes for open-redirect hygiene (it only composes same-origin paths from `location.search`, but verify).
+Reviewed the migration, the four API routes and the sign-in redirects; clicked through every screen in Chromium (light, dark, 390 px) with the API mocked. Fixed:
+
+- **Open redirect after sign-in** (older than this branch, but this branch sends more people through `?next=`): `startsWith("/") && !startsWith("//")` let `?next=/%09/evil.example` and `/\evil.example` through, and browsers open both as evil.example. One helper, `src/lib/safe-next.ts`, now guards the login page, the Google return and `/api/auth/google/` (tests: `src/lib/__tests__/safe-next.test.ts`).
+- **Deleted analyses still listed**: "Delete my data" hides analyses with `deleted_at`, but the dashboard list and the job page didn't filter on it (`src/lib/data.ts`). The account screen also drops cached lists after deleting, so nothing deleted flashes back.
+- **Welcome dialog** opened with the photo button focused, showing its "change photo" overlay over the initials; focus now starts on the dialog (Tab still reaches everything).
+- **"Up next" card on phones** squeezed its text to one word per line beside the button; the button now wraps underneath, full width.
+- Delete-my-data copy now also names pull-request checks (they are deleted).
+
+Checked and fine: migration is additive and idempotent, `bump_share_views` is service-role only with a fixed `search_path`, every write route checks ownership, uploads are sniffed and capped, the Google photo import only fetches `https://*.googleusercontent.com`, the export leaves out tokens and webhook URLs, and Workers Builds runs `supabase db push` before the deploy (docs/engine.md), so the new `deleted_at` filter shouldn't meet a database without the column.
+
+## Still to verify by hand (needs a real account)
+
+- With a throwaway account on production after merge: Google photo import, welcome dialog on first sign-in, share link → open in a private window → view count, then delete-my-data and delete-account.
+- **Existing users will see the welcome dialog once** after this ships (their `onboarded_at` is empty). It skips the "where to start" step for anyone with analyses. If that's unwanted, backfill `onboarded_at` for existing profiles before merging.
 
 ## Not started (known gaps)
 

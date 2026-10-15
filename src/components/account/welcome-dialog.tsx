@@ -86,7 +86,17 @@ export function WelcomeDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !saving && finish()}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-[30rem] gap-0 overflow-y-auto rounded-[22px] p-0" dir="ltr">
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-[30rem] gap-0 overflow-y-auto rounded-[22px] p-0"
+        dir="ltr"
+        // The dialog opens by itself, so Radix would focus the first control (the
+        // photo button) and show its "change photo" overlay before anyone touched
+        // anything. Start on the dialog itself; Tab still reaches every control.
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          (e.currentTarget as HTMLElement | null)?.focus();
+        }}
+      >
         <AnimatePresence mode="wait" initial={false}>
           {step === 1 ? (
             <motion.div key="profile" {...motionProps} className="grid gap-6 p-6 sm:p-8">
