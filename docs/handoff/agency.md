@@ -144,11 +144,15 @@ white label comes with Team (and a future Agency plan).
 
 ### Still to do to finish 2a (small)
 
-1. Run `npm run test:sql` (needs a local Postgres; set PGHOST/PGPORT/PGUSER,
-   see the header of `scripts/test-sql.mjs`) and watch CI on `agency`.
-2. Re-screenshot after the last tweaks: logo-only brand bar, Team page
-   "What it's for" cards (text should sit at the top: `content-start`),
-   no cookie banner on `/dev/portal/`.
+1. Done (15 Oct): CI on `agency` green, and its SQL tests job passed (21
+   migrations, recent ones twice; `agency.test.sql`, `workspaces.test.sql`).
+   Hermes's PC has no Postgres, so `npm run test:sql` runs only in CI there.
+2. Done (15 Oct): re-screenshotted at 1024 and 390, light and dark. The
+   banner did show on `/dev/portal/` and `/dev/share/`: those previews drew
+   after mount, so `data-agency-page` wasn't there yet when the banner
+   looked. They are server-rendered now, like the real `/c/` and `/p/`.
+   Hermes's PC has no Python Playwright, so `clients_flows.py` wasn't re-run
+   (nothing it covers changed).
 3. Tell Hermes what's ready and wait for his OK before anything goes to main.
    Merge order when he says yes: `profile-fixes` → `workspaces` → `agency`
    (each is based on the previous one).

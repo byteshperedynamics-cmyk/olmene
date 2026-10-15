@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ClientPortal } from "@/components/agency/client-portal";
 import type { PortalView } from "@/lib/agency/types";
 import { SITE_GROWING, SITE_NEW } from "../account/fixtures";
@@ -12,23 +11,17 @@ const SITES = [
 ];
 
 /** ?state=wl: white label; plain: the agency hasn't set up branding; name: name only, no logo; empty: no sites yet; gone: link turned off. */
-export function PortalPreview() {
-  const [view, setView] = useState<PortalView | null | undefined>(undefined);
-  useEffect(() => {
-    const s = new URLSearchParams(window.location.search).get("state");
-    const client = { name: "Bakery Brothers" };
-    setView(
-      s === "gone"
-        ? null
-        : s === "plain"
-          ? { client, brand: NO_BRAND, sites: SITES }
-          : s === "name"
-            ? { client, brand: { ...BRAND, logoUrl: null }, sites: SITES }
-            : s === "empty"
-              ? { client, brand: BRAND, sites: [] }
-              : { client, brand: { ...BRAND, whiteLabel: s === "wl" }, sites: SITES },
-    );
-  }, []);
-  if (view === undefined) return null;
+export function PortalPreview({ state: s }: { state: string | null }) {
+  const client = { name: "Bakery Brothers" };
+  const view: PortalView | null =
+    s === "gone"
+      ? null
+      : s === "plain"
+        ? { client, brand: NO_BRAND, sites: SITES }
+        : s === "name"
+          ? { client, brand: { ...BRAND, logoUrl: null }, sites: SITES }
+          : s === "empty"
+            ? { client, brand: BRAND, sites: [] }
+            : { client, brand: { ...BRAND, whiteLabel: s === "wl" }, sites: SITES };
   return <ClientPortal view={view} />;
 }
