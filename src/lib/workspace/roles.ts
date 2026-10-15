@@ -15,11 +15,11 @@ export const INVITABLE_ROLES: InvitableRole[] = ["admin", "member", "viewer"];
 /** Which workspace a request acts in: the owner's user id. Absent = your own account. */
 export const WORKSPACE_HEADER = "x-olmene-workspace";
 
-export const ROLE_COPY: Record<WorkspaceRole, { label: string; blurb: string }> = {
-  owner: { label: "Owner", blurb: "Plan and billing, and everything else." },
-  admin: { label: "Admin", blurb: "Manages the team and connections, and does every kind of work." },
-  member: { label: "Member", blurb: "Runs scans, reports and fixes." },
-  viewer: { label: "Viewer", blurb: "Sees everything, changes nothing." },
+export const ROLE_COPY: Record<WorkspaceRole, { label: string; blurb: string; you: string }> = {
+  owner: { label: "Owner", blurb: "Plan and billing, and everything else.", you: "You'll look after the plan and billing, and everything else." },
+  admin: { label: "Admin", blurb: "Manages the team and connections, and does every kind of work.", you: "You'll manage the team and connections, and do every kind of work." },
+  member: { label: "Member", blurb: "Runs scans, reports and fixes.", you: "You'll run scans, reports and fixes." },
+  viewer: { label: "Viewer", blurb: "Sees everything, changes nothing.", you: "You'll see every report, site and fix." },
 };
 
 export function isRole(v: unknown): v is WorkspaceRole {

@@ -269,6 +269,8 @@ function describeActivity(n: NotificationRow): { text: string; href?: string; to
       return { text: `${p.competitor} changed their homepage`, tone: "warn" };
     case "weekly_digest":
       return { text: "Weekly summary", tone: "plain" };
+    case "workspace_invite":
+      return { text: `${p.inviter ?? "Someone"} invited ${p.to ?? "a teammate"} to the team`, href: "/app/team/", tone: "plain" };
     default:
       return { text: n.kind.replace(/_/g, " "), tone: "plain" };
   }

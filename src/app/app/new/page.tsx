@@ -16,6 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LogoLoader } from "@/components/logo-loader";
 import { Enter } from "@/components/motion";
 import { startAnalysis, ApiRequestError } from "@/lib/api";
+import { useSession } from "@/lib/session";
+import { useWorkspaces } from "@/lib/workspace/client";
+import { atLeast } from "@/lib/workspace/roles";
 import { getEntitlement } from "@/lib/data";
 import { GOALS, GOAL_LABELS, LANGUAGES } from "@/lib/steps";
 import { useI18n } from "@/i18n/provider";
@@ -51,6 +54,10 @@ export default function NewAnalysisPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const { data: ent } = useQuery({ queryKey: ["entitlement"], queryFn: getEntitlement });
+  // Viewers in a shared workspace can read reports but not start them.
+  const { session } = useSession();
+  const { current: workspace } = useWorkspaces(session);
+  const viewer = !!workspace && !atLeast(workspace.role, "member");
   // Reports default to the language the visitor reads the site in.
   const { lang } = useI18n();
 
@@ -118,11 +125,20 @@ export default function NewAnalysisPage() {
         </p>
       </div>
 
-      {ent && !ent.active && ent.reportCredits === 0 && (
+      {viewer && (
+        <p className="mb-6 rounded-lg border border-rim bg-chip/60 px-4 py-3 text-sm text-foreground">
+          You&apos;re a viewer in {workspace.name}: you can read every report, but starting one needs the Member role. Ask an admin on the{" "}
+          <a href="/app/team/" className="font-semibold underline underline-offset-2">
+            Team page
+          </a>
+          .
+        </p>
+      )}
+      {!viewer && ent && !ent.active && ent.reportCredits === 0 && (
         <p className="mb-6 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-foreground">
-          You need an active subscription to run analyses.{" "}
+          {workspace && !workspace.own ? `${workspace.name} needs an active plan to run analyses. The owner can choose one under ` : "You need an active subscription to run analyses. "}
           <a href="/app/billing/" className="font-semibold underline underline-offset-2">
-            See plans
+            {workspace && !workspace.own ? "Billing" : "See plans"}
           </a>
           .
         </p>
@@ -210,7 +226,7 @@ export default function NewAnalysisPage() {
               )}
             </div>
 
-            <Button type="submit" size="lg" className="w-full" disabled={submitting || !siteUrl}>
+            <Button type="submit" size="lg" className="w-full" disabled={submitting || !siteUrl || viewer}>
               {submitting ? (
                 <>
                   <LogoLoader size={16} /> Starting analysis…

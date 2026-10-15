@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabase } from "./supabase";
+import { setActiveWorkspace } from "./workspace/client";
 
 // Set while a deliberate sign-out navigates away, so the /app/ auth gate
 // doesn't race it with its own "you're signed out" redirect.
@@ -43,6 +44,8 @@ export function useSession() {
   const signOut = useCallback(async (opts?: { to?: string; everywhere?: boolean }) => {
     const supabase = getSupabase();
     if (opts?.to) leaving = true;
+    // The next person on this browser starts in their own account.
+    setActiveWorkspace(null, { reload: false });
     await supabase?.auth.signOut({ scope: opts?.everywhere ? "global" : "local" }).catch(() => {});
     setSession(null);
     if (opts?.to) window.location.replace(opts.to);

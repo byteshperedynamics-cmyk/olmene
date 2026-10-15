@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCard, LayoutDashboard, LifeBuoy, LogOut, Share2, UserRound } from "lucide-react";
+import { CreditCard, LayoutDashboard, LifeBuoy, LogOut, Share2, UserRound, UsersRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,8 @@ export interface AccountMenuLabels {
   help: string;
   signOut: string;
   addName: string;
+  /** Shown in the app only (the marketing header has no Team link). */
+  team?: string;
 }
 
 const EN: AccountMenuLabels = {
@@ -34,6 +36,7 @@ const EN: AccountMenuLabels = {
   help: "Help and support",
   signOut: "Sign out",
   addName: "Add your name",
+  team: "Team",
 };
 
 /**
@@ -89,6 +92,13 @@ export function AccountMenu({
             <UserRound className="size-4" aria-hidden /> {labels.account}
           </Link>
         </DropdownMenuItem>
+        {labels.team && (
+          <DropdownMenuItem asChild className="cursor-pointer gap-2.5 rounded-lg px-2 py-2">
+            <Link href="/app/team/">
+              <UsersRound className="size-4" aria-hidden /> {labels.team}
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild className="cursor-pointer gap-2.5 rounded-lg px-2 py-2">
           <Link href="/app/account/#progress">
             <Share2 className="size-4" aria-hidden /> {labels.share}

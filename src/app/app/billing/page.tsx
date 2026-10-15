@@ -12,6 +12,8 @@ import { getEntitlement, getPlans } from "@/lib/data";
 import { createCheckout, createPortalSession, ApiRequestError } from "@/lib/api";
 import { fmtDateTime, fmtDate } from "@/lib/format";
 import { track } from "@/lib/track";
+import { useSession } from "@/lib/session";
+import { useWorkspaces } from "@/lib/workspace/client";
 
 export default function BillingPage() {
   const router = useRouter();
@@ -31,6 +33,10 @@ export default function BillingPage() {
   const { data: ent } = useQuery({ queryKey: ["entitlement"], queryFn: getEntitlement });
   const { data: plans } = useQuery({ queryKey: ["plans"], queryFn: getPlans });
   const [busy, setBusy] = useState<string | null>(null);
+  // In someone else's workspace you see their plan, but only the owner pays or changes it.
+  const { session } = useSession();
+  const { current: workspace } = useWorkspaces(session);
+  const shared = !!workspace && !workspace.own;
 
   async function subscribe(productId: string, planName?: string) {
     setBusy(productId);
@@ -67,9 +73,21 @@ export default function BillingPage() {
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">Billing</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Plans are counted in fixes and reports, not seats. Cancel any time; access runs to the end of your period.
+          Plans are counted in fixes and reports; Fix includes 2 people and Team 5. Cancel any time; access runs to the end of your period.
         </p>
       </div>
+
+      {shared && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{workspace.name}&apos;s plan</CardTitle>
+            <CardDescription>
+              {workspace.ownerName ?? "The owner"} looks after billing for this workspace. Everyone here shares the plan below; to change it,
+              ask them.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       {ent && (ent.active || creditOnly || ent.hasPurchases) && (
         <Card>
@@ -107,17 +125,19 @@ export default function BillingPage() {
                   your quota{ent.creditsExpireAt ? ` — valid until ${fmtDate(ent.creditsExpireAt)}` : ""}
                 </p>
               )}
-              <Button variant="outline" size="sm" onClick={manage} disabled={busy === "portal"}>
-                {busy === "portal" ? <LogoLoader size={16} /> : <ExternalLink className="size-4" aria-hidden />}
-                Manage subscription
-              </Button>
+              {!shared && (
+                <Button variant="outline" size="sm" onClick={manage} disabled={busy === "portal"}>
+                  {busy === "portal" ? <LogoLoader size={16} /> : <ExternalLink className="size-4" aria-hidden />}
+                  Manage subscription
+                </Button>
+              )}
             </CardContent>
           ) : (
             <CardContent className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 No subscription — single reports run on credits. Failed analyses never burn a credit.
               </p>
-              {ent.hasPurchases && (
+              {ent.hasPurchases && !shared && (
                 <Button variant="outline" size="sm" onClick={manage} disabled={busy === "portal"}>
                   {busy === "portal" ? <LogoLoader size={16} /> : <ExternalLink className="size-4" aria-hidden />}
                   Receipts and invoices
@@ -128,7 +148,7 @@ export default function BillingPage() {
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className={shared ? "hidden" : "grid gap-4 sm:grid-cols-2"}>
         {sorted.map((p) => {
           const selected = selectedPlan === p.polar_product_id;
           // The plan you already pay for can't be "switched" to.

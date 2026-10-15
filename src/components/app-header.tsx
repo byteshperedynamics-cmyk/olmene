@@ -7,6 +7,9 @@ import { Logo } from "@/components/logo";
 import { AccountMenu } from "@/components/account/account-menu";
 import { featureAgentEnabled, featureMeasureEnabled } from "@/lib/agent-client";
 import type { Identity } from "@/lib/account-client";
+import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
+import { atLeast } from "@/lib/workspace/roles";
+import type { WorkspaceSummary } from "@/lib/workspace/types";
 
 const NAV = [
   { href: "/app/", label: "Analyses", on: true },
@@ -15,6 +18,7 @@ const NAV = [
   { href: "/app/agent/", label: "Fix runs", on: featureAgentEnabled() },
   { href: "/app/impact/", label: "Impact", on: featureMeasureEnabled() },
   { href: "/app/alerts/", label: "Alerts", on: true },
+  { href: "/app/team/", label: "Team", on: true },
 ].filter((n) => n.on);
 
 // Sub-pages that belong to a nav item without sharing its path prefix.
@@ -31,18 +35,33 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 /**
- * Signed-in app header. From sm up the links sit inline next to the logo;
- * below sm they move to a scrollable tab row under the bar, and the action
- * buttons collapse to icons so nothing clips at 375px. The person's picture
+ * Signed-in app header. From lg up the links sit inline next to the logo;
+ * below lg they move to a scrollable tab row under the bar (seven links and
+ * the workspace switcher don't fit inline on a tablet), and below sm the
+ * action buttons collapse to icons so nothing clips at 375px. The person's picture
  * on the right opens the account menu (account, sharing, billing, sign out).
  */
-export function AppHeader({ pathname, identity, onSignOut }: { pathname: string; identity: Identity | null; onSignOut: () => void }) {
+export function AppHeader({
+  pathname,
+  identity,
+  onSignOut,
+  workspaces,
+}: {
+  pathname: string;
+  identity: Identity | null;
+  onSignOut: () => void;
+  /** Your workspaces and the one you're in (the switcher shows once there are two). */
+  workspaces?: { list: WorkspaceSummary[] | null; current: WorkspaceSummary | null };
+}) {
+  // Viewers can't start anything; everyone else can (the server checks too).
+  const canStart = !workspaces?.current || atLeast(workspaces.current.role, "member");
   return (
     <header className="o-glass sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 print:hidden">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-        <div className="flex items-center gap-6">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
           <Logo />
-          <nav className="hidden items-center gap-4 sm:flex" aria-label="App">
+          {workspaces?.list && <WorkspaceSwitcher list={workspaces.list} current={workspaces.current} />}
+          <nav className="hidden items-center gap-4 lg:flex" aria-label="App">
             {NAV.map((n) => (
               <Link
                 key={n.href}
@@ -56,12 +75,14 @@ export function AppHeader({ pathname, identity, onSignOut }: { pathname: string;
           </nav>
         </div>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-          <Button asChild size="sm" variant="outline" aria-label="New analysis">
-            <Link href="/app/new/">
-              <Plus className="size-4" aria-hidden />
-              <span className="hidden sm:inline">New analysis</span>
-            </Link>
-          </Button>
+          {canStart && (
+            <Button asChild size="sm" variant="outline" aria-label="New analysis">
+              <Link href="/app/new/">
+                <Plus className="size-4" aria-hidden />
+                <span className="hidden sm:inline">New analysis</span>
+              </Link>
+            </Button>
+          )}
           {identity ? (
             <AccountMenu identity={identity} onSignOut={onSignOut} />
           ) : (
@@ -72,10 +93,10 @@ export function AppHeader({ pathname, identity, onSignOut }: { pathname: string;
           )}
         </div>
       </div>
-      {/* Mobile: the same links as a scrollable tab row (sm+ uses the inline nav above). */}
+      {/* Below lg: the same links as a scrollable tab row (lg+ uses the inline nav above). */}
       <nav
         aria-label="App"
-        className="flex gap-1 overflow-x-auto border-t border-border/50 px-3 py-1.5 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden"
+        className="flex gap-1 overflow-x-auto border-t border-border/50 px-3 py-1.5 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
       >
         {NAV.map((n) => (
           <Link

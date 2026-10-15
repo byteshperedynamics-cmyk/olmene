@@ -9,6 +9,7 @@ import { WelcomeDialog } from "@/components/account/welcome-dialog";
 import { identityOf, useProfile } from "@/lib/account-client";
 import { listJobs } from "@/lib/data";
 import { isLeaving, useSession } from "@/lib/session";
+import { useFollowWorkspaceSwitches, useWorkspaces } from "@/lib/workspace/client";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { session, loading, loggedIn, signOut } = useSession();
@@ -20,6 +21,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // First sign-in: the profile row exists (the signup trigger made it) but onboarding hasn't run.
   const needsWelcome = !!profile.data && !profile.data.onboarded_at;
   const jobs = useQuery({ queryKey: ["jobs"], queryFn: listJobs, enabled: needsWelcome });
+  const workspaces = useWorkspaces(session);
+  useFollowWorkspaceSwitches();
 
   useEffect(() => {
     if (!loading && !loggedIn && !isLeaving()) {
@@ -55,7 +58,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div dir="ltr" className="flex min-h-screen flex-col">
-      <AppHeader pathname={pathname} identity={identity} onSignOut={() => signOut({ to: "/login/?signed_out=1" })} />
+      <AppHeader
+        pathname={pathname}
+        identity={identity}
+        workspaces={{ list: workspaces.list, current: workspaces.current }}
+        onSignOut={() => signOut({ to: "/login/?signed_out=1" })}
+      />
       <main id="main-content" className="flex-1">
         <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:py-10 print:max-w-none print:p-0">{children}</div>
       </main>
