@@ -6,7 +6,8 @@ import { isUnsubToken, loadUnsubscribe } from "@/lib/agency/server";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Email reports",
+  // No " — Olmene" suffix: white-label agencies' clients land here too.
+  title: { absolute: "Email reports" },
   robots: { index: false, follow: false },
   referrer: "no-referrer",
 };

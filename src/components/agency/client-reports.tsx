@@ -179,11 +179,12 @@ export function ClientReports({ client, canEdit, onView }: { client: Client; can
                 inputMode="email"
                 autoComplete="off"
                 dir="ltr"
+                required
                 aria-invalid={error ? true : undefined}
                 disabled={busy !== null}
               />
             </label>
-            <Button type="submit" variant="hairline" className="h-10 shrink-0" disabled={busy !== null || !email.trim()}>
+            <Button type="submit" variant="hairline" className="h-10 shrink-0" disabled={busy !== null}>
               <Plus className="size-4" aria-hidden /> {busy === "add" ? "Adding…" : "Add"}
             </Button>
           </div>

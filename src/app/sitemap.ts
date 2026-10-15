@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     page("/", "weekly", 1),
     page("/pricing/", "monthly", 0.9),
+    page("/business/", "monthly", 0.8),
     page("/sample-report/", "monthly", 0.8),
     page("/open/", "daily", 0.6),
     page("/login/", "yearly", 0.3),

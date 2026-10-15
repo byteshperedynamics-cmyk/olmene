@@ -294,9 +294,16 @@ function BrandForm({ view, onView, admin, onDraft }: { view: ClientsView; onView
               <>
                 Comes with the Team plan.{" "}
                 {view.role === "owner" && (
-                  <Link href="/app/billing/" className="underline underline-offset-4 hover:text-foreground">
-                    See plans
-                  </Link>
+                  <>
+                    <Link href="/app/billing/" className="underline underline-offset-4 hover:text-foreground">
+                      See plans
+                    </Link>{" "}
+                    or{" "}
+                    <Link href="/business/#trial" className="underline underline-offset-4 hover:text-foreground">
+                      try it free for 14 days
+                    </Link>
+                    .
+                  </>
                 )}
               </>
             )}

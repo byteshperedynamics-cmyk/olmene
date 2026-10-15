@@ -193,6 +193,29 @@ Not done, worth considering: a "reports sent" history on the client card
 (emails are English, like every other Olmene email); a custom sender domain
 for white-label agencies (the From address is still Olmene's).
 
+## Readiness pass and free trials (branch `business-trial`, 16 Oct)
+
+Stacked on `client-reports`. Hermes asked to make sure everything new really
+works, fix workflow and UX, and add a way for businesses to ask for a free
+trial. Done:
+
+- Review of everything since ce5a8e5 (profile fixes, workspaces, agency,
+  client reports). Fixed: client-report unsubscribe now asks first
+  (`/unsubscribe/?t=`; mail scanners open every link), invitation tokens
+  kept out of Google Analytics (`data-private-page`, `analyticsLocation`),
+  members no longer read pending invitation rows (policy in
+  20261024_client_reports.sql), "Last sent" set only when an email really
+  went out, neutral 401 message. Checked live (signed out): the new API
+  routes refuse without a session, invitation lookups 404 cleanly, plan
+  slugs match `SEATS_BY_PLAN` / `canWhiteLabel`.
+- UX: no more pre-disabled submit buttons (invite, add client, add
+  recipient); "How it works for your clients" mentions email reports; trial
+  links where Free users hit a wall (Team page, Billing, white label).
+- Free trial: `/business/` page and request form, `trial_requests` table,
+  notify emails each request to SUPPORT_EMAIL with Reply-To. 14 days of
+  Team, reply within one working day (Hermes's choice). See
+  `docs/business-trial.md` for what Hermes does with each request.
+
 ## Next: 2c, then 2d (ideas agreed in principle)
 
 - **2c Overview**: top of `/app/clients/` (or its own tab): totals (clients,

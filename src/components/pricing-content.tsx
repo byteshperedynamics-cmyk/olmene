@@ -6,6 +6,7 @@ import { Check, ShieldCheck } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PlanGrid } from "@/components/v2/pricing/plan-grid";
+import { TrialBand } from "@/components/business/trial-band";
 import type { Plan } from "@/lib/data";
 import { Eyebrow } from "@/components/v2/atoms";
 import { track } from "@/lib/track";
@@ -45,6 +46,8 @@ export function PricingContent({ initialPlans }: { initialPlans?: Plan[] } = {})
         <section className="pb-20">
           <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
             <PlanGrid initialPlans={initialPlans} />
+
+            <TrialBand className="mt-10" />
 
             {/* Risk reversal */}
             <div className="mt-10 grid gap-6 rounded-2xl border bg-card p-6 sm:p-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">

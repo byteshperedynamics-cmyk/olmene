@@ -35,6 +35,7 @@ export function SiteFooter() {
             <ul className="space-y-1 text-sm text-muted-foreground">
               <li><Link className={linkClass} href="/#how-it-works">{t("nav.howItWorks")}</Link></li>
               <li><Link className={linkClass} href="/pricing/">{t("nav.pricing")}</Link></li>
+              <li><Link className={linkClass} href="/business/">{t("footer.business")}</Link></li>
               <li><Link className={linkClass} href="/sample-report/">{t("nav.sampleReport")}</Link></li>
               <li><Link className={linkClass} href="/login/">{t("common.signIn")}</Link></li>
             </ul>

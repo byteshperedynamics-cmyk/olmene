@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FreeAuditInput } from "@/components/free-audit-form";
 import { PlanGrid } from "../pricing/plan-grid";
+import { TrialBand } from "@/components/business/trial-band";
 import { CHECK_COUNT, FOUNDER_LINKEDIN, FOUNDER_NAME } from "@/lib/config";
 import { useI18n, Tx } from "@/i18n/provider";
 import { Eyebrow } from "../atoms";
@@ -132,6 +133,7 @@ export function PricingBand() {
         </Button>
       </div>
       <PlanGrid layout="home" />
+      <TrialBand />
     </Section>
   );
 }

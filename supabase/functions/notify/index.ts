@@ -148,6 +148,41 @@ async function deliverToChannels(supabase: ReturnType<typeof db>, n: Row, appUrl
   return delivered;
 }
 
+/**
+ * Free-trial requests from /business/ go to Olmene's inbox (notify_to, set
+ * by the Worker from SUPPORT_EMAIL), Reply-To the person who asked, so a
+ * reply goes straight to them. Up to 3 tries each, then left for a person
+ * to find in the table.
+ */
+async function sendTrialRequests(supabase: ReturnType<typeof db>, appUrl: string): Promise<number> {
+  const { data } = await supabase
+    .from("trial_requests")
+    .select("id, name, email, company, website, kind, team_size, note, language, user_id, notify_to, notify_attempts, created_at")
+    .is("notified_at", null)
+    .lt("notify_attempts", MAX_ATTEMPTS)
+    .not("notify_to", "is", null)
+    .order("created_at", { ascending: true })
+    .limit(10);
+  let sent = 0;
+  for (const r of (data ?? []) as Record<string, unknown>[]) {
+    const mail = render("trial_request", {
+      name: r.name, email: r.email, company: r.company, website: r.website, kind: r.kind, teamSize: r.team_size,
+      note: r.note, language: r.language, userId: r.user_id, createdAt: r.created_at,
+    }, appUrl, "Sent by olmene.com/business/.");
+    const to = String(r.notify_to ?? "");
+    if (!mail || !INVITE_EMAIL.test(to)) {
+      await supabase.from("trial_requests").update({ notify_attempts: MAX_ATTEMPTS }).eq("id", r.id);
+      continue;
+    }
+    const res = await sendEmail({ to, subject: mail.subject, html: mail.html, text: mail.text, tag: "trial_request", replyTo: String(r.email) });
+    await supabase.from("trial_requests")
+      .update(res.ok ? { notified_at: new Date().toISOString(), notify_attempts: Number(r.notify_attempts ?? 0) + 1 } : { notify_attempts: Number(r.notify_attempts ?? 0) + 1 })
+      .eq("id", r.id);
+    if (res.ok) sent++;
+  }
+  return sent;
+}
+
 Deno.serve(async (req) => {
   const url = new URL(req.url);
   const supabase = db();
@@ -203,6 +238,7 @@ Deno.serve(async (req) => {
   }
   if (!emailConfigured()) return Response.json({ ok: true, ...channelOut, skipped: "BREVO_API_KEY / NOTIFY_FROM_EMAIL not set" });
 
+  const trialRequests = await sendTrialRequests(supabase, appUrl).catch(() => 0);
   const fnBase = `${Deno.env.get("SUPABASE_URL") ?? ""}/functions/v1/notify`;
   const { data: rows } = await supabase
     .from("notifications")
@@ -297,5 +333,5 @@ Deno.serve(async (req) => {
       out.failed++;
     }
   }
-  return Response.json({ ok: true, ...out, ...channelOut });
+  return Response.json({ ok: true, ...out, ...channelOut, trialRequests });
 });

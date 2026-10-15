@@ -171,10 +171,15 @@ function InviteForm({ view, onInvited }: { view: WorkspaceView; onInvited: () =>
             : `All ${view.seats.limit} places on your plan are taken. Remove someone, withdraw an invitation, or move to a bigger plan.`}
         </p>
         {view.role === "owner" && (
-          <div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <Button asChild variant="sheen" size="sm">
               <Link href="/app/billing/">See plans</Link>
             </Button>
+            {view.seats.limit <= 1 && (
+              <Link href="/business/#trial" className="text-[13px] font-medium underline underline-offset-4">
+                Or try Team with your team, free for 14 days
+              </Link>
+            )}
           </div>
         )}
       </div>
@@ -219,7 +224,7 @@ function InviteForm({ view, onInvited }: { view: WorkspaceView; onInvited: () =>
             ))}
           </select>
         </label>
-        <Button type="submit" variant="sheen" className="h-11" disabled={busy || !email.trim()}>
+        <Button type="submit" variant="sheen" className="h-11" disabled={busy}>
           <MailPlus className="size-4" aria-hidden /> {busy ? "Sending…" : "Send invitation"}
         </Button>
       </form>

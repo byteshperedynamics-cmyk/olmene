@@ -119,3 +119,15 @@ Deno.test("client reports: white label drops Olmene's name; tests carry no unsub
   assertEquals(render("client_report", { ...base, unsubscribeUrl: null }, "https://olmene.com", ""), null, "never without an unsubscribe link");
   assertEquals(render("client_report", { ...base, sites: [] }, "https://olmene.com", ""), null, "nothing to report");
 });
+
+Deno.test("trial requests reach Olmene's inbox with every field, escaped", () => {
+  const r = render("trial_request", {
+    name: "Ana <Lima>", email: "ana@northwind.example", company: "Northwind Studio", website: "https://northwind.example/",
+    kind: "agency", teamSize: "6-20", note: "Twelve clients\non WordPress.", language: "de", userId: null, createdAt: "2026-10-16T10:00:00Z",
+  }, "https://olmene.com", "footer")!;
+  assertEquals(r.subject, "Trial request: Northwind Studio (agency)");
+  assert(r.html.includes("Ana &lt;Lima&gt;") && !r.html.includes("<Lima>"));
+  assert(r.text.includes("Team size: 6-20") && r.text.includes("Twelve clients\non WordPress."));
+  assert(r.text.includes("Reply to this email to reach them."));
+  assertEquals(render("trial_request", { company: "", email: "x@y.z" }, "https://olmene.com", ""), null);
+});

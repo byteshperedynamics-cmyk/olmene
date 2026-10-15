@@ -191,7 +191,7 @@ function ClientForm({
         </p>
       )}
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant="sheen" disabled={busy || !f.name.trim()}>
+        <Button type="submit" variant="sheen" disabled={busy}>
           {busy ? busyLabel : submitLabel}
         </Button>
         <Button type="button" variant="ghost" onClick={onCancel} disabled={busy}>
@@ -490,7 +490,7 @@ function HowItWorks() {
   return (
     <section className="grid gap-3 rounded-2xl border bg-card p-5" aria-labelledby="how-pages">
       <h2 id="how-pages" className="text-[14px] font-medium">
-        How client pages work
+        How it works for your clients
       </h2>
       <ol className="grid gap-2.5 text-[13px] text-muted-foreground">
         <li className="flex gap-2.5">
@@ -501,6 +501,9 @@ function HowItWorks() {
         </li>
         <li className="flex gap-2.5">
           <span className="o-readout-strong w-4 shrink-0 text-[12px]">3</span> They see each site&apos;s score and progress, updated every week, under your name. Reports, findings and fixes stay private.
+        </li>
+        <li className="flex gap-2.5">
+          <span className="o-readout-strong w-4 shrink-0 text-[12px]">4</span> Turn on an email report, and the people you add get the same numbers every Monday or on the 1st.
         </li>
       </ol>
     </section>

@@ -16,7 +16,7 @@ import { SUPPORT_EMAIL } from "@/lib/config";
 export type LegalSection = { h: string; p: string[] };
 
 export const LP_SECTIONS: LegalSection[] = [
-  { h: "lp.s1.h", p: ["lp.s1.p"] },
+  { h: "lp.s1.h", p: ["lp.s1.p", "lp.s1.trial", "lp.s1.recipients"] },
   { h: "lp.s2.h", p: ["lp.s2.p"] },
   { h: "lp.s3.h", p: ["lp.s3.p"] },
   { h: "lp.s4.h", p: ["lp.s4.p"] },

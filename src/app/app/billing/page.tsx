@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, ExternalLink, Sparkles } from "lucide-react";
@@ -76,6 +77,16 @@ export default function BillingPage() {
           Plans are counted in fixes and reports; Fix includes 2 people and Team 5. Cancel any time; access runs to the end of your period.
         </p>
       </div>
+
+      {!shared && ent && !ent.active && (
+        <p className="rounded-xl border border-rim bg-chip/50 px-4 py-3 text-sm">
+          Setting Olmene up for a company or an agency?{" "}
+          <Link href="/business/#trial" className="font-medium underline underline-offset-4">
+            Ask for 14 days of Team, free
+          </Link>
+          . We set it up within one working day.
+        </p>
+      )}
 
       {shared && (
         <Card>

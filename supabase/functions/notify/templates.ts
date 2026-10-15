@@ -143,6 +143,37 @@ export function render(kind: string, p: Payload, appUrl: string, footer: string)
         optional: false,
       };
     }
+    case "trial_request": {
+      // To Olmene's own inbox (notify/index.ts); Reply-To is the person who asked.
+      const company = String(p.company ?? "").trim();
+      const email = String(p.email ?? "").trim();
+      if (!company || !email) return null;
+      const kind = p.kind === "agency" ? "agency" : "company";
+      const rows: [string, string][] = [
+        ["Name", String(p.name ?? "")],
+        ["Email", email],
+        ["Company", company],
+        ["Website", String(p.website ?? "")],
+        ["For", kind === "agency" ? "An agency (clients' websites)" : "A company (its own websites)"],
+        ["Team size", p.teamSize ? String(p.teamSize) : "Not given"],
+        ["Language", p.language ? String(p.language) : "Not given"],
+        ["Signed in", p.userId ? `Yes (user ${String(p.userId)})` : "No"],
+      ];
+      const note = typeof p.note === "string" && p.note.trim() ? p.note.trim() : "";
+      const due = typeof p.createdAt === "string" && !Number.isNaN(Date.parse(p.createdAt))
+        ? new Date(Date.parse(p.createdAt) + 86_400_000).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" }) + " UTC"
+        : null;
+      return {
+        subject: `Trial request: ${company} (${kind})`,
+        text: `${rows.map(([k, v]) => `${k}: ${v}`).join("\n")}${note ? `\n\nNote:\n${note}` : ""}\n\nReply to this email to reach them.${due ? ` The page promised a reply by ${due} (one working day).` : ""}`,
+        html: html(`Trial request: ${company}`, [
+          rows.map(([k, v]) => `<strong>${e(k)}:</strong> ${e(v)}`).join("<br>"),
+          note ? `<strong>Note:</strong><br>${e(note).replace(/\n/g, "<br>")}` : "",
+          `Reply to this email to reach them.${due ? ` The page promised a reply within one working day (by ${e(due)}).` : ""}`,
+        ]),
+        optional: false,
+      };
+    }
     case "client_report": {
       // Built by notify (client-report.ts) and sent to someone the agency added,
       // under the agency's name. The footer is this email's own: who sent it,
