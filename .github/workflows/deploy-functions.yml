@@ -38,7 +38,9 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: env.SUPABASE_ACCESS_TOKEN != ''
         with:
-          version: latest
+          # Pinned: "latest" asks GitHub's API which version that is, and
+          # shared runners hit its rate limit (deploy failed on 2026-10-15).
+          version: 2.121.0
       - name: Deploy
         if: env.SUPABASE_ACCESS_TOKEN != ''
         run: |
