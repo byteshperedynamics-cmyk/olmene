@@ -16,6 +16,7 @@ import { getSupabase } from "@/lib/supabase";
 import { identityOf, useProfile } from "@/lib/account-client";
 import { useSession } from "@/lib/session";
 import { finishGoogleSignIn, googleSignInEnabled, readGoogleReturn, startGoogleSignIn } from "@/lib/auth/google-signin-client";
+import { safeNextPath } from "@/lib/safe-next";
 import { useI18n, usePageMeta } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
@@ -122,9 +123,8 @@ function LoginForm() {
   const params = useSearchParams();
   const [mode, setMode] = useState<"signin" | "signup">(params.get("mode") === "signup" ? "signup" : "signin");
   usePageMeta(mode === "signup" ? "meta.title.signup" : "meta.title.login");
-  // Only allow in-app redirect targets (never external URLs).
-  const rawNext = params.get("next") ?? "/app/";
-  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/app/";
+  // Only allow in-app redirect targets (never external URLs; lib/safe-next.ts).
+  const nextPath = safeNextPath(params.get("next"));
   const { session, loading: sessionLoading, signOut } = useSession();
   const profile = useProfile(session);
   const identity = identityOf(session, profile.data);

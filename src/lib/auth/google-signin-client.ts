@@ -2,6 +2,7 @@
 
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/config";
 import { getSupabase } from "@/lib/supabase";
+import { safeNextPath } from "@/lib/safe-next";
 
 /**
  * Browser half of "Continue with Google" (server half and the full flow:
@@ -29,8 +30,7 @@ export function readGoogleReturn(): { token: string; next: string } | null {
   if (typeof window === "undefined" || !window.location.hash.includes("google_id_token=")) return null;
   const p = new URLSearchParams(window.location.hash.slice(1));
   const token = p.get("google_id_token");
-  const next = p.get("next") ?? "/app/";
-  return token ? { token, next: next.startsWith("/") && !next.startsWith("//") ? next : "/app/" } : null;
+  return token ? { token, next: safeNextPath(p.get("next")) } : null;
 }
 
 /** Exchanges the Google ID token for a Supabase session. Returns an auth_error code on failure. */
