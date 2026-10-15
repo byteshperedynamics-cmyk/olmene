@@ -38,7 +38,7 @@ export function ComponentGallery() {
 
         <Cell name="AppHeader · signed-in app bar (resize to check the mobile tab row)">
           <div className="overflow-hidden rounded-xl border">
-            <AppHeader pathname="/app/billing/" onSignOut={() => {}} />
+            <AppHeader pathname="/app/billing/" identity={null} onSignOut={() => {}} />
           </div>
         </Cell>
 

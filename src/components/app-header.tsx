@@ -4,7 +4,9 @@ import Link from "next/link";
 import { LogOut, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { AccountMenu } from "@/components/account/account-menu";
 import { featureAgentEnabled, featureMeasureEnabled } from "@/lib/agent-client";
+import type { Identity } from "@/lib/account-client";
 
 const NAV = [
   { href: "/app/", label: "Analyses", on: true },
@@ -31,9 +33,10 @@ function isActive(pathname: string, href: string): boolean {
 /**
  * Signed-in app header. From sm up the links sit inline next to the logo;
  * below sm they move to a scrollable tab row under the bar, and the action
- * buttons collapse to icons so nothing clips at 375px.
+ * buttons collapse to icons so nothing clips at 375px. The person's picture
+ * on the right opens the account menu (account, sharing, billing, sign out).
  */
-export function AppHeader({ pathname, onSignOut }: { pathname: string; onSignOut: () => void }) {
+export function AppHeader({ pathname, identity, onSignOut }: { pathname: string; identity: Identity | null; onSignOut: () => void }) {
   return (
     <header className="o-glass sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70 print:hidden">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -59,10 +62,14 @@ export function AppHeader({ pathname, onSignOut }: { pathname: string; onSignOut
               <span className="hidden sm:inline">New analysis</span>
             </Link>
           </Button>
-          <Button variant="ghost" size="sm" onClick={onSignOut} aria-label="Sign out">
-            <LogOut className="size-4 sm:hidden" aria-hidden />
-            <span className="hidden sm:inline">Sign out</span>
-          </Button>
+          {identity ? (
+            <AccountMenu identity={identity} onSignOut={onSignOut} />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={onSignOut} aria-label="Sign out">
+              <LogOut className="size-4 sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
+          )}
         </div>
       </div>
       {/* Mobile: the same links as a scrollable tab row (sm+ uses the inline nav above). */}
