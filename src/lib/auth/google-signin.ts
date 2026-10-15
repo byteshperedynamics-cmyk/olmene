@@ -25,6 +25,7 @@
  * client Measure uses). Scopes are the non-sensitive openid + email + profile.
  */
 import { getEnv } from "@/lib/agent/env";
+import { safeNextPath } from "@/lib/safe-next";
 
 export const SIGNIN_SCOPE = "openid email profile";
 export const STATE_COOKIE = "olm_google_signin";
@@ -39,12 +40,8 @@ export function googleSignInClient(): { id: string; secret: string } | null {
   return id && secret ? { id, secret } : null;
 }
 
-/** In-app paths only (never another origin). */
-export function safeNextPath(raw: string | null | undefined): string {
-  if (!raw || raw.length > 512) return "/app/";
-  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\")) return "/app/";
-  return raw;
-}
+/** In-app paths only (never another origin); shared with the browser half and the login page. */
+export { safeNextPath };
 
 /** sha256(raw nonce) as lowercase hex, which is what Supabase compares against. */
 export function isHashedNonce(v: string | null): v is string {
