@@ -30,8 +30,13 @@ async function fromDb(limit: number, since: string | null): Promise<Array<{ id: 
   return ((await res.json()) as Array<{ id: string; data: ReportData }>).map((r) => ({ id: r.id, report: r.data }));
 }
 
+/** Bare report files, or scripts/pipeline-eval/run.ts output (the report under `report`). */
 function fromDir(dir: string): Array<{ id: string; report: ReportData }> {
-  return readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => ({ id: f, report: JSON.parse(readFileSync(join(dir, f), "utf8")) as ReportData }));
+  return readdirSync(dir).filter((f) => f.endsWith(".json")).flatMap((f) => {
+    const raw = JSON.parse(readFileSync(join(dir, f), "utf8")) as ReportData | { report: ReportData | null };
+    const report = "meta" in raw ? raw : raw.report;
+    return report ? [{ id: f, report }] : [];
+  });
 }
 
 const rows = args.includes("--db") ? await fromDb(Number(opt("--limit") ?? 20), opt("--since")) : opt("--dir") ? fromDir(opt("--dir")!) : [];

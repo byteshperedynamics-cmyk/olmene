@@ -46,6 +46,33 @@ Deno.test("category: online store, app, SaaS, content", () => {
   assertEquals(blog.checks.find((c) => c.id === "biz-feed")?.status, "pass");
 });
 
+Deno.test("category: navigation lists and software plans are not a shop", () => {
+  // basecamp.com, 2026-10-29: WebPage, WebSite and an ItemList of nav links.
+  const nav = analyzeBusiness(input(`<p>Project management for teams: to-dos, a dashboard, integrations and onboarding.</p><a href="/pricing">Pricing</a><a>Try it free</a>`, {
+    jsonLdTypes: ["WebPage", "WebSite", "ItemList", "SiteNavigationElement"], hasPricingPage: true, ctaButtons: ["Try it free"],
+  }));
+  assertEquals(nav.category.id, "saas");
+  const plans = analyzeBusiness(input(`<p>Analytics for teams.</p>`, { jsonLdTypes: ["SoftwareApplication", "Offer", "AggregateRating"], hasPricingPage: true }));
+  assertEquals(plans.category.id, "saas");
+  const shop = analyzeBusiness(input(`<p>Add to cart</p>`, { jsonLdTypes: ["Product", "Offer"] }));
+  assertEquals(shop.category.id, "ecommerce");
+  assertEquals(shop.checks.find((c) => c.id === "biz-product-schema")?.status, "pass");
+  assertEquals(analyzeBusiness(input(`<p>Tickets</p>`, { jsonLdTypes: ["Offer"] })).category.id, "ecommerce");
+});
+
+Deno.test("saas trial: offered on another crawled page is a warning that names the page, not 'no trial'", () => {
+  const base = { hasPricingPage: true, jsonLdTypes: ["SoftwareApplication"] };
+  const none = analyzeBusiness(input(`<p>Analytics</p>`, base)).checks.find((c) => c.id === "biz-trial");
+  assertEquals(none?.status, "warn");
+  assert(none?.detail.startsWith("No free trial"));
+  const other = analyzeBusiness(input(`<p>Analytics</p>`, { ...base, otherPages: [{ url: "https://example.org/pricing", text: "Pro: Try 14-day free trial" }] }))
+    .checks.find((c) => c.id === "biz-trial");
+  assertEquals(other?.status, "warn");
+  assert(other?.detail.includes("/pricing"));
+  const home = analyzeBusiness(input(`<a>Start free trial</a>`, base)).checks.find((c) => c.id === "biz-trial");
+  assertEquals(home?.status, "pass");
+});
+
 Deno.test("category: nothing specific stays 'other' with no checks", () => {
   const r = analyzeBusiness(input("<p>Hello world</p>"));
   assertEquals(r.category.id, "other");

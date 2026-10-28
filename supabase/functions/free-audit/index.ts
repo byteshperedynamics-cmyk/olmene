@@ -506,7 +506,10 @@ function computeSeoSignals(
   const priceMatches = lowText.match(/(?:[$€£¥₹]\s?\d{1,5}(?:[.,]\d{2})?|\d{1,5}(?:[.,]\d{2})?\s?(?:€|£|zł|kr|usd|eur|gbp)\b|\b(?:usd|eur|gbp)\s?\d{1,5})/g) ?? [];
   const pricePerPeriod = /(?:[$€£]\s?\d[\d.,]*|\d[\d.,]*\s?(?:€|£|usd|eur))\s?(?:\/|per|a|pro|al|par|por|al mese|\/ ?mo)\s?(?:month|mo|year|yr|monat|jahr|mes|año|mois|an|mese|anno|mês|ano|user|seat)\b/.test(lowText);
   const cartLike = /add to (?:cart|bag)|in den warenkorb|añadir al carrito|ajouter au panier|aggiungi al carrello|adicionar ao carrinho|in winkelwagen/.test(lowText);
-  const productSchema = jsonLdTypes.some((t) => /^(?:Product|Offer|AggregateOffer|OnlineStore|Store|ProductGroup)$/i.test(t));
+  // Offers also describe software plans (SoftwareApplication.offers), so on
+  // their own they only mark a shop when the page isn't software.
+  const softwareSchema = jsonLdTypes.some((t) => /^(?:SoftwareApplication|WebApplication|MobileApplication)$/i.test(t));
+  const productSchema = jsonLdTypes.some((t) => /^(?:Product|OnlineStore|Store|ProductGroup)$/i.test(t)) || (!softwareSchema && jsonLdTypes.some((t) => /^(?:Offer|AggregateOffer)$/i.test(t)));
   const isStore = storePlatform || productSchema || (priceMatches.length >= 4 && (cartLike || productLinks >= 3)) || priceMatches.length >= 10;
   const pricingEvidence: "link" | "homepage" | "store" | null = hasPricingPage ? "link" : isStore && priceMatches.length > 0 ? "store" : pricePerPeriod ? "homepage" : null;
   if (pricingEvidence) hasPricingPage = true;

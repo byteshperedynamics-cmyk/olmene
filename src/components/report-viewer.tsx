@@ -115,10 +115,10 @@ function SeoCheckRow({ c }: { c: SeoCheck }) {
 
 // ── Section renderers ───────────────────────────────────────────────────
 
-const COPY_KIND_LABEL: Record<ConversionDiffField["kind"], string> = {
-  h1: "Headline",
-  subheadline: "Subheadline",
-  cta: "CTA button",
+const COPY_KIND_KEYS: Record<ConversionDiffField["kind"], string> = {
+  h1: "rv.copyKind.h1",
+  subheadline: "rv.copyKind.subheadline",
+  cta: "rv.copyKind.cta",
 };
 
 /**
@@ -150,7 +150,7 @@ export function ConversionDiffSection({ diff }: { diff: ConversionDiff }) {
         <div key={f.kind} className="o-artifact rounded-xl p-4 print-block">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded border border-rim bg-chip px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
-              {COPY_KIND_LABEL[f.kind]}
+              {t(COPY_KIND_KEYS[f.kind])}
             </span>
             <span className="font-mono text-[11px] text-muted-foreground" dir="ltr">
               {f.tag ? `<${f.tag}>` : null}
@@ -220,7 +220,10 @@ export function SummarySection({ r }: { r: ReportData }) {
           <ScoreBar label={t("scores.trust")} value={s.trust} />
         </div>
       </div>
-      <p className="font-display text-xl font-semibold leading-snug text-balance">{r.executiveSummary.headline}</p>
+      <p className="font-display text-xl font-semibold leading-snug text-balance">
+        {r.executiveSummary.headline}
+        {r.meta.quality?.headlineUnverified && <Unverified />}
+      </p>
       <div>
         <h3 className="font-display text-lg font-semibold">{t("rv.topFindings")}</h3>
         <ul className="mt-3 space-y-2.5">

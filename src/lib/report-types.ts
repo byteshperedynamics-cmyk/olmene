@@ -93,7 +93,8 @@ export interface ReportData {
     /** engine v2: mobile lab speed (PageSpeed Insights) measured during the report. */
     speed?: { source: string; performance: number | null; lcpMs: number | null; cls: number | null; tbtMs: number | null } | null;
     /** engine v2: market claims whose numbers were checked against their cited sources. */
-    quality?: { claimsChecked: number; claimsUnverified: number };
+    /** headlineUnverified: the headline repeats a market figure flagged unverified below. */
+    quality?: { claimsChecked: number; claimsUnverified: number; headlineUnverified?: boolean };
   };
   executiveSummary: {
     headline: string;

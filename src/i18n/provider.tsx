@@ -294,7 +294,6 @@ export function usePageMeta(titleKey: string, descKey?: string) {
     }
     return () => registerPageMeta(null);
     // registerPageMeta is stable (empty deps in the provider)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t, titleKey, descKey]);
 }
 

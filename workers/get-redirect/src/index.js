@@ -13,9 +13,11 @@
 
 const NEW_ORIGIN = "https://olmene.com";
 
-export default {
+const worker = {
   async fetch(request) {
     const url = new URL(request.url);
     return Response.redirect(NEW_ORIGIN + url.pathname + url.search, 301);
   },
 };
+
+export default worker;

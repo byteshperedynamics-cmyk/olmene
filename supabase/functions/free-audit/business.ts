@@ -48,7 +48,18 @@ export const CATEGORY_LABELS: Record<CategoryId, string> = {
 /** schema.org types that are local businesses (the common subtypes of LocalBusiness). */
 const LOCAL_TYPES = /^(LocalBusiness|ProfessionalService|HomeAndConstructionBusiness|Plumber|Electrician|HVACBusiness|RoofingContractor|GeneralContractor|Locksmith|MovingCompany|HousePainter|Dentist|Physician|MedicalClinic|MedicalBusiness|Optician|Pharmacy|VeterinaryCare|LegalService|Attorney|Notary|AccountingService|FinancialService|InsuranceAgency|RealEstateAgent|BeautySalon|HairSalon|NailSalon|DaySpa|HealthClub|ExerciseGym|SportsActivityLocation|AutoRepair|AutoDealer|AutomotiveBusiness|ChildCare|DryCleaningOrLaundry|EmergencyService|EmploymentAgency|EntertainmentBusiness|Hotel|LodgingBusiness|BedAndBreakfast|Hostel|TravelAgency|Store|ClothingStore|Florist|Bakery|SelfStorage|TouristInformationCenter|AnimalShelter|Library|RadioStation)$/;
 const FOOD_TYPES = /^(Restaurant|FoodEstablishment|CafeOrCoffeeShop|BarOrPub|Bakery|FastFoodRestaurant|IceCreamShop|Winery|Brewery|Distillery)$/;
-const STORE_TYPES = /^(Product|Offer|AggregateOffer|OnlineStore|ProductGroup|ItemList)$/;
+const PRODUCT_TYPES = /^(Product|ProductGroup|OnlineStore)$/;
+const OFFER_TYPES = /^(Offer|AggregateOffer)$/;
+const SOFTWARE_TYPES = /^(SoftwareApplication|WebApplication|MobileApplication)$/;
+
+/**
+ * The structured-data type that shows a shop, if any. Offers count only when
+ * they aren't a software plan (SoftwareApplication.offers is a price, not a
+ * shop). ItemList never counts: sites use it for navigation and article lists.
+ */
+function storeType(types: string[]): string | undefined {
+  return types.find((t) => PRODUCT_TYPES.test(t)) ?? (types.some((t) => SOFTWARE_TYPES.test(t)) ? undefined : types.find((t) => OFFER_TYPES.test(t)));
+}
 
 export interface BusinessInput {
   html: string;
@@ -58,6 +69,8 @@ export interface BusinessInput {
   hasPricingPage: boolean;
   ctaButtons: string[];
   trustSignals: string[];
+  /** Text of other pages already read (the full report crawls a few); the free scan reads only the homepage. */
+  otherPages?: { url: string; text: string }[];
 }
 
 interface Facts {
@@ -146,8 +159,9 @@ export function detectCategory(input: BusinessInput, facts: Facts = factsOf(inpu
   if (food) return make("restaurant", "high", [`${food} structured data`, ...(menu ? ["menu"] : []), ...(reserve ? ["reservations"] : [])]);
   if (menu && reserve) return make("restaurant", "medium", ["menu", "reservations"]);
 
-  if (input.isStore || types.some((t) => STORE_TYPES.test(t))) {
-    const why = [types.find((t) => STORE_TYPES.test(t)) ? "product structured data" : "store platform or product prices"];
+  const storeSchema = storeType(types);
+  if (input.isStore || storeSchema) {
+    const why = [storeSchema ? "product structured data" : "store platform or product prices"];
     if (has(low, /add to (?:cart|bag)/)) why.push("add-to-cart");
     return make("ecommerce", input.isStore ? "high" : "medium", why);
   }
@@ -202,6 +216,14 @@ export function detectCategory(input: BusinessInput, facts: Facts = factsOf(inpu
 
 // ─── Checks per kind of business (unscored, group "Business") ────────────
 
+function pathOf(url: string): string {
+  try {
+    return new URL(url).pathname || "/";
+  } catch {
+    return url;
+  }
+}
+
 function c(id: string, check: string, ok: boolean | "warn", passDetail: string, failDetail: string, failStatus: "warn" | "fail" = "warn"): ExtraCheck {
   const status = ok === true ? "pass" : ok === "warn" ? "warn" : failStatus;
   return { id: `biz-${id}`, group: "Business", check, status, detail: ok === true ? passDetail : failDetail };
@@ -235,7 +257,7 @@ export function businessChecks(category: Category, input: BusinessInput, facts: 
       break;
     case "ecommerce":
       out.push(
-        c("product-schema", "Product structured data", types.some((t) => STORE_TYPES.test(t)), "Product data is marked up (prices and availability can show in search)", "No Product or Offer structured data on the homepage: make sure product pages have it so prices and stock show in Google"),
+        c("product-schema", "Product structured data", storeType(types) !== undefined, "Product data is marked up (prices and availability can show in search)", "No Product or Offer structured data on the homepage: make sure product pages have it so prices and stock show in Google"),
         c("shipping", "Shipping and returns are easy to find", has(low, SHIPPING) || linkMatches(facts, /shipping|delivery|returns|refund|versand|livraison|envio|spedizione/), "Shipping or returns information is linked", "No shipping or returns information on the homepage: it's a top reason shoppers leave"),
         c("payment", "Payment options shown", has(low, PAYMENT), "Accepted payment methods are visible", "No payment methods shown (Visa, PayPal, Apple Pay…): showing them reassures first-time buyers"),
         c("reviews", "Customer reviews visible", types.includes("AggregateRating") || types.includes("Review") || has(low, REVIEWS), "Reviews or ratings are visible", "No reviews or ratings visible on the homepage"),
@@ -243,8 +265,12 @@ export function businessChecks(category: Category, input: BusinessInput, facts: 
       break;
     case "saas": {
       const trial = has(low, TRIAL) || input.ctaButtons.some((b) => TRIAL.test(b.toLowerCase()));
+      // Offered elsewhere (often the pricing page) but not on the homepage: say so, rather than "no trial".
+      const elsewhere = trial ? undefined : input.otherPages?.find((p) => TRIAL.test(p.text.toLowerCase()));
       out.push(
-        c("trial", "Free trial or demo offer", trial, "A free trial or demo call to action is on the homepage", "No free trial or demo offer: most software buyers want to try before they pay"),
+        elsewhere
+          ? c("trial", "Free trial or demo offer", "warn", "", `A free trial or demo is offered on ${pathOf(elsewhere.url)}, but not on the homepage: put it next to the main call to action`)
+          : c("trial", "Free trial or demo offer", trial, "A free trial or demo call to action is on the homepage", "No free trial or demo offer: most software buyers want to try before they pay"),
         c("proof", "Social proof", input.trustSignals.length >= 2, `Proof found: ${input.trustSignals.slice(0, 3).join(", ")}`, input.trustSignals.length ? `Only ${input.trustSignals[0]}: add customer logos, quotes or numbers near the signup` : "No customer logos, quotes or numbers"),
         c("security", "Security and privacy page", linkMatches(facts, /security|trust|privacy|gdpr|dpa|compliance/), "A security, trust or privacy page is linked", "No security or privacy link: business buyers look for one before signing up"),
         c("schema", "SoftwareApplication structured data", types.includes("SoftwareApplication") || types.includes("WebApplication"), "Software structured data is present", "No SoftwareApplication structured data (optional): helps search engines and AI assistants describe your product and price"),

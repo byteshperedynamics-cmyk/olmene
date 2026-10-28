@@ -52,11 +52,14 @@ export function CountUp({
     return () => cancelAnimationFrame(raf);
   }, [armed, inView, value, duration]);
 
+  // Only the running count-up shows `shown`; otherwise (reduced motion, not yet
+  // in view, or a live value that arrived later) the real value is on screen.
+  const display = armed && inView ? shown : value;
   let formatted: string;
   try {
-    formatted = new Intl.NumberFormat(lang).format(shown);
+    formatted = new Intl.NumberFormat(lang).format(display);
   } catch {
-    formatted = String(shown);
+    formatted = String(display);
   }
 
   return (

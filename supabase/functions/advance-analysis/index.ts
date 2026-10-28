@@ -14,7 +14,7 @@ import { roleOn } from "../_shared/workspace.ts";
 import { analyzeBusiness } from "../free-audit/business.ts";
 import { detectPlatform } from "../free-audit/extras.ts";
 import { labSpeed } from "../_shared/speed.ts";
-import { checkMarketClaims } from "./quality.ts";
+import { checkMarketClaims, unverifiedNumbersIn } from "./quality.ts";
 
 // ───────────── inlined: _shared/cors.ts ─────────────
 /**
@@ -1838,7 +1838,10 @@ function status(present, warnCondition = false) {
   const priceMatches = lowText.match(/(?:[$€£¥₹]\s?\d{1,5}(?:[.,]\d{2})?|\d{1,5}(?:[.,]\d{2})?\s?(?:€|£|zł|kr|usd|eur|gbp)\b|\b(?:usd|eur|gbp)\s?\d{1,5})/g) ?? [];
   const pricePerPeriod = /(?:[$€£]\s?\d[\d.,]*|\d[\d.,]*\s?(?:€|£|usd|eur))\s?(?:\/|per|a|pro|al|par|por|al mese|\/ ?mo)\s?(?:month|mo|year|yr|monat|jahr|mes|año|mois|an|mese|anno|mês|ano|user|seat)\b/.test(lowText);
   const cartLike = /add to (?:cart|bag)|in den warenkorb|añadir al carrito|ajouter au panier|aggiungi al carrello|adicionar ao carrinho|in winkelwagen/.test(lowText);
-  const productSchema = jsonLdTypes.some((t)=>/^(?:Product|Offer|AggregateOffer|OnlineStore|Store|ProductGroup)$/i.test(t));
+  // Offers also describe software plans (SoftwareApplication.offers), so on
+  // their own they only mark a shop when the page isn't software.
+  const softwareSchema = jsonLdTypes.some((t)=>/^(?:SoftwareApplication|WebApplication|MobileApplication)$/i.test(t));
+  const productSchema = jsonLdTypes.some((t)=>/^(?:Product|OnlineStore|Store|ProductGroup)$/i.test(t)) || !softwareSchema && jsonLdTypes.some((t)=>/^(?:Offer|AggregateOffer)$/i.test(t));
   const isStore = storePlatform || productSchema || priceMatches.length >= 4 && (cartLike || productLinks >= 3) || priceMatches.length >= 10;
   if (ctaButtons.length === 0 && isStore && productLinks >= 3) addCta("Product links");
   const trustSignals = findTrustSignals(lowText);
@@ -2446,7 +2449,7 @@ const Report = z.object({
     appStoreId: z.string().nullable().optional(),
     extras: z.array(z.object({ id: z.string(), status: z.enum(["pass", "warn", "fail"]), detail: z.string() })).optional(),
     speed: z.object({ source: z.string(), performance: z.number().nullable(), lcpMs: z.number().nullable(), cls: z.number().nullable(), tbtMs: z.number().nullable() }).nullable().optional(),
-    quality: z.object({ claimsChecked: z.number(), claimsUnverified: z.number() }).optional()
+    quality: z.object({ claimsChecked: z.number(), claimsUnverified: z.number(), headlineUnverified: z.boolean().optional() }).optional()
   }),
   executiveSummary: StrategyOut.shape.executiveSummary,
   product: z.object({
@@ -2769,7 +2772,8 @@ function strategyPrompt(input, profile, market, competitors, audit, sources) {
   return `TASK: You have the full research. Now act as the marketing director and
 produce (1) the executive summary with honest 0-100 scores for overall,
 messaging, positioning, conversion, seo and trust — anchored in the audit
-findings; (2) the strategy: positioning statement, 2-4 ideal customer
+findings (quote a market number only when it isn't marked "not in its
+sources"); (2) the strategy: positioning statement, 2-4 ideal customer
 personas, prioritized channels (priority 1 = do first) with concrete first
 steps, offer/pricing ideas, content themes; (3) a roadmap split into quickWins
 (achievable in <= 7 days), days30, days60 and days90 — each action with why,
@@ -2786,8 +2790,8 @@ Value props: ${profile.valueProps.map((v)=>clip(v, 120)).join(" | ")}`)}
 
 MARKET:
 ${wrapUntrusted(`Definition: ${market.definition}
-Size: ${market.size.value ?? "unknown"} (confidence: ${market.size.confidence})
-Trends: ${market.trends.map((t)=>`${t.trend} [${t.sourceIds.join(",")}]`).join(" | ")}
+Size: ${market.size.value ?? "unknown"} (confidence: ${market.size.confidence}${market.size.verified === false ? "; not in its sources, never quote it" : ""})
+Trends: ${market.trends.map((t)=>`${t.trend} [${t.sourceIds.join(",")}]${t.verified === false ? " (numbers not in its sources, never quote them)" : ""}`).join(" | ")}
 Segments: ${market.segments.map((s)=>`${s.name} (fit ${s.fitScore})`).join(" | ")}
 Potential: ${clip(market.potentialAssessment, 900)}`)}
 
@@ -3184,7 +3188,7 @@ function assembleReport(parts) {
       language: parts.language,
       modelsUsed: parts.modelsUsed,
       schemaVersion: 1,
-      quality: { claimsChecked: claims.checked, claimsUnverified: claims.unverified },
+      quality: { claimsChecked: claims.checked, claimsUnverified: claims.unverified, headlineUnverified: unverifiedNumbersIn(`${exec.headline ?? ""}`, market).length > 0 },
       ...parts.siteFacts ? {
         category: parts.siteFacts.category ? { id: parts.siteFacts.category.id, label: parts.siteFacts.category.label } : null,
         platformId: parts.siteFacts.platform?.id ?? null,
@@ -3399,7 +3403,8 @@ async function runCrawl(job, supabase, env) {
       isStore: !!seoSignals.isStore,
       hasPricingPage: !!seoSignals.hasPricingPage,
       ctaButtons: seoSignals.ctaButtons ?? [],
-      trustSignals: seoSignals.trustSignals ?? []
+      trustSignals: seoSignals.trustSignals ?? [],
+      otherPages: pages.slice(1).map((p)=>({ url: p.url, text: p.text }))
     });
     siteFacts = { category: business.category, checks: usedFallbackExtract ? [] : business.checks, appStoreId: business.appStoreId, platform: detectPlatform(home.html), speed };
   } catch { /* optional facts */ }
@@ -3785,7 +3790,10 @@ async function runMarket(job, supabase, env, profile, research) {
 async function runStrategy(job, supabase, env, profile, market, competitors, audit, research) {
   const input = safeInput(job);
   const models = [];
-  const strategy = await llm(supabase, env, "strategy", StrategyOut, strategyPrompt(input, profile, market, competitors, audit, research.sources), input.language, models, job);
+  // Mark market figures whose numbers aren't in their cited sources, so the
+  // summary never leads with one (assemble flags any that slip through).
+  const checkedMarket = checkMarketClaims(market, research.sources ?? []).market;
+  const strategy = await llm(supabase, env, "strategy", StrategyOut, strategyPrompt(input, profile, checkedMarket, competitors, audit, research.sources), input.language, models, job);
   return {
     strategy,
     models

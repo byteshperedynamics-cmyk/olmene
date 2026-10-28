@@ -1,105 +1,104 @@
 /**
  * Local, purchase-free driver for the advance-analysis engine.
  *
- * Loads supabase/functions/advance-analysis/index.ts with Deno.serve stubbed,
- * swaps the database for an in-memory fake (no rows written anywhere), and
- * runs every step in order exactly like executeOneUnit/runStep do, with the
- * real Gemini + Tavily APIs. Writes the report + every step output to JSON.
+ * Loads supabase/functions/advance-analysis/index.ts with Deno.serve stubbed
+ * and runs the production dispatcher (executeOneUnit: every step in order,
+ * with the same retries and backoff as the edge function) against an
+ * in-memory database, so no rows are written anywhere. The LLM and research
+ * calls are real (Gemini + Tavily). Writes the report and every step output
+ * to JSON; `report` is the ReportData that eval-reports and agent-eval read.
  *
- * usage:
+ * usage (from the repo root):
  *   GEMINI_API_KEY=… TAVILY_API_KEY=… [MODELS=id,id] \
- *     deno run -A scripts/pipeline-eval/run.ts https://site.com out.json [goal]
+ *     deno run -A --config supabase/functions/deno.json scripts/pipeline-eval/run.ts https://site.com out.json [goal] [language]
  */
-const [siteUrl, outFile, goal = "first_customers"] = Deno.args;
+const [siteUrl, outFile, goal = "first_customers", language = "English"] = Deno.args;
 if (!siteUrl || !outFile) {
-  console.error("usage: run.ts <siteUrl> <outFile> [goal]");
+  console.error("usage: run.ts <siteUrl> <outFile> [goal] [language]");
   Deno.exit(2);
 }
-const ENGINE = Deno.env.get("ENGINE") ?? new URL("../../supabase/functions/advance-analysis/index.ts", import.meta.url).pathname;
-let src = await Deno.readTextFile(ENGINE);
+const ENGINE_DIR = Deno.env.get("ENGINE_DIR") ?? new URL("../../supabase/functions/advance-analysis/", import.meta.url).pathname;
+// Keep the patched copy next to the original so its relative imports
+// (../_shared, ../free-audit, ./quality.ts) still resolve.
+let src = await Deno.readTextFile(`${ENGINE_DIR}/index.ts`);
 src = src.replace("Deno.serve(", "const __noServe = (");
-src += `\nexport { runCrawl, runProfile, runResearch, runCompetitorsPick, runCompetitorsExtract, runCompetitorsAnalyze, runAudit, runMarket, runStrategy, runAssemble };\n`;
-const tmp = await Deno.makeTempFile({ suffix: ".ts" });
+src += `\nexport { executeOneUnit };\n`;
+const tmp = `${ENGINE_DIR}/.__eval_${crypto.randomUUID().slice(0, 8)}.ts`;
 await Deno.writeTextFile(tmp, src);
-const E = await import(`file://${tmp}`);
 
-// Production order (llm_models.priority) unless overridden.
-const MODELS = (Deno.env.get("MODELS") ?? "google/gemini-3.5-flash-lite,google/gemini-3.6-flash,google/gemini-3.5-flash")
+// Production uses Vertex; these ids go through the Gemini API key instead.
+const MODELS = (Deno.env.get("MODELS") ?? "google/gemini-3.6-flash,google/gemini-3.5-flash-lite")
   .split(",").map((id, i) => ({ id, priority: i + 1, supports_json_schema: false }));
 
-// In-memory Supabase stand-in: llm_models comes from MODELS, budgets always
-// allow, updates/inserts are no-ops.
+// deno-lint-ignore no-explicit-any
+type Row = Record<string, any>;
+const job: Row = {
+  id: crypto.randomUUID(), user_id: "local-eval", site_url: siteUrl, status: "queued", current_step: "crawl",
+  attempts: 0, step_outputs: {}, step_log: [],
+  input: { siteUrl, goal, language, knownCompetitors: [] as string[] },
+};
+const tables: Record<string, Row[]> = {};
+
+// In-memory Supabase stand-in: job updates land on `job`, inserts are kept per
+// table (engine_usage gives the token counts), llm_models comes from MODELS
+// and every budget allows.
 function builder(table: string) {
-  const self: Record<string, unknown> = {};
-  const ret = (data: unknown) => Promise.resolve({ data, error: null });
-  for (const m of ["select", "eq", "order", "update", "limit", "gte", "in", "not"]) self[m] = () => self;
-  self.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
-    (table === "llm_models" ? ret(MODELS) : ret(null)).then(res, rej);
-  self.maybeSingle = () => ret(null);
-  self.insert = () => ({ select: () => ({ single: () => ret({ id: crypto.randomUUID() }) }) });
+  let op = "select";
+  let payload: Row | null = null;
+  const self: Row = {};
+  for (const m of ["select", "eq", "gt", "gte", "lt", "order", "limit", "in", "not", "is", "neq", "match", "filter"]) self[m] = () => self;
+  const result = () => {
+    if (op === "update" && table === "analysis_jobs") Object.assign(job, payload);
+    if (op === "insert" || op === "upsert") (tables[table] ??= []).push(payload ?? {});
+    if (op === "select" && table === "llm_models") return MODELS;
+    if (op === "select" && table === "llm_model_health") return [];
+    if (op === "insert" && table === "reports") return { id: (payload!.id ??= crypto.randomUUID()) };
+    return null;
+  };
+  self.update = (p: Row) => ((op = "update"), (payload = p), self);
+  self.insert = (p: Row) => ((op = "insert"), (payload = p), self);
+  self.upsert = (p: Row) => ((op = "upsert"), (payload = p), self);
+  self.delete = () => ((op = "delete"), self);
+  self.single = () => Promise.resolve({ data: result(), error: null });
+  self.maybeSingle = self.single;
+  self.then = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve({ data: result(), error: null }).then(res, rej);
   return self;
 }
-const supabase = { from: builder, rpc: () => Promise.resolve({ data: true, error: null }) };
+const supabase = { from: builder, rpc: (name: string) => Promise.resolve({ data: name === "consume_budget" ? true : null, error: null }) };
 const env = {
   GEMINI_API_KEY: Deno.env.get("GEMINI_API_KEY") ?? "",
   TAVILY_API_KEY: Deno.env.get("TAVILY_API_KEY") ?? "",
   GLM_API_KEY: Deno.env.get("GLM_API_KEY") ?? "", GLM_DAILY_CAP: "100000", TAVILY_MONTHLY_CAP: "100000",
   APP_URL: "https://olmene.com", APP_NAME: "Olmene",
 };
-const job = {
-  id: crypto.randomUUID(), user_id: "local-eval", site_url: siteUrl,
-  input: { siteUrl, goal, language: "English", knownCompetitors: [] as string[] },
-  step_outputs: {} as Record<string, unknown>, step_log: [],
-};
-const o = job.step_outputs;
+
+const t0 = Date.now();
 const timing: Record<string, number> = {};
-const models: Record<string, string[]> = {};
-// Production re-queues a failed step and retries it up to 3 times (30 s
-// backoff, handleStepError); mirror that so transient 503s don't count as
-// pipeline failures.
-async function step(name: string, fn: () => Promise<{ output: unknown; models?: string[] }>) {
-  const t0 = Date.now();
-  let r: { output: unknown; models?: string[] } | undefined;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      r = await fn();
-      break;
-    } catch (e) {
-      if (attempt >= 3) throw e;
-      console.error(`  ↻ ${name} attempt ${attempt} failed (${String(e).slice(0, 80)}) — retrying in 30s`);
-      await new Promise((res) => setTimeout(res, 30_000));
+try {
+  const E = await import(`file://${tmp}`);
+  for (let guard = 0; guard < 60 && !["completed", "failed"].includes(job.status); guard++) {
+    const step = job.current_step;
+    const s0 = Date.now();
+    const r = await E.executeOneUnit(supabase, env, structuredClone(job));
+    timing[step] = (timing[step] ?? 0) + (Date.now() - s0);
+    const entry = job.step_log.find((e: Row) => e.step === step);
+    console.error(`  ${r.status === "queued" ? "↻" : "✓"} ${step} ${((Date.now() - s0) / 1000).toFixed(1)}s ${entry?.model ?? ""}${entry?.error ? ` ${entry.error.slice(0, 120)}` : ""}`);
+    if (r.status === "queued") {
+      // Production waits for the backoff or the budget reset; locally, at most 30 s.
+      const wait = Math.min(Math.max(0, new Date(job.locked_until ?? 0).getTime() - Date.now()), 30_000);
+      await new Promise((res) => setTimeout(res, wait));
     }
   }
-  timing[name] = Date.now() - t0;
-  models[name] = r.models ?? [];
-  o[name] = r.output;
-  console.error(`  ✓ ${name} ${(timing[name] / 1000).toFixed(1)}s ${models[name].join(",")}`);
-}
-const t0 = Date.now();
-try {
-  await step("crawl", () => E.runCrawl(job, supabase, env));
-  await step("profile", async () => { const r = await E.runProfile(job, supabase, env, o.crawl); return { output: r.profile, models: r.models }; });
-  await step("research", () => E.runResearch(job, supabase, env, o.profile));
-  await step("competitors_pick", async () => (await E.runCompetitorsPick(job, supabase, env, o.profile, o.research)).outcome);
-  await step("competitors_extract", () => E.runCompetitorsExtract(job, supabase, env, o.competitors_pick));
-  await step("competitors_analyze", async () => {
-    const r = await E.runCompetitorsAnalyze(job, supabase, env, o.profile, o.competitors_extract, o.research);
-    return { output: { competitors: r.competitors }, models: r.models };
-  });
-  await step("audit", async () => { const r = await E.runAudit(job, supabase, env, o.profile, o.crawl, o.research); return { output: r.audit, models: r.models }; });
-  await step("market", async () => { const r = await E.runMarket(job, supabase, env, o.profile, o.research); return { output: r.market, models: r.models }; });
-  await step("strategy", async () => {
-    const comps = (o.competitors_analyze as { competitors: unknown }).competitors;
-    const r = await E.runStrategy(job, supabase, env, o.profile, o.market, comps, o.audit, o.research);
-    return { output: r.strategy, models: r.models };
-  });
-  const { report, title } = await E.runAssemble(job, [...new Set(Object.values(models).flat())]);
-  await Deno.writeTextFile(outFile, JSON.stringify({ siteUrl, title, totalMs: Date.now() - t0, timing, models, report, stepOutputs: o }, null, 2));
-  console.error(`DONE ${siteUrl} in ${((Date.now() - t0) / 1000).toFixed(0)}s → ${outFile}`);
-} catch (e) {
-  await Deno.writeTextFile(outFile, JSON.stringify({ siteUrl, failed: String(e), timing, models, stepOutputs: o }, null, 2));
-  console.error(`FAILED ${siteUrl}: ${e}`);
-  Deno.exit(1);
+  const stored = tables.reports?.[0];
+  const usage = tables.engine_usage ?? [];
+  const sum = (k: string) => usage.reduce((a, u) => a + (u[k] ?? 0), 0);
+  await Deno.writeTextFile(outFile, JSON.stringify({
+    siteUrl, status: job.status, error: job.error ?? null, totalMs: Date.now() - t0, timing, stepLog: job.step_log,
+    usage: { calls: usage.length, failed: usage.filter((u) => u.ok === false).length, promptTokens: sum("prompt_tokens"), completionTokens: sum("completion_tokens") },
+    title: stored?.title ?? null, models: stored?.models_used ?? [], report: stored?.data ?? null, stepOutputs: job.step_outputs,
+  }, null, 2));
+  console.error(`${String(job.status).toUpperCase()} ${siteUrl} in ${((Date.now() - t0) / 1000).toFixed(0)}s → ${outFile}`);
+  if (job.status !== "completed") Deno.exitCode = 1;
 } finally {
   await Deno.remove(tmp).catch(() => {});
 }

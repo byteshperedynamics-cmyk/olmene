@@ -70,3 +70,11 @@ export function checkMarketClaims(market: Market, sources: SourceLite[]): { mark
   }
   return { market: out, checked, unverified };
 }
+
+/** Numbers in `text` that come from a market claim flagged unverified (the headline repeating a figure its sources don't contain). */
+export function unverifiedNumbersIn(text: string, market: Market): string[] {
+  const flagged = new Set<string>();
+  if (market.size?.verified === false) for (const n of claimNumbers(`${market.size.value ?? ""}`)) flagged.add(n);
+  for (const t of market.trends ?? []) if (t?.verified === false) for (const n of claimNumbers(`${t.trend ?? ""}`)) flagged.add(n);
+  return claimNumbers(text).filter((n) => flagged.has(n));
+}

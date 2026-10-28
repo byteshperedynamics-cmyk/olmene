@@ -262,7 +262,7 @@ export function ProposalsPanel({ scanId, onProposals }: { scanId: string; onProp
       {proposals.fields.map((f) => (
         <div key={f.field} className="rounded-xl border border-line-strong bg-background p-3.5">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-[13px] tracking-[0.1em] text-faint font-medium">{f.field}</p>
+            <p className="text-[13px] tracking-[0.1em] text-faint font-medium">{t(`form.proposeField.${f.field}`)}</p>
             <CopyChip label={t("rv.copyText")} text={f.after} />
           </div>
           {f.before && (
