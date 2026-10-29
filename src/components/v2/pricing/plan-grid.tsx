@@ -24,6 +24,15 @@ export function splitPrice(label: string): { amount: string; suffix: string } {
   return m ? { amount: m[1].replace(/\s/g, ""), suffix: m[2] } : { amount: label, suffix: "" };
 }
 
+/**
+ * The name shown on a plan card. "Team" became "Agency" in migration
+ * 20261026_plan_agency_name; /pricing/ reads plans at build time, which can run
+ * before that migration, so the card maps the slug as well.
+ */
+function displayName(p: Plan): string {
+  return p.slug?.startsWith("team") ? "Agency" : p.name;
+}
+
 function intervalOf(p: Plan): "month" | "year" | "once" {
   if (p.billing_interval) return p.billing_interval;
   return p.one_time ? "once" : "month";
@@ -83,7 +92,7 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
 
   if (layout === "home") {
     // Homepage: the three ways in — free scan, one cited report, the fix plan.
-    // Team and yearly billing stay on /pricing/.
+    // Agency and yearly billing stay on /pricing/.
     const report = oneTimes[0];
     const fix = sorted.find((p) => intervalOf(p) === "month" && p.slug?.startsWith("fix")) ?? highlight;
     return (
@@ -192,7 +201,7 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
               return (
                 <TierCard
                   key={p.polar_product_id}
-                  name={p.name}
+                  name={displayName(p)}
                   amount={price.amount}
                   suffix={price.suffix}
                   highlight={isHighlight}

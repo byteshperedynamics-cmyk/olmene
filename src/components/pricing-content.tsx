@@ -12,7 +12,7 @@ import { Eyebrow } from "@/components/v2/atoms";
 import { track } from "@/lib/track";
 import { useI18n, usePageMeta } from "@/i18n/provider";
 
-const RISK_REVERSAL = ["pricing.r1", "pricing.r2", "pricing.r3", "pricing.r4"];
+const RISK_REVERSAL = ["pricing.r5", "pricing.r1", "pricing.r3", "pricing.r4"];
 
 export function PricingContent({ initialPlans }: { initialPlans?: Plan[] } = {}) {
   const { t } = useI18n();

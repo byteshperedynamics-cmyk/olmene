@@ -357,7 +357,7 @@ export async function updateBrand(db: SupabaseClient, actor: Actor, input: Brand
   if (input.url !== undefined) patch.brand_url = input.url;
   if (input.whiteLabel !== undefined) {
     if (input.whiteLabel && !canWhiteLabel(await ownerPlanSlug(db, actor.ownerId))) {
-      throw new TeamError(402, "plan_required", "Hiding Olmene's name on client pages comes with the Team plan.");
+      throw new TeamError(402, "plan_required", "Hiding Olmene's name on client pages comes with the Agency plan.");
     }
     patch.white_label = input.whiteLabel;
   }

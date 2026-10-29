@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   }
   if (!body.siteUrl || !/^https:\/\//.test(body.siteUrl)) return ERR.badRequest("siteUrl (your live site, https://…) is required.");
   const entitlement = await checkApplyEntitlement(db, actor.ownerId);
-  if (!entitlement.allowed && entitlement.code === "plan_required") return jsonError(402, "plan_required", "Pull request checks are part of the Fix and Team plans.");
+  if (!entitlement.allowed && entitlement.code === "plan_required") return jsonError(402, "plan_required", "Pull request checks are part of the Fix and Agency plans.");
   const { data: connection } = await db.from("connections").select("id, resource_ids").eq("user_id", actor.ownerId).eq("provider", "github").eq("status", "active")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (!connection) return ERR.badRequest("Connect your GitHub account first (Agent page → Connect GitHub).");

@@ -1,7 +1,7 @@
 # Free trials for teams and agencies
 
 `/business/` sells Olmene to companies and agencies and takes requests for a
-**14-day free trial of the Team plan**. The page promises a reply **within
+**14-day free trial of the Agency plan** (called Team until 2026-10-29; slug `team`). The page promises a reply **within
 one working day**, so each request needs a person.
 
 ## What happens when someone asks
@@ -23,12 +23,12 @@ one working day**, so each request needs a person.
 
 1. Reply to the email. If they were signed in, the email says so and gives
    their user id. Otherwise ask them to sign up with the address they used.
-2. Turn on Team for 14 days for their account. Olmene treats a subscription
+2. Turn on the Agency plan for 14 days for their account. Olmene treats a subscription
    with status `trialing` or `active` as paid (`subscriptions` table, synced
    from Polar), so anything you set up in Polar works, for example:
-   - a checkout link for Team with a 14-day free trial, if the product has
+   - a checkout link for Agency with a 14-day free trial, if the product has
      one in Polar; or
-   - a one-time discount code for Team's first period.
+   - a one-time discount code for Agency's first period.
    Send the link or code in your reply. Don't promise "no card needed"
    unless the way you set it up really doesn't ask for one.
 3. Optional: set the row's `status` in Supabase (Table editor →

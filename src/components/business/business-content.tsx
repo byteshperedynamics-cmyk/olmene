@@ -28,7 +28,7 @@ function Feature({ icon: Icon, title, body }: { icon: typeof Check; title: strin
 
 /**
  * /business/: Olmene for companies and agencies, and the free-trial request
- * (14 days of Team, set up by hand within one working day). Every feature
+ * (14 days of the Agency plan, set up by hand within one working day). Every feature
  * named here exists in the product today; the copy is in the dictionaries.
  */
 export function BusinessContent() {

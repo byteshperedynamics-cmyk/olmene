@@ -52,12 +52,12 @@ export function PrChecksPanel({ repos, defaultSiteUrl }: { repos: string[]; defa
             live site and posts the result on the pull request. It reads; it never writes to your code.
           </p>
         </div>
-        <LivePill tone="neutral">Fix and Team plans</LivePill>
+        <LivePill tone="neutral">Fix and Agency plans</LivePill>
       </div>
 
       {planRequired && (
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-rim bg-artifact p-4 shadow-[inset_0_1px_0_var(--edge-top)]">
-          <p className="text-[14px]">Pull request checks are part of the Fix and Team plans.</p>
+          <p className="text-[14px]">Pull request checks are part of the Fix and Agency plans.</p>
           <Button asChild variant="sheen" size="sm">
             <Link href="/pricing/">
               See plans <ArrowRight className="size-4 rtl-flip" aria-hidden />

@@ -171,7 +171,7 @@ export default function BillingPage() {
         <p className="rounded-xl border border-rim bg-chip/50 px-4 py-3 text-sm">
           Setting Olmene up for a company or an agency?{" "}
           <Link href="/business/#trial" className="font-medium underline underline-offset-4">
-            Ask for 14 days of Team, free
+            Ask for 14 days of Agency, free
           </Link>
           . We set it up within one working day.
         </p>

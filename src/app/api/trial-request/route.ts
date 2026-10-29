@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/trial-request/ { name, email, company, website, kind, teamSize?,
  * note?, language?, hp, elapsedMs } — a company or agency asks for a free
- * trial of Team (/business/). Signed out is fine; signed in, the request
+ * trial of the Agency plan (/business/). Signed out is fine; signed in, the request
  * names the account. 400 { error: { code, field } } for a field to fix,
  * 429 past the limit; bots get a quiet 202 and nothing is stored.
  */

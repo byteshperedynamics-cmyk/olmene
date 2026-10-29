@@ -292,7 +292,7 @@ function BrandForm({ view, onView, admin, onDraft }: { view: ClientsView; onView
               "Client pages won't mention Olmene."
             ) : (
               <>
-                Comes with the Team plan.{" "}
+                Comes with the Agency plan.{" "}
                 {view.role === "owner" && (
                   <>
                     <Link href="/app/billing/" className="underline underline-offset-4 hover:text-foreground">

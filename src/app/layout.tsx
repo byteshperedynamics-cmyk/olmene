@@ -86,7 +86,7 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       description: APP_DESCRIPTION,
-      offers: { "@type": "AggregateOffer", lowPrice: "19", highPrice: "29", priceCurrency: "USD", offerCount: "2" },
+      offers: { "@type": "AggregateOffer", lowPrice: "29", highPrice: "149", priceCurrency: "EUR", offerCount: "3" },
     },
   ],
 };

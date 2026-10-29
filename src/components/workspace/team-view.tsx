@@ -167,7 +167,7 @@ function InviteForm({ view, onInvited }: { view: WorkspaceView; onInvited: () =>
       <div className="grid gap-3 rounded-xl border border-dashed border-line-strong p-4">
         <p className="text-[14px]">
           {view.seats.limit <= 1
-            ? "Your plan is for one person. Inviting your team starts with the Fix plan (2 people) or Team (5)."
+            ? "Your plan is for one person. Inviting your team starts with the Fix plan (2 people) or Agency (5)."
             : `All ${view.seats.limit} places on your plan are taken. Remove someone, withdraw an invitation, or move to a bigger plan.`}
         </p>
         {view.role === "owner" && (
@@ -177,7 +177,7 @@ function InviteForm({ view, onInvited }: { view: WorkspaceView; onInvited: () =>
             </Button>
             {view.seats.limit <= 1 && (
               <Link href="/business/#trial" className="text-[13px] font-medium underline underline-offset-4">
-                Or try Team with your team, free for 14 days
+                Or try the Agency plan with your team, free for 14 days
               </Link>
             )}
           </div>

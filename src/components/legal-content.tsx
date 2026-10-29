@@ -29,7 +29,7 @@ export const LP_SECTIONS: LegalSection[] = [
 export const LT_SECTIONS: LegalSection[] = [
   { h: "lt.s1.h", p: ["lt.s1.p"] },
   { h: "lt.s2.h", p: ["lt.s2.p"] },
-  { h: "lt.s3.h", p: ["lt.s3.p"] },
+  { h: "lt.s3.h", p: ["lt.s3.p", "lt.s3.refund"] },
   { h: "lt.s4.h", p: ["lt.s4.p"] },
   { h: "lt.s5.h", p: ["lt.s5.p"] },
   { h: "lt.s6.h", p: ["lt.s6.p"] },

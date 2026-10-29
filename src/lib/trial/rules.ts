@@ -1,6 +1,6 @@
 /**
  * The free-trial request on /business/ (companies and agencies ask for 14
- * days of Team). Shared by the form and the Worker route, so both refuse the
+ * days of the Agency plan). Shared by the form and the Worker route, so both refuse the
  * same things. Errors carry a field and a code; the page shows the message
  * for that code in the visitor's language (trial.err.* in the dictionaries).
  */
