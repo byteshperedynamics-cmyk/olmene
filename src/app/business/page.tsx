@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { BusinessContent } from "@/components/business/business-content";
 
 export const metadata: Metadata = {
-  title: "For teams and agencies",
+  title: "For agencies",
   description:
-    "Try the Olmene Team plan free for 14 days: up to 5 people, client pages and email reports under your agency's name, and every fix reviewed before it ships.",
+    "Fixes and white-label reports for up to 5 client sites, €149 a month or about €30 per site. Try the Team plan free for 14 days. Every fix is reviewed before it ships.",
   alternates: { canonical: "/business/" },
 };
 

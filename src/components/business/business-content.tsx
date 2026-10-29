@@ -124,7 +124,7 @@ export function BusinessContent() {
             <TrialForm />
           </div>
           <Accordion type="single" collapsible className="min-w-0 lg:col-start-1 lg:row-start-2">
-            {["1", "2", "3", "4"].map((n) => (
+            {["1", "5", "2", "3", "4"].map((n) => (
               <AccordionItem key={n} value={`biz-faq-${n}`}>
                 <AccordionTrigger className="text-start text-[16px] font-medium">{t(`biz.faq.q${n}`, days)}</AccordionTrigger>
                 <AccordionContent className="text-[15px] leading-relaxed text-muted-foreground">

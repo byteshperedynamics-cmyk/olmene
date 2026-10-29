@@ -28,7 +28,7 @@ const STATS: ProofStat[] = [
 ];
 
 /**
- * Homepage v2 — "the growth engineer that ships the fix".
+ * Homepage v2 — "get found on Google and in AI answers; Olmene writes the fixes".
  * Section order and copy: docs/design/IMPLEMENTATION_BRIEF.md §5A.
  * Marketing page rule: no framer-motion here (CSS motion only).
  */

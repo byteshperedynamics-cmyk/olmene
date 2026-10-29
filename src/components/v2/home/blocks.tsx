@@ -24,7 +24,7 @@ export function CanCannot() {
         <div className="o-artifact rounded-2xl p-6 sm:p-7">
           <p className="o-display text-xl">{t("cc.canTitle")}</p>
           <ul className="mt-5 grid gap-3.5 text-[15px]">
-            {["cc.can1", "cc.can2", "cc.can3"].map((k) => (
+            {["cc.can4", "cc.can1", "cc.can2", "cc.can3"].map((k) => (
               <li key={k} className="flex items-start gap-3">
                 <Check className="mt-0.5 size-4 shrink-0 text-tel-emerald" strokeWidth={2.5} aria-hidden />
                 <span>{t(k)}</span>
@@ -35,7 +35,7 @@ export function CanCannot() {
         <div className="o-well rounded-2xl p-6 sm:p-7">
           <p className="o-display text-xl">{t("cc.cannotTitle")}</p>
           <ul className="mt-5 grid gap-3.5 text-[15px] text-muted-foreground">
-            {["cc.cannot1", "cc.cannot2", "cc.cannot3"].map((k) => (
+            {["cc.cannot1", "cc.cannot2", "cc.cannot3", "cc.cannot4"].map((k) => (
               <li key={k} className="flex items-start gap-3">
                 <X className="mt-0.5 size-4 shrink-0 text-tel-rose" strokeWidth={2.5} aria-hidden />
                 <span>{t(k)}</span>
@@ -142,7 +142,7 @@ export function PricingBand() {
 
 export function HomeFaq() {
   const { t } = useI18n();
-  const faqs = ["1", "2", "3", "4", "5", "6", "7"];
+  const faqs = ["1", "8", "2", "3", "4", "5", "6", "7"];
   return (
     <Section id="faq" innerClassName="grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
       <div className="grid content-start gap-8">

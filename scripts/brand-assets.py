@@ -62,7 +62,8 @@ def _find_font(family, italic=False):
     """A font file next/font downloaded into .next (or the path given on the command line)."""
     if family == "Newsreader" and len(sys.argv) > 1:
         return sys.argv[1]
-    for f in sorted(glob.glob(".next/static/media/*.woff2")):
+    # `next build` writes fonts to .next/static/media, `next dev` to .next/dev/static/media.
+    for f in sorted(glob.glob(".next/static/media/*.woff2") + glob.glob(".next/dev/static/media/*.woff2")):
         try:
             name, style = ImageFont.truetype(f, 12).getname()
         except Exception:
@@ -132,7 +133,7 @@ f = wordmark_font(132*SS)
 bbox = d.textbbox((0, 0), "olmene", font=f)
 tw = bbox[2]-bbox[0]
 d.text((W//2 - tw/2 - bbox[0], H//2 + 8*SS - bbox[1]), "olmene", font=f, fill=WHITE)
-tag = "Find what is costing you customers. Ship the fix."
+tag = "Get found on Google and in AI answers. Olmene writes the fixes."
 ft = variable_font("Inter", 30*SS, 400)
 bbox = d.textbbox((0, 0), tag, font=ft)
 d.text((W//2 - (bbox[2]-bbox[0])/2 - bbox[0], H//2 + 170*SS - bbox[1]), tag, font=ft, fill=ZINC)

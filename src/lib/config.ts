@@ -9,9 +9,9 @@ export const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://olmene.com";
 
 export const APP_NAME = "Olmene";
-export const APP_TAGLINE = "Find what is costing you customers and ship the fix";
+export const APP_TAGLINE = "Get found on Google and in AI answers";
 export const APP_DESCRIPTION =
-  "Olmene finds what is costing your website customers, then opens a pull request that fixes it. Free scan in 30 seconds. Nothing merges without you.";
+  "Olmene checks the search basics your site is missing for Google and AI answers, then writes the fixes as pull requests you review. Free scan, about 30 seconds.";
 /** GA4 measurement ID — analytics only loads after the visitor accepts cookies. */
 export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-P6X5RFQG7W";
 
