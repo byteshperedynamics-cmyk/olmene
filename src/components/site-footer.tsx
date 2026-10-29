@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { CookiePreferencesLink } from "@/components/cookie-preferences-link";
 import { LanguageSelector } from "@/components/language-selector";
+import { StudioMark } from "@/components/studio-mark";
 import { useI18n } from "@/i18n/provider";
 import { FOUNDER_LINKEDIN, STUDIO_GITHUB, STUDIO_NAME, SUPPORT_EMAIL } from "@/lib/config";
 
@@ -72,7 +73,8 @@ export function SiteFooter() {
           <div className="space-y-1">
             <p>
               {beforeStudio}
-              <a translate="no" href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground/80 underline-offset-4 hover:underline">
+              <a translate="no" href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 align-bottom font-medium text-foreground/80 underline-offset-4 hover:underline">
+                <StudioMark size={12} />
                 {STUDIO_NAME}
               </a>
               {afterStudio}

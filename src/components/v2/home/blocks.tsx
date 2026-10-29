@@ -7,7 +7,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { FreeAuditInput } from "@/components/free-audit-form";
 import { PlanGrid } from "../pricing/plan-grid";
 import { TrialBand } from "@/components/business/trial-band";
-import { CHECK_COUNT, FOUNDER_LINKEDIN, FOUNDER_NAME } from "@/lib/config";
+import { StudioMark } from "@/components/studio-mark";
+import { CHECK_COUNT, FOUNDER_LINKEDIN, FOUNDER_NAME, STUDIO_NAME } from "@/lib/config";
 import { useI18n, Tx } from "@/i18n/provider";
 import { Eyebrow } from "../atoms";
 import { Flower } from "../flower";
@@ -67,6 +68,10 @@ export function AboutStudio() {
           <p className="max-w-2xl leading-relaxed text-muted-foreground">{t("about.p2")}</p>
         </div>
         <div className="grid gap-2 text-sm md:justify-items-end md:text-end">
+          <p translate="no" className="mb-1 inline-flex items-center gap-2.5 text-base font-medium text-foreground">
+            <StudioMark size={28} />
+            {STUDIO_NAME}
+          </p>
           <p className="text-muted-foreground">
             {t("about.founder")}: <span className="font-medium text-foreground">{FOUNDER_NAME}</span> ·{" "}
             <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">

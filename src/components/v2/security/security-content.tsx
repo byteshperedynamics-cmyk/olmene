@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Section, SectionHeader } from "@/components/v2/home/section";
 import { useI18n, Tx, usePageMeta } from "@/i18n/provider";
+import { StudioMark } from "@/components/studio-mark";
 import { FOUNDER_LINKEDIN, SECURITY_EMAIL } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import { useStage } from "@/components/v2/in-view";
@@ -200,7 +201,10 @@ export function SecurityContent() {
         {/* Operator */}
         <Section id="operator" className="pt-8 md:pt-10">
           <div className="o-artifact max-w-2xl rounded-2xl p-6 sm:p-7">
-            <h2 className="o-display text-xl">{t("sec.who.title")}</h2>
+            <div className="flex items-center gap-3">
+              <StudioMark size={32} className="shrink-0" />
+              <h2 className="o-display text-xl">{t("sec.who.title")}</h2>
+            </div>
             <p className="mt-3 leading-relaxed text-muted-foreground">{t("sec.who.p")}</p>
             <p className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
               <a href={FOUNDER_LINKEDIN} target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline underline-offset-4 hover:text-foreground/80">
