@@ -311,6 +311,7 @@
   "lp.s8.p": "Olmene mengandalkan: Cloudflare (hosting), Supabase (akun, basis data, background jobs), Google Cloud Vertex AI (model Gemini yang menulis laporan dan memperbaiki teks), Tavily (riset web live), Brevo (email untuk masuk), Polar (pembayaran, merchant of record), GitHub (hanya jika Anda menghubungkan repositori), dan Google Analytics (hanya jika Anda menerima cookie). Semuanya memproses data hanya atas instruksi kami.",
   "lp.s1.trial": "{{Permintaan uji coba:}} jika Anda meminta uji coba gratis di halaman kami untuk tim dan agensi, nama, email kantor, perusahaan, situs web, dan catatan yang Anda kirim. Kami memakainya hanya untuk membalas Anda dan menyiapkan uji coba Anda.",
   "lp.s1.recipients": "{{Penerima laporan klien:}} jika sebuah agensi menambahkan alamat email Anda ke laporan situs web yang dikirimnya kepada salah satu kliennya, kami menyimpan alamat itu untuk mengirim laporan tersebut. Setiap laporan memiliki tautan untuk menghentikannya.",
+  "lp.s1.outreach": "{{Penjangkauan bisnis:}} jika kami mengirim email ke bisnis Anda tentang Olmene, kami menggunakan alamat kerja yang dipublikasikan di situs web Anda, beserta nama perusahaan dan situs Anda, hanya untuk menulis kepada Anda tentang Olmene. Dasar hukum kami adalah kepentingan yang sah (GDPR Pasal 6(1)(f)). Balas \"tidak\" atau hubungi kami untuk menolak: kami berhenti, dan hanya menyimpan alamat Anda di daftar jangan-dihubungi agar tidak pernah menulis lagi.",
   "lt.h1": "Ketentuan Layanan",
   "lt.updated": "Terakhir diperbarui: Oktober 2026",
   "lt.s1.h": "1. Layanan",

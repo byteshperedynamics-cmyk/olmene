@@ -311,6 +311,7 @@
   "lp.s8.p": "Olmene şu hizmetlere dayanır: Cloudflare (barındırma), Supabase (hesaplar, veritabanı, arka plan işleri), Google Cloud Vertex AI (raporları yazan ve metinleri düzelten Gemini modelleri), Tavily (canlı web araştırması), Brevo (giriş e-postaları), Polar (ödemeler, merchant of record), GitHub (yalnızca bir depo bağladığınızda) ve Google Analytics (yalnızca çerezleri kabul ederseniz). Tümü verileri yalnızca bizim talimatımızla işler.",
   "lp.s1.trial": "{{Deneme talepleri:}} ekipler ve ajanslar sayfamızda ücretsiz deneme isterseniz, gönderdiğiniz ad, iş e-postası, şirket, web sitesi ve not. Bunları yalnızca size yanıt vermek ve denemenizi hazırlamak için kullanırız.",
   "lp.s1.recipients": "{{Müşteri raporu alıcıları:}} bir ajans e-posta adresinizi müşterilerinden birine gönderdiği web sitesi raporlarına eklerse, bu raporları göndermek için o adresi saklarız. Her raporda bunları durdurmak için bir bağlantı vardır.",
+  "lp.s1.outreach": "{{İş amaçlı iletişim:}} şirketinize Olmene hakkında e-posta gönderdiysek, web sitenizde yayımlanan iş adresini, şirket adınız ve sitenizle birlikte, yalnızca size Olmene hakkında yazmak için kullandık. Hukuki dayanağımız meşru menfaattir (GDPR md. 6(1)(f)). İtiraz etmek için \"hayır\" diye yanıtlayın veya bize ulaşın: yazmayı bırakırız ve adresinizi yalnızca bir daha yazmamak için iletişim kurulmayacaklar listesinde tutarız.",
   "lt.h1": "Hizmet Şartları",
   "lt.updated": "Son güncelleme: Ekim 2026",
   "lt.s1.h": "1. Hizmet",

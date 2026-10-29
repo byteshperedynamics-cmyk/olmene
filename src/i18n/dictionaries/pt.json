@@ -311,6 +311,7 @@
   "lp.s8.p": "A Olmene conta com: Cloudflare (hospedagem), Supabase (contas, banco de dados, background jobs), Google Cloud Vertex AI (os modelos Gemini que escrevem relatórios e corrigem o copy), Tavily (pesquisa web ao vivo), Brevo (e-mails de login), Polar (pagamentos, merchant of record), GitHub (apenas quando você conecta um repositório) e Google Analytics (apenas se você aceitar cookies). Todos processam dados apenas sob nossas instruções.",
   "lp.s1.trial": "{{Pedidos de teste:}} se você pedir um teste grátis na nossa página para equipes e agências, o nome, o e-mail de trabalho, a empresa, o site e a nota que você envia. Usamos esses dados só para responder e preparar o seu teste.",
   "lp.s1.recipients": "{{Destinatários de relatórios de clientes:}} se uma agência adicionar seu endereço de e-mail aos relatórios de site que envia a um de seus clientes, guardamos esse endereço para enviar esses relatórios. Cada relatório tem um link para parar de recebê-los.",
+  "lp.s1.outreach": "{{Contato comercial:}} se escrevemos para sua empresa sobre o Olmene, usamos o endereço profissional publicado no seu site, com o nome da sua empresa e o seu site, apenas para escrever a você sobre o Olmene. Nossa base legal é o interesse legítimo (art. 6.º, n.º 1, alínea f do RGPD). Responda \"não\" ou fale conosco para se opor: paramos e mantemos seu endereço apenas numa lista de não contato, para nunca mais escrever.",
   "lt.h1": "Termos de Serviço",
   "lt.updated": "Última atualização: outubro de 2026",
   "lt.s1.h": "1. O serviço",
