@@ -27,7 +27,8 @@ import { ConnectPanel } from "@/components/v2/agent/connect-panel";
 import { StateMessage } from "@/components/v2/agent/job-view";
 import { PrChecksPanel } from "@/components/v2/agent/pr-checks-panel";
 import { useAgentHub, type DisconnectResult } from "@/components/v2/agent/use-agent-hub";
-import { statusLine } from "@/components/v2/agent/fixers";
+import { PR_STAGE_COPY, prStage, statusLine } from "@/components/v2/agent/fixers";
+import { AsyncState, EmptyState } from "@/components/app/async-state";
 
 /** Fix runs hub (brief §5B): connection, new run, run history. */
 export default function AgentPage() {
@@ -57,7 +58,7 @@ export default function AgentPage() {
         body="Fix runs are not enabled on this deployment. Your reports and free scans work as usual."
         action={
           <Button asChild variant="hairline">
-            <Link href="/app/">Back to analyses</Link>
+            <Link href="/app/">Back to the overview</Link>
           </Button>
         }
       />
@@ -209,43 +210,53 @@ export default function AgentPage() {
 
       {hub.disconnectResult && <DisconnectNotice result={hub.disconnectResult} />}
 
-      <RunsTable jobs={jobs.data?.jobs ?? []} />
+      <section className="overflow-hidden rounded-xl border bg-card">
+        <div className="border-b px-5 py-4">
+          <h2 className="text-[15px] font-medium">Recent runs</h2>
+        </div>
+        <div className="p-3">
+          <AsyncState
+            query={jobs}
+            what="fix runs"
+            compact
+            isEmpty={(d) => d.jobs.length === 0}
+            empty={<EmptyState compact title="No runs yet" body="Your first pull request shows up here, with its review, merge and live check." />}
+          >
+            {(d) => <RunsTable jobs={d.jobs} />}
+          </AsyncState>
+        </div>
+      </section>
     </div>
   );
 }
 
 function RunsTable({ jobs }: { jobs: AgentJob[] }) {
   return (
-    <section className="overflow-hidden rounded-2xl border bg-card">
-      <div className="border-b px-5 py-4">
-        <h2 className="o-display text-xl">Recent runs</h2>
-      </div>
-      {jobs.length === 0 ? (
-        <p className="px-5 py-6 text-[14px] text-muted-foreground">
-          No runs yet. Your first pull request shows up here.
-        </p>
-      ) : (
+    <>
+      {(
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13.5px]">
             <thead>
-              <tr className="border-b text-start font-mono text-[11px] uppercase tracking-[0.1em] text-faint">
-                <th className="px-5 py-2.5 text-start font-medium">Repository</th>
-                <th className="px-5 py-2.5 text-start font-medium">Status</th>
-                <th className="px-5 py-2.5 text-start font-medium">Started</th>
-                <th className="px-5 py-2.5" />
+              <tr className="border-b text-start text-[12px] text-muted-foreground">
+                <th className="px-3 py-2 text-start font-normal">Repository</th>
+                <th className="px-3 py-2 text-start font-normal">State</th>
+                <th className="px-3 py-2 text-start font-normal">Started</th>
+                <th className="px-3 py-2">
+                  <span className="sr-only">Open</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {jobs.slice(0, 10).map((j) => (
                 <tr key={j.id} className="border-b last:border-0">
-                  <td className="px-5 py-3 font-mono text-[12.5px]" dir="ltr">
+                  <td className="px-3 py-3 font-mono text-[12.5px]" dir="ltr">
                     {j.input?.targetRepo ?? j.id.slice(0, 8)}
                   </td>
-                  <td className="px-5 py-3">
-                    <RunStatus status={j.status} />
+                  <td className="px-3 py-3">
+                    <RunStatus job={j} />
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{fmtDateTime(j.created_at)}</td>
-                  <td className="px-5 py-3 text-end">
+                  <td className="px-3 py-3 text-muted-foreground">{fmtDateTime(j.created_at)}</td>
+                  <td className="px-3 py-3 text-end">
                     <Link
                       href={`/app/agent/job/${j.id}`}
                       className="inline-flex items-center gap-1 text-[13px] text-primary hover:underline"
@@ -259,11 +270,22 @@ function RunsTable({ jobs }: { jobs: AgentJob[] }) {
           </table>
         </div>
       )}
-    </section>
+    </>
   );
 }
 
-function RunStatus({ status }: { status: string }) {
+/** A run's state; once a pull request exists, where it stands from opened to verified live. */
+function RunStatus({ job }: { job: AgentJob }) {
+  const stage = prStage(job);
+  if (stage) {
+    const c = PR_STAGE_COPY[stage];
+    return (
+      <LivePill tone={c.tone} pulse={false}>
+        #{job.pr_number} {c.label}
+      </LivePill>
+    );
+  }
+  const status = job.status;
   const tone =
     status === "completed"
       ? "ok"
@@ -365,7 +387,7 @@ function NewRunForm({
   }
 
   const select =
-    "h-11 w-full rounded-[10px] border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+    "h-11 w-full rounded-md border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
   if (scanId) {
     // Scan mode: no report picker — the plan is built from the saved free scan.

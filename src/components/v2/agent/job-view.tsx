@@ -19,6 +19,8 @@ import {
   fixerImpact,
   fixerLabel,
   statusLine,
+  PR_STAGE_COPY,
+  prStage,
 } from "./fixers";
 
 /** The fixes checked on the PR's preview deployment, before merge (engine sync). */
@@ -64,6 +66,7 @@ export function JobView({
   const active = ACTIVE_JOB_STATUSES.includes(job.status);
   const terminal = TERMINAL_JOB_STATUSES.includes(job.status);
   const repo = job.input?.targetRepo ?? "";
+  const stage = prStage(job);
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6">
@@ -75,10 +78,28 @@ export function JobView({
           >
             <ArrowLeft className="size-3.5 rtl-flip" aria-hidden /> Fix runs
           </Link>
-          <h1 className="o-display text-[32px] leading-tight">Fix run</h1>
-          <p className="font-mono text-[12px] text-muted-foreground" dir="ltr">
-            {repo} · started {fmtDateTime(job.created_at)}
-          </p>
+          <h1 className="o-display text-[28px] leading-tight">Fix run</h1>
+          {/* Where this lands and where it stands, before any diff (refinement 2026-10-30). */}
+          <dl className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px]">
+            <div className="flex items-center gap-1.5">
+              <dt className="text-muted-foreground">Repository</dt>
+              <dd className="font-mono text-[12.5px] text-tel-sky" dir="ltr">
+                {repo || "–"}
+              </dd>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <dt className="text-muted-foreground">State</dt>
+              <dd>
+                <LivePill tone={stage ? PR_STAGE_COPY[stage].tone : job.status === "awaiting_approval" ? "live" : "neutral"} pulse={job.status === "awaiting_approval"}>
+                  {stage ? PR_STAGE_COPY[stage].label : statusLine(job.status)}
+                </LivePill>
+              </dd>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <dt className="text-muted-foreground">Started</dt>
+              <dd className="text-muted-foreground">{fmtDateTime(job.created_at)}</dd>
+            </div>
+          </dl>
         </div>
         {active && (
           <Button variant="hairline" onClick={onCancel} disabled={busy !== null}>
@@ -90,7 +111,7 @@ export function JobView({
       <div className="grid items-start gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <RunRail status={job.status} currentStep={job.current_step} repo={repo} audit={audit ?? []} />
 
-        <div key={job.status} className="o-crossfade grid min-w-0 gap-5">
+        <div className="grid min-w-0 gap-5">
           {job.error && <ErrorBanner status={job.status} message={job.error} prOpened={Boolean(applyOut?.prUrl)} />}
 
           {(job.status === "queued" || job.status === "planning" || job.status === "previewing") && <DraftingState />}
@@ -101,7 +122,7 @@ export function JobView({
                 <h2 className="o-display text-2xl">
                   {viable.length} proposed {viable.length === 1 ? "change" : "changes"}
                 </h2>
-                <p className="text-[13px] text-muted-foreground">Nothing is written until you approve.</p>
+                <p className="text-[13px] text-muted-foreground">Nothing is written until you create the pull request, and nothing merges until you merge it.</p>
               </div>
               <div className="grid gap-4">
                 {viable.map((a, i) => (
@@ -177,7 +198,7 @@ export function JobView({
                 </div>
               ) : null}
               <div className="flex flex-wrap gap-3">
-                <Button asChild variant="sheen" size="xl">
+                <Button asChild size="xl">
                   <a href={applyOut.prUrl} target="_blank" rel="noreferrer">
                     Review on GitHub <ExternalLink className="size-4" aria-hidden />
                   </a>
@@ -280,7 +301,7 @@ function ActionCard({
   const impact = fixerImpact(action.fixer_id);
   const p = action.preview;
   return (
-    <div className={cn("min-w-0 rounded-2xl border bg-card transition-colors", checked && "border-rim shadow-[inset_0_1px_0_var(--edge-top)]")}>
+    <div className={cn("min-w-0 rounded-xl border bg-card transition-colors", checked && "border-rim")}>
       <div className="flex items-start gap-3 p-4 sm:p-5">
         <input
           id={`act-${action.id}`}
@@ -310,9 +331,6 @@ function ActionCard({
       </div>
       {open && p && (
         <div className="grid gap-4 border-t px-4 pb-5 pt-4 sm:px-5">
-          {p.edits.length > 0 && (
-            <DiffView files={p.edits.map((e) => ({ path: e.path, diff: e.diff, isNewFile: e.isNewFile }))} />
-          )}
           <dl className="grid gap-3 text-[13.5px] sm:grid-cols-2">
             <div>
               <dt className="o-eyebrow">Evidence</dt>
@@ -323,6 +341,9 @@ function ActionCard({
               <dd className="mt-1 text-muted-foreground">{p.expectedScoreChange}</dd>
             </div>
           </dl>
+          {p.edits.length > 0 && (
+            <DiffView files={p.edits.map((e) => ({ path: e.path, diff: e.diff, isNewFile: e.isNewFile }))} />
+          )}
           {p.revertSteps?.length > 0 && (
             <details className="group rounded-xl border bg-background/40 px-4 py-3 text-[13.5px]">
               <summary className="flex cursor-pointer list-none items-center gap-2 text-muted-foreground [&::-webkit-details-marker]:hidden">
@@ -375,20 +396,20 @@ function ApproveBar({
   onReject: () => void;
 }) {
   return (
-    <div className="o-glass sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_20px_50px_-20px_rgb(0_0_0/0.5)] backdrop-blur sm:px-5">
+    <div className="o-glass sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line-strong bg-card/95 px-4 py-3 shadow-[0_12px_32px_-16px_rgb(0_0_0/0.45)] backdrop-blur sm:px-5">
       <p className="min-w-0 text-[12.5px] text-muted-foreground">
-        Opens a pull request on{" "}
+        Creates a pull request from{" "}
         <code className="font-mono text-[11.5px] text-foreground" dir="ltr">
           {branch}
         </code>
-        . Nothing merges without you. <span className="font-mono">{selected}/{total} selected</span>
+        . It doesn&apos;t merge: you review and merge it on GitHub. <span className="font-mono">{selected}/{total} selected</span>
       </p>
       <div className="flex gap-2">
         <Button variant="hairline" onClick={onReject} disabled={busy !== null}>
           {busy === "reject" ? "Declining…" : "Decline all"}
         </Button>
-        <Button variant="sheen" onClick={onApprove} disabled={busy !== null || selected === 0}>
-          {busy === "approve" ? "Approving…" : `Approve ${selected} ${selected === 1 ? "change" : "changes"}`}
+        <Button onClick={onApprove} disabled={busy !== null || selected === 0}>
+          {busy === "approve" ? "Creating pull request…" : `Create pull request with ${selected} ${selected === 1 ? "change" : "changes"}`}
         </Button>
       </div>
     </div>

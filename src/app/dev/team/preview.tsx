@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-header";
 import { Eyebrow } from "@/components/v2/atoms";
 import { TeamView } from "@/components/workspace/team-view";
 import type { Identity } from "@/lib/account-client";
@@ -66,10 +66,7 @@ export function TeamPreview() {
   const v = view(state.role, state.full);
   const current = { ...LIST[1], role: state.role };
   return (
-    <div dir="ltr" className="flex min-h-screen flex-col">
-      <AppHeader pathname="/app/team/" identity={IDENTITY} workspaces={{ list: [LIST[0], current, LIST[2]], current }} onSignOut={() => toast("Signed out (preview)")} />
-      <main id="main-content" className="flex-1">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:py-10">
+    <AppShell pathname="/app/team/" identity={IDENTITY} workspaces={{ list: [LIST[0], current, LIST[2]], current }} onSignOut={() => toast("Signed out (preview)")}>
           <div className="mx-auto grid max-w-3xl gap-6">
             <header className="grid gap-2">
               <Eyebrow>Team</Eyebrow>
@@ -78,8 +75,6 @@ export function TeamPreview() {
             </header>
             <TeamView view={v} onChanged={() => toast("Changed (preview)")} onLeft={() => toast("Left (preview)")} />
           </div>
-        </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }

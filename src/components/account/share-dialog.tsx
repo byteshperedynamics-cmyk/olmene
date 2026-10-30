@@ -174,7 +174,7 @@ export function ShareDialog({
                 aria-label="Progress link"
                 onFocus={(e) => e.currentTarget.select()}
                 dir="ltr"
-                className="h-11 min-w-0 flex-1 rounded-[10px] border border-rim bg-background px-3 font-mono text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-11 min-w-0 flex-1 rounded-md border border-rim bg-background px-3 font-mono text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <Button size="xl" onClick={copy} className="shrink-0" aria-live="polite">
                 {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />} {copied ? "Copied" : "Copy"}

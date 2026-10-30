@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 import { Eyebrow } from "@/components/v2/atoms";
 
 const input =
-  "h-11 w-full rounded-[10px] border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-11 w-full rounded-md border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 const KIND_HINT: Record<AlertChannel["kind"], { label: string; placeholder: string; help: string }> = {
   slack: {

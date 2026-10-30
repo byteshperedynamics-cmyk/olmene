@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const input =
-  "h-11 w-full rounded-[10px] border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "h-11 w-full rounded-md border border-line-strong bg-background px-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function SiteConnectionsPanel({ defaultOpen = false }: { defaultOpen?: boolean }) {
   const { data, isLoading, refetch } = useQuery({ queryKey: ["site-connections"], queryFn: getSiteConnections });

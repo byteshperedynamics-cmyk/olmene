@@ -16,7 +16,7 @@ export default function AccountPage() {
   if (!identity) {
     return (
       <div className="mx-auto grid max-w-5xl gap-6">
-        <Skeleton className="h-36 w-full rounded-[22px]" />
+        <Skeleton className="h-36 w-full rounded-2xl" />
         <Skeleton className="h-72 w-full rounded-2xl" />
       </div>
     );

@@ -267,7 +267,7 @@ export default function GuidedRunPage() {
       <div className="grid justify-items-center gap-3 py-24 text-center">
         <p className="o-display text-2xl">Guided fixes aren&apos;t switched on yet</p>
         <Button asChild variant="hairline">
-          <Link href="/app/">Back to analyses</Link>
+          <Link href="/app/">Back to the overview</Link>
         </Button>
       </div>
     );

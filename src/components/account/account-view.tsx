@@ -48,7 +48,7 @@ const SECTIONS = [
 ];
 
 const field =
-  "h-11 w-full rounded-[10px] border border-rim bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-tel-rose";
+  "h-11 w-full rounded-md border border-rim bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring aria-[invalid=true]:border-tel-rose";
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: string; children: React.ReactNode }) {
   return (
@@ -449,7 +449,7 @@ export function AccountView({
   return (
     <div className="mx-auto grid max-w-5xl gap-10">
       {/* Who you are, at a glance */}
-      <header className="o-artifact grid gap-6 rounded-[22px] p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      <header className="o-artifact grid gap-6 rounded-2xl p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
         <div className="flex min-w-0 items-center gap-4 sm:gap-5">
           <UserAvatar src={identity.avatarUrl} initials={identity.initials} size={72} className="ring-2" />
           <div className="min-w-0">

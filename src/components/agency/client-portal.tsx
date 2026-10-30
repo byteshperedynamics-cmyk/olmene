@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Link2Off, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ProgressCard } from "@/components/account/progress-card";
+import { ClientProgress, ClientProgressNote, latestMeasurement, useLongDate } from "./client-progress";
 import { useI18n } from "@/i18n/provider";
 import type { Brand, PortalView } from "@/lib/agency/types";
 import { cn } from "@/lib/utils";
@@ -83,16 +83,18 @@ export function PrivateNote({ brand }: { brand: Brand | null }) {
 
 /**
  * /c/[slug]/: one client's websites, as their agency shares them: the
- * agency's branding, a progress card per site, and a line on what stays
- * private. "Measured with Olmene" unless the agency's plan hides it.
+ * agency's branding, who it's for and when it was last measured, one
+ * progress record per site (no badges), what the numbers mean, and what
+ * stays private. "Measured with Olmene" unless the agency's plan hides it.
  */
 export function ClientPortal({ view }: { view: PortalView | null }) {
   const { t } = useI18n();
+  const long = useLongDate();
   if (!view) {
     return (
       <main id="main-content" className="flex min-h-screen items-center justify-center px-4">
         <div className="grid max-w-md justify-items-center gap-4 py-16 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl border border-rim bg-secondary">
+          <span className="grid size-14 place-items-center rounded-xl border border-rim bg-secondary">
             <Link2Off className="size-6" aria-hidden />
           </span>
           <h1 className="o-display text-[28px] leading-tight">{t("share.notFound.title")}</h1>
@@ -105,23 +107,28 @@ export function ClientPortal({ view }: { view: PortalView | null }) {
     );
   }
   const { brand, client, sites } = view;
+  const latest = sites.map(latestMeasurement).sort().pop() ?? null;
   return (
     <BrandedPage brand={brand}>
       <div className="mx-auto grid w-full max-w-5xl gap-8">
-        <header className="grid gap-2">
+        <header className="grid gap-2 border-b pb-6">
           {brand.name && <p className="o-eyebrow">{t("portal.preparedBy", { agency: brand.name })}</p>}
-          <h1 className="o-display text-balance text-[30px] leading-tight sm:text-[38px]">{t("portal.title", { client: client.name })}</h1>
-          <p className="text-[15px] text-muted-foreground">{t("portal.body")}</p>
+          <h1 className="o-display text-balance text-[30px] leading-tight sm:text-[36px]">{t("portal.title", { client: client.name })}</h1>
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-[14px] text-muted-foreground">
+            <span>{t("portal.scope", { n: sites.length })}</span>
+            {latest && <span>{t("portal.latest", { date: long(latest) })}</span>}
+          </p>
         </header>
         {sites.length ? (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {sites.map((s) => (
-              <ProgressCard key={s.siteId} site={s} owner={{ name: null, avatarUrl: null }} title={s.host} />
+              <ClientProgress key={s.siteId} site={s} />
             ))}
           </div>
         ) : (
-          <p className="rounded-2xl border border-dashed border-line-strong p-8 text-center text-[15px] text-muted-foreground">{t("portal.empty")}</p>
+          <p className="rounded-xl border border-dashed border-line-strong p-8 text-center text-[15px] text-muted-foreground">{t("portal.empty")}</p>
         )}
+        {sites.length > 0 && <ClientProgressNote />}
         <PrivateNote brand={brand} />
       </div>
     </BrandedPage>

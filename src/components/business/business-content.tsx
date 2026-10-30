@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Eyebrow } from "@/components/v2/atoms";
 import { Section, SectionHeader } from "@/components/v2/home/section";
+import { ClientPagePreview } from "@/components/v2/home/agency-home";
 import { useI18n, usePageMeta } from "@/i18n/provider";
 import { track } from "@/lib/track";
 import { TRIAL_DAYS } from "@/lib/trial/rules";
@@ -16,12 +17,11 @@ import { TrialForm } from "./trial-form";
 
 function Feature({ icon: Icon, title, body }: { icon: typeof Check; title: string; body: string }) {
   return (
-    <div className="o-artifact grid content-start gap-3 rounded-2xl p-6">
-      <span className="grid size-10 place-items-center rounded-xl border border-rim bg-chip">
-        <Icon className="size-[18px]" aria-hidden />
-      </span>
-      <h3 className="text-[17px] font-semibold">{title}</h3>
-      <p className="text-[15px] leading-relaxed text-muted-foreground">{body}</p>
+    <div className="grid content-start gap-2 rounded-xl border bg-card p-5">
+      <h3 className="flex items-center gap-2.5 text-[16px] font-medium">
+        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden /> {title}
+      </h3>
+      <p className="text-[14.5px] leading-relaxed text-muted-foreground">{body}</p>
     </div>
   );
 }
@@ -44,51 +44,50 @@ export function BusinessContent() {
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
       <main id="main-content" className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden">
-          <div
-            aria-hidden
-            className="o-grid-bg pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(70%_80%_at_50%_0%,black,transparent)]"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(50%_60%_at_50%_0%,var(--leaf-soft),transparent)]"
-          />
-          <div className="mx-auto grid w-full max-w-3xl justify-items-center gap-5 px-4 pb-14 pt-12 text-center sm:px-6 md:pb-20 md:pt-20">
-            <Eyebrow>{t("biz.eyebrow")}</Eyebrow>
-            <h1 className="o-display text-balance text-[38px] leading-[1.04] sm:text-[56px]">{t("biz.title")}</h1>
-            <p className="max-w-2xl text-[17px] leading-relaxed text-muted-foreground sm:text-[18px]">{t("biz.body", days)}</p>
-            <div className="mt-2 flex flex-wrap justify-center gap-3">
-              <Button asChild variant="sheen" size="xl">
-                <a href="#trial">{t("biz.cta")}</a>
-              </Button>
-              <Button asChild variant="hairline" size="xl">
-                <Link href="/pricing/">{t("biz.cta2")}</Link>
-              </Button>
+        {/* Hero: what agencies get, and the client page itself (example data) */}
+        <section className="border-b border-edge">
+          <div className="mx-auto grid w-full max-w-6xl items-start gap-10 px-4 pb-14 pt-12 sm:px-6 md:pb-20 md:pt-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-12">
+            <div className="grid content-start gap-5">
+              <Eyebrow>{t("biz.eyebrow")}</Eyebrow>
+              <h1 className="o-display text-balance text-[36px] leading-[1.06] sm:text-[48px] lg:text-[56px]">{t("biz.title")}</h1>
+              <p className="max-w-xl text-[17px] leading-relaxed text-muted-foreground">{t("biz.body", days)}</p>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild size="xl">
+                  <a href="#trial">
+                    {t("cta.agencyTrial")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+                  </a>
+                </Button>
+                <Button asChild variant="hairline" size="xl">
+                  <Link href="/pricing/">{t("biz.cta2")}</Link>
+                </Button>
+              </div>
+              <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-muted-foreground">
+                {["biz.fact1", "biz.fact2", "biz.fact3"].map((k) => (
+                  <li key={k} className="flex items-center gap-2">
+                    <Check className="size-4 text-muted-foreground" strokeWidth={2.5} aria-hidden />
+                    {t(k, days)}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-2 text-[14px] text-muted-foreground">
-              {["biz.fact1", "biz.fact2", "biz.fact3"].map((k) => (
-                <li key={k} className="flex items-center gap-2">
-                  <Check className="size-4 text-tel-emerald" strokeWidth={2.5} aria-hidden />
-                  {t(k, days)}
-                </li>
-              ))}
-            </ul>
+            <ClientPagePreview />
           </div>
         </section>
 
-        {/* For every team */}
-        <Section id="teams" className="border-t border-edge">
-          <SectionHeader eyebrow={t("biz.team.label")} title={t("biz.team.title")} />
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Feature icon={UsersRound} title={t("biz.f1.t")} body={t("biz.f1.b")} />
-            <Feature icon={GitPullRequest} title={t("biz.f2.t")} body={t("biz.f2.b")} />
-            <Feature icon={ScrollText} title={t("biz.f3.t")} body={t("biz.f3.b")} />
-            <Feature icon={RefreshCw} title={t("biz.f4.t")} body={t("biz.f4.b")} />
-          </div>
+        {/* The trial, plainly: setup, timing, what's included, limits, what it needs, what happens after */}
+        <Section id="how">
+          <SectionHeader eyebrow={t("biz.how.label")} title={t("biz.how.title", days)} />
+          <dl className="mt-10 grid overflow-hidden rounded-xl border md:grid-cols-2">
+            {(["setup", "timing", "includes", "limits", "needs", "after"] as const).map((k) => (
+              <div key={k} className="grid gap-1 border-b bg-card p-5 md:[&:nth-child(odd)]:border-e md:[&:nth-last-child(-n+2)]:border-b-0 [&:last-child]:border-b-0">
+                <dt className="text-[13px] text-muted-foreground">{t(`biz.facts.${k}.t`)}</dt>
+                <dd className="text-[15px] leading-relaxed">{t(`biz.facts.${k}.b`, days)}</dd>
+              </div>
+            ))}
+          </dl>
         </Section>
 
-        {/* For agencies */}
+        {/* What agencies deliver, and what every team gets */}
         <Section id="agencies" className="border-t border-edge">
           <SectionHeader eyebrow={t("biz.agency.label")} title={t("biz.agency.title")} />
           <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -96,31 +95,22 @@ export function BusinessContent() {
             <Feature icon={Mail} title={t("biz.a2.t")} body={t("biz.a2.b")} />
             <Feature icon={Palette} title={t("biz.a3.t")} body={t("biz.a3.b")} />
           </div>
-        </Section>
-
-        {/* How the trial works */}
-        <Section id="how" className="border-t border-edge">
-          <SectionHeader eyebrow={t("biz.how.label")} title={t("biz.how.title", days)} />
-          <ol className="mt-10 grid gap-4 md:grid-cols-3">
-            {(["s1", "s2", "s3"] as const).map((s, i) => (
-              <li key={s} className="o-well grid content-start gap-3 rounded-2xl p-6">
-                <span className="o-readout-strong text-[13px] text-muted-foreground">0{i + 1}</span>
-                <h3 className="text-[17px] font-semibold">{t(`biz.${s}.t`)}</h3>
-                <p className="text-[15px] leading-relaxed text-muted-foreground">{t(`biz.${s}.b`, days)}</p>
-              </li>
-            ))}
-          </ol>
-          <p className="mt-6 max-w-2xl text-[15px] text-muted-foreground">{t("biz.after", days)}</p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Feature icon={UsersRound} title={t("biz.f1.t")} body={t("biz.f1.b")} />
+            <Feature icon={GitPullRequest} title={t("biz.f2.t")} body={t("biz.f2.b")} />
+            <Feature icon={ScrollText} title={t("biz.f3.t")} body={t("biz.f3.b")} />
+            <Feature icon={RefreshCw} title={t("biz.f4.t")} body={t("biz.f4.b")} />
+          </div>
         </Section>
 
         {/* The request: on phones the form comes straight after its heading, the questions after it. */}
         <Section id="trial" className="border-t border-edge" innerClassName="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-8">
           <div className="grid content-start gap-4 lg:col-start-1 lg:row-start-1">
             <Eyebrow>{t("biz.eyebrow")}</Eyebrow>
-            <h2 className="o-display text-[34px] leading-[1.04] sm:text-[44px]">{t("trial.title")}</h2>
+            <h2 className="o-display text-[30px] leading-[1.08] sm:text-[38px]">{t("trial.title")}</h2>
             <p className="text-[17px] leading-relaxed text-muted-foreground">{t("trial.lede")}</p>
           </div>
-          <div className="o-artifact relative self-start rounded-[22px] p-5 sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <div className="relative self-start rounded-xl border bg-card p-5 sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <TrialForm />
           </div>
           <Accordion type="single" collapsible className="min-w-0 lg:col-start-1 lg:row-start-2">

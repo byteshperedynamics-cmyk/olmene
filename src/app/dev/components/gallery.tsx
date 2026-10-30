@@ -11,7 +11,7 @@ import { DiffView } from "@/components/v2/diff-view";
 import { ConnectDiagram, FixFeed, ImpactChart, KpiTile, MergeRing, MetricBars } from "@/components/v2/data-viz";
 import { InView } from "@/components/v2/in-view";
 import { ConnectPanel } from "@/components/v2/agent/connect-panel";
-import { AppHeader } from "@/components/app-header";
+import { AppTopBar } from "@/components/app-header";
 import { SAMPLE_DIFF, SAMPLE_FEED, SAMPLE_MRR_WEEKS, sampleClickSeries } from "@/lib/v2/sample-data";
 
 function Cell({ name, children }: { name: string; children: React.ReactNode }) {
@@ -36,9 +36,9 @@ export function ComponentGallery() {
           <ThemeToggle />
         </div>
 
-        <Cell name="AppHeader · signed-in app bar (resize to check the mobile tab row)">
+        <Cell name="AppTopBar · signed-in top bar below lg (the drawer holds the navigation)">
           <div className="overflow-hidden rounded-xl border">
-            <AppHeader pathname="/app/billing/" identity={null} onSignOut={() => {}} />
+            <AppTopBar pathname="/app/billing/" identity={null} onSignOut={() => {}} />
           </div>
         </Cell>
 

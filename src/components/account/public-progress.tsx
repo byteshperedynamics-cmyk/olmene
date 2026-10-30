@@ -46,7 +46,7 @@ export function PublicProgress({ share }: { share: PublicShareView | null }) {
           <div className="mx-auto grid w-full max-w-2xl gap-8">
             <ProgressCard site={share.site} owner={share.owner} />
             <PrivateNote brand={null} />
-            <section className="o-well grid justify-items-center gap-4 rounded-[22px] px-6 py-9 text-center">
+            <section className="o-well grid justify-items-center gap-4 rounded-2xl px-6 py-9 text-center">
               <h2 className="o-display text-[26px] leading-tight sm:text-[30px]">{t("share.cta.title")}</h2>
               <p className="max-w-md text-[15px] leading-relaxed text-muted-foreground">{t("share.cta.body")}</p>
               <Button asChild size="xl" className="mt-2">

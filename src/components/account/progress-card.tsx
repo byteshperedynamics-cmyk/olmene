@@ -67,7 +67,7 @@ export function ProgressCard({
       : t("share.firstCheck", { date: short(firstAt) });
 
   return (
-    <article className={cn("o-artifact grid gap-6 rounded-[22px] p-5 sm:p-7", compact && "gap-4 p-4 sm:p-5", className)}>
+    <article className={cn("o-artifact grid gap-6 rounded-2xl p-5 sm:p-7", compact && "gap-4 p-4 sm:p-5", className)}>
       <header className="flex items-center gap-3.5">
         {(named || owner.avatarUrl) && (
           <UserAvatar src={owner.avatarUrl} initials={initialsOf(owner.name, site.host)} size={compact ? 36 : 48} />

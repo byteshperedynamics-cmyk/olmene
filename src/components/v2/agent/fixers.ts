@@ -68,3 +68,42 @@ export function statusLine(status: string): string {
       return status;
   }
 }
+
+/**
+ * Where a fix run's pull request stands, from opening to proof. One
+ * vocabulary for the overview, the fix-run list and the run page:
+ *   opened → merged, awaiting deployment → verified live | verification failed
+ * plus closed without merging. `null` until a pull request exists.
+ */
+export type PrStage = "opened" | "closed" | "awaiting_deploy" | "verified" | "verify_failed";
+
+export interface PrStageInput {
+  pr_state?: "open" | "merged" | "closed" | null;
+  pr_number?: number | null;
+  step_outputs?: Record<string, unknown> | null;
+}
+
+export function prStage(job: PrStageInput): PrStage | null {
+  if (!job.pr_state || !job.pr_number) return null;
+  if (job.pr_state === "open") return "opened";
+  if (job.pr_state === "closed") return "closed";
+  const live = (job.step_outputs as { liveCheck?: { last?: { passed: number; total: number; fetchError?: string }; settled?: boolean } } | null)?.liveCheck;
+  const last = live?.last;
+  if (!last) return "awaiting_deploy";
+  if (!last.fetchError && last.total > 0 && last.passed === last.total) return "verified";
+  // Inside the first day Olmene keeps re-checking while the deploy finishes.
+  return live?.settled || last.fetchError ? "verify_failed" : "awaiting_deploy";
+}
+
+/** Counts verified pull-request runs, regardless of how many fixes each run contains. */
+export function countVerifiedRuns(jobs: PrStageInput[]): number {
+  return jobs.filter((job) => prStage(job) === "verified").length;
+}
+
+export const PR_STAGE_COPY: Record<PrStage, { label: string; tone: "live" | "neutral" | "problem" | "ok" }> = {
+  opened: { label: "Pull request open", tone: "neutral" },
+  closed: { label: "Closed without merging", tone: "neutral" },
+  awaiting_deploy: { label: "Merged, awaiting deployment", tone: "neutral" },
+  verified: { label: "Verified live", tone: "ok" },
+  verify_failed: { label: "Verification failed", tone: "problem" },
+};

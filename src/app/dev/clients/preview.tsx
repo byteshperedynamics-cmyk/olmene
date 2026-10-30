@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-header";
 import ClientsPage from "@/app/app/clients/page";
 import type { Identity } from "@/lib/account-client";
 import type { WorkspaceRole } from "@/lib/workspace/roles";
@@ -46,13 +46,8 @@ export function ClientsPreview() {
   }, []);
   if (!ready) return null;
   return (
-    <div dir="ltr" className="flex min-h-screen flex-col">
-      <AppHeader pathname="/app/clients/" identity={IDENTITY} workspaces={{ list: ready.list, current: ready.ws }} onSignOut={() => toast("Signed out (preview)")} />
-      <main id="main-content" className="flex-1">
-        <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 md:py-10">
+    <AppShell pathname="/app/clients/" identity={IDENTITY} workspaces={{ list: ready.list, current: ready.ws }} onSignOut={() => toast("Signed out (preview)")}>
           <ClientsPage />
-        </div>
-      </main>
-    </div>
+    </AppShell>
   );
 }

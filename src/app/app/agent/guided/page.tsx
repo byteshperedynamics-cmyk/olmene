@@ -85,7 +85,7 @@ export default function GuidedPage() {
         body="They're not enabled on this deployment. Your reports and free scans work as usual."
         action={
           <Button asChild variant="hairline">
-            <Link href="/app/">Back to analyses</Link>
+            <Link href="/app/">Back to the overview</Link>
           </Button>
         }
       />

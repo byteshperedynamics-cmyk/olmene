@@ -40,10 +40,10 @@ export function WorkspaceSwitcher({ list, current }: { list: WorkspaceSummary[];
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger
         aria-label={`Workspace: ${current.name}. Switch workspace`}
-        className="o-hit flex h-9 max-w-[11rem] cursor-pointer items-center gap-2 rounded-lg border border-transparent px-2 text-[13.5px] transition-colors hover:border-rim hover:bg-chip focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-rim data-[state=open]:bg-chip sm:max-w-[14rem]"
+        className="o-hit flex h-9 w-full max-w-full cursor-pointer items-center gap-2 rounded-md border border-transparent px-2 text-[13.5px] transition-colors hover:border-rim hover:bg-chip focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-rim data-[state=open]:bg-chip"
       >
         <Mark ws={current} />
-        <span className="hidden truncate font-medium sm:inline">{current.name}</span>
+        <span className="min-w-0 flex-1 truncate text-start font-medium">{current.name}</span>
         <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={8} className="w-[18rem] rounded-xl p-1.5">
