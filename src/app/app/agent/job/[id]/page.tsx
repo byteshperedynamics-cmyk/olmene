@@ -67,7 +67,7 @@ export default function AgentJobPage() {
     setBusy("approve");
     try {
       const res = await approveAgentJob(id, [...checked]);
-      toast.success(`Approved ${res.approved} ${res.approved === 1 ? "change" : "changes"}. Opening the pull request.`);
+      toast.success(`Creating the pull request with ${res.approved} ${res.approved === 1 ? "change" : "changes"}.`);
       await refetch();
     } catch (e) {
       if (e instanceof AgentApiError && e.code === "plan_required") {
@@ -79,7 +79,7 @@ export default function AgentJobPage() {
           action: { label: "See plans", onClick: () => (window.location.href = "/pricing/") },
         });
       } else {
-        toast.error(e instanceof AgentApiError ? e.message : "Could not approve. Try again.");
+        toast.error(e instanceof AgentApiError ? e.message : "Could not create the pull request. Try again.");
       }
     } finally {
       setBusy(null);

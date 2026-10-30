@@ -1,9 +1,8 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Eyebrow } from "@/components/v2/atoms";
+import { DeniedState, FailedState, isDenied } from "@/components/app/async-state";
 import { ClientsScreen } from "@/components/agency/clients-view";
 import { getClients } from "@/lib/agency/client";
 import type { ClientsView } from "@/lib/agency/types";
@@ -18,23 +17,19 @@ export default function ClientsPage() {
 
   return (
     <div className="mx-auto grid max-w-6xl gap-8">
-      <header className="grid gap-2">
-        <Eyebrow>Clients</Eyebrow>
-        <h1 className="o-display text-[32px] leading-tight">Clients</h1>
-        <p className="max-w-2xl text-[15px] text-muted-foreground">
+      <header className="grid gap-1">
+        <h1 className="o-display text-[28px] leading-tight">Clients</h1>
+        <p className="max-w-2xl text-[14px] text-muted-foreground">
           Group sites by client, and give each client a page with their sites&apos; progress, under your name.
         </p>
       </header>
 
-      {q.isError ? (
-        <section className="grid gap-3 rounded-2xl border bg-card p-6">
-          <p className="text-[14px]">{q.error instanceof Error ? q.error.message : "Couldn't load your clients."}</p>
-          <div>
-            <Button variant="hairline" size="sm" onClick={() => void q.refetch()}>
-              Try again
-            </Button>
-          </div>
-        </section>
+      {q.isError && !view ? (
+        isDenied(q.error) ? (
+          <DeniedState what="clients" />
+        ) : (
+          <FailedState what="clients" error={q.error} retrying={q.isFetching} onRetry={() => void q.refetch()} />
+        )
       ) : !view ? (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="grid gap-4">

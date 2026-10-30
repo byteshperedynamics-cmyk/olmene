@@ -75,3 +75,46 @@ export const SAMPLE_FEED: FeedItem[] = [
   { id: "f5", title: "Canonical URL", site: "a newsletter", ago: "33m" },
   { id: "f6", title: "H1 rewrite", site: "a B2B API", ago: "41m" },
 ];
+
+/**
+ * The homepage's example client (refinement 2026-10-30). Fictional, on the
+ * reserved .example domain, and always shown under an "Example" badge.
+ */
+export const EXAMPLE_CLIENT = {
+  agency: "Northline Studio",
+  agencyColor: "#3F6FD8",
+  client: "Harbor & Pine Dental",
+  host: "harborpine.example",
+} as const;
+
+/** The example client's site as its progress page shows it: eight weekly measurements. */
+export const EXAMPLE_PROGRESS = {
+  siteId: "example",
+  host: "harborpine.example",
+  url: "https://harborpine.example/",
+  since: "2026-09-02T09:00:00.000Z",
+  monitor: true,
+  scoreNow: 78,
+  scoreFirst: 58,
+  history: [58, 58, 61, 64, 64, 71, 74, 78].map((score, i) => ({ at: new Date(Date.UTC(2026, 8, 2 + i * 7, 9)).toISOString(), score })),
+  checksPassing: 18,
+  checksTotal: 21,
+  checksFixed: 5,
+  aiMentionShare: null,
+};
+
+/** The fix the hero example opens: one finding, its evidence, the proposed change. */
+export const EXAMPLE_FIX_DIFF: DiffFile[] = [
+  {
+    path: "app/layout.tsx",
+    diff: [
+      "--- a/app/layout.tsx",
+      "+++ b/app/layout.tsx",
+      "@@ -8,3 +8,4 @@",
+      " export const metadata = {",
+      '   title: "Harbor & Pine Dental — Family dentist in Portsmouth",',
+      '+  description: "Family and emergency dental care in Portsmouth. Evening appointments, most insurers accepted.",',
+      " };",
+    ].join("\n"),
+  },
+];

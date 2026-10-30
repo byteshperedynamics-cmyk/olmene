@@ -221,14 +221,14 @@ function BrandForm({ view, onView, admin, onDraft }: { view: ClientsView; onView
             {!HEX.test(color.trim()) && (
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 rounded-[10px] border border-line-strong bg-background bg-[linear-gradient(to_top_right,transparent_calc(50%-1px),var(--muted-foreground)_calc(50%-1px),var(--muted-foreground)_calc(50%+1px),transparent_calc(50%+1px))]"
+                className="pointer-events-none absolute inset-0 rounded-md border border-line-strong bg-background bg-[linear-gradient(to_top_right,transparent_calc(50%-1px),var(--muted-foreground)_calc(50%-1px),var(--muted-foreground)_calc(50%+1px),transparent_calc(50%+1px))]"
               />
             )}
             <input
               type="color"
               aria-label="Pick the accent colour"
               className={cn(
-                "h-11 w-14 cursor-pointer rounded-[10px] border border-line-strong bg-background p-1 disabled:cursor-default disabled:opacity-60",
+                "h-11 w-14 cursor-pointer rounded-md border border-line-strong bg-background p-1 disabled:cursor-default disabled:opacity-60",
                 !HEX.test(color.trim()) && "opacity-0",
               )}
               value={HEX.test(color.trim()) ? color.trim().toLowerCase() : DEFAULT_SWATCH}

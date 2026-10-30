@@ -118,10 +118,22 @@ export default function NewAnalysisPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight">New analysis</h1>
+        <h1 className="o-display text-[28px] leading-tight">New analysis</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Point Olmene at the website that sells your product. The report takes a few minutes — you can
           close the tab, nothing is lost.
+        </p>
+        {/* Free scan vs paid analysis, said before anyone submits (refinement 2026-10-30). */}
+        <p className="mt-3 rounded-lg border bg-card px-3.5 py-2.5 text-[13px] leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">
+            {ent && !ent.active && ent.reportCredits > 0 ? "This uses one report credit" : "This uses one analysis from your plan"}
+          </span>
+          {ent?.active && ent.quotaTotal > 0 ? ` (${Math.max(0, ent.quotaTotal - ent.quotaUsed)} of ${ent.quotaTotal} left this month)` : ""}. When it
+          completes, the site is watched and re-checked every week. Only want the basics checked once?{" "}
+          <a href="/app/scan/" className="font-medium text-foreground underline underline-offset-2">
+            Run a free scan
+          </a>
+          .
         </p>
       </div>
 

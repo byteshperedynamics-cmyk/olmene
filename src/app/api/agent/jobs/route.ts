@@ -26,7 +26,7 @@ export async function GET(req: Request) {
 
   const { data: jobs, error } = await db
     .from("agent_jobs")
-    .select("id, status, current_step, input, step_outputs, error, created_at, completed_at, report_id, scan_id")
+    .select("id, status, current_step, input, step_outputs, error, created_at, completed_at, report_id, scan_id, pr_number, pr_url, pr_state, merged_at")
     .eq("user_id", actor.ownerId)
     .order("created_at", { ascending: false })
     .limit(limit);

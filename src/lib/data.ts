@@ -99,6 +99,23 @@ type JobRow = {
   completed_at: string | null;
 };
 
+/**
+ * A failed database read. List screens show it as "couldn't load" (or "no
+ * access" for permission errors), never as an empty list. `status` follows
+ * the HTTP-like convention the API errors use, so one state component reads both.
+ */
+export class DataError extends Error {
+  status: number;
+  code: string;
+  constructor(err: { message?: string; code?: string }) {
+    super(err.message || "The database didn't answer.");
+    this.name = "DataError";
+    this.code = err.code ?? "db_error";
+    // 42501 insufficient privilege, PGRST301 JWT rejected: a permission problem, not an outage.
+    this.status = err.code === "42501" ? 403 : err.code === "PGRST301" ? 401 : 503;
+  }
+}
+
 function mapJob(r: JobRow): Job {
   return {
     id: r.id,
@@ -122,13 +139,15 @@ export async function listJobs(): Promise<Job[]> {
   if (!supabase) return [];
   // "Delete my data" empties an analysis and marks it deleted_at instead of
   // removing it (it still counts toward the month's quota); it's gone for the user.
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("analysis_jobs")
     .select(JOB_SELECT)
     .eq("user_id", await workspaceOwner())
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(50);
+  // A failed read must surface as an error, never as "no analyses".
+  if (error) throw new DataError(error);
   return (data ?? []).map(mapJob);
 }
 
@@ -303,7 +322,7 @@ export async function listSites(): Promise<SiteRow[]> {
     .eq("user_id", await workspaceOwner())
     .order("created_at", { ascending: false })
     .limit(50);
-  if (error) return [];
+  if (error) throw new DataError(error);
   return (data ?? []) as SiteRow[];
 }
 
@@ -325,6 +344,6 @@ export async function listNotifications(limit = 15): Promise<NotificationRow[]> 
     .eq("user_id", await workspaceOwner())
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) return [];
+  if (error) throw new DataError(error);
   return (data ?? []) as NotificationRow[];
 }

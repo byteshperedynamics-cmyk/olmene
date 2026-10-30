@@ -1,26 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, ChevronDown, Quote, TriangleAlert } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronDown, Quote } from "lucide-react";
 import { CHECK_COUNT } from "@/lib/config";
 import { useI18n } from "@/i18n/provider";
-import { prefersReducedMotion } from "../in-view";
 import { Eyebrow } from "../atoms";
 import { Section, SectionHeader } from "./section";
 
-// Teardown #001 — REAL, measured results of running Olmene on its own homepage.
-// BEFORE: measured 2026-09-25 on the live site, by the 18-check engine of the
-// time. AFTER: re-measured 2026-10-01, after the free audit moved to the
-// 21-check pipeline. The numbers stay as measured; the switcher says which
-// engine produced each.
-const STATES = {
-  before: { readiness: 89, passed: 13, total: 18 },
-  after: { readiness: 98, passed: CHECK_COUNT, total: CHECK_COUNT },
-};
+// Teardown #001: REAL, measured results of running Olmene on its own homepage.
+// FINDING: measured 2026-09-25 on the live site by the 18-check engine of the
+// time. VERIFICATION: re-measured 2026-10-01, after the free audit moved to
+// the 21-check pipeline. The numbers stay as measured. Because the check sets
+// differ, the case never presents 89 → 98 as a like-for-like gain; what
+// compares directly is the five findings, each failing then passing.
+const FINDING = { date: "2026-09-25", readiness: 89, passed: 13, total: 18 };
+const VERIFIED = { date: "2026-10-01", readiness: 98, passed: CHECK_COUNT, total: CHECK_COUNT };
 
-/** The five fixes, each with its before and after line. */
+/** The five findings and the change that answered each. */
 const ITEMS: Array<{ before: string; after: string }> = [
   { before: "teardown.b1", after: "teardown.li1" },
   { before: "teardown.b2", after: "teardown.li2" },
@@ -29,104 +25,94 @@ const ITEMS: Array<{ before: string; after: string }> = [
   { before: "teardown.b5", after: "teardown.li5" },
 ];
 
+/**
+ * One end-to-end case (refinement 2026-10-30): finding → change → live
+ * verification, on olmene.com itself. The primary public evidence: dated
+ * measurements, the engine that produced each, and a plain note on what can
+ * and can't be compared. Raw output and report quotes sit one click away.
+ */
 export function Teardown() {
-  const { t } = useI18n();
-  const [view, setView] = useState<"before" | "after">("after");
-  const s = STATES[view];
+  const { t, lang } = useI18n();
+  const date = (iso: string) => {
+    try {
+      return new Intl.DateTimeFormat(lang === "zh" ? "zh-CN" : lang, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T12:00:00Z`));
+    } catch {
+      return iso;
+    }
+  };
 
   return (
     <Section id="teardown">
-      <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.05fr]">
-        <div className="min-w-0">
-          <SectionHeader eyebrow={t("teardown.label")} title={t("teardown.title")} lede={t("teardown.body")} />
+      <SectionHeader eyebrow={t("case.label")} title={t("case.title")} lede={t("case.lede")} />
 
-          {/* @graph parser story: engineering transparency */}
-          <div className="o-artifact mt-8 grid gap-3 rounded-2xl p-5">
-            <p className="text-[13px] text-tel-amber font-medium">{t("teardown.lessonTitle")}</p>
-            <p className="max-w-[64ch] text-[14.5px] leading-relaxed text-muted-foreground">{t("teardown.lesson")}</p>
-            <pre dir="ltr" className="o-well overflow-x-auto rounded-lg px-3 py-2.5 font-mono text-[11.5px] leading-relaxed text-muted-foreground">
-              <span className="text-faint">{"{"}</span> <span className="text-foreground">&quot;@context&quot;</span>: &quot;https://schema.org&quot;,{"\n"}
-              {"  "}<span className="text-tel-emerald">&quot;@graph&quot;</span>: [ {"{"} &quot;@type&quot;: &quot;Organization&quot; {"}"}, {"{"} &quot;@type&quot;: &quot;WebApplication&quot; {"}"} ] <span className="text-faint">{"}"}</span>
-            </pre>
-          </div>
-
-          <Button asChild size="xl" className="mt-7">
-            <Link href="#free-diagnosis">
-              {t("teardown.cta")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
-            </Link>
-          </Button>
-        </div>
-
-        {/* Before / after switcher — measured, not invented */}
-        <div className="o-artifact min-w-0 rounded-2xl p-5 sm:p-6">
-          <div role="tablist" aria-label={t("teardown.label")} className="o-well relative grid grid-cols-2 rounded-xl p-1">
-            <span
-              aria-hidden
-              className="absolute inset-y-1 start-1 w-[calc(50%-4px)] rounded-lg bg-chip shadow-[inset_0_1px_0_var(--edge-top)] transition-transform duration-[var(--dur-state)] ease-[var(--ease-out-expo)] rtl:[--o-dir:-1]"
-              style={{ transform: view === "after" ? "translateX(calc(100% * var(--o-dir, 1)))" : "none" }}
-            />
-            {(["before", "after"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                role="tab"
-                aria-selected={view === v}
-                onClick={() => setView(v)}
-                className={`relative z-[1] flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-[13px] transition-colors pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                  view === v ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t(v === "before" ? "teardown.before" : "teardown.after")}{" "}
-                <span className={`o-readout-strong text-[12px] ${v === "before" ? "text-tel-amber" : "text-tel-emerald"}`}>
-                  {STATES[v].readiness}/100
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-6">
-            <Dial value={s.readiness} good={view === "after"} />
-            <div className="grid min-w-0 gap-2">
-              <p className="o-readout-strong text-[15px] text-foreground">{t("form.checksPassed", { a: s.passed, b: s.total })}</p>
-              <span className="inline-flex w-fit items-center rounded-full border border-rim bg-chip px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
-                {view === "before" ? t("teardown.engine18") : t("teardown.engineTag")}
-              </span>
-              <p className="text-[12.5px] text-faint">{t("scores.readiness")}</p>
-            </div>
-          </div>
-
-          <ul className="mt-6 grid gap-2 border-t border-edge pt-5 text-[13.5px] leading-relaxed" aria-live="polite">
+      <ol className="mt-10 grid gap-4 lg:grid-cols-3">
+        <li className="grid content-start gap-4 rounded-xl border bg-card p-5">
+          <StepHead n={1} title={t("case.s1.title")} meta={`${date(FINDING.date)} · ${t("teardown.engine18")}`} />
+          <p className="text-[14px]">
+            {t("cp.score")} <span className="o-readout-strong text-foreground">{FINDING.readiness}/100</span>
+            <span className="text-muted-foreground"> · {t("form.checksPassed", { a: FINDING.passed, b: FINDING.total })}</span>
+          </p>
+          <ul className="grid gap-2 border-t pt-4 text-[13.5px] leading-relaxed text-muted-foreground">
             {ITEMS.map((it) => (
-              <li key={it.after} className="flex items-start gap-2.5">
-                {view === "after" ? (
-                  <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-tel-emerald/35 bg-tel-emerald/10 px-1.5 py-0.5 font-mono text-[11px] text-tel-emerald">
-                    <CheckCircle2 className="size-3" aria-hidden /> {t("teardown.verified")}
-                  </span>
-                ) : (
-                  <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 rounded-full border border-tel-rose/35 bg-tel-rose/10 px-1.5 py-0.5 font-mono text-[11px] text-tel-rose">
-                    <TriangleAlert className="size-3" aria-hidden /> {t("teardown.warning")}
-                  </span>
-                )}{" "}
-                <span key={view} className="o-crossfade min-w-0 text-muted-foreground">
-                  {t(view === "after" ? it.after : it.before)}
-                </span>
+              <li key={it.before} className="flex gap-2">
+                <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-tel-rose" aria-hidden />
+                <span>{t(it.before)}</span>
               </li>
             ))}
           </ul>
-        </div>
+        </li>
+
+        <li className="grid content-start gap-4 rounded-xl border bg-card p-5">
+          <StepHead n={2} title={t("case.s2.title")} meta={t("case.s2.meta")} />
+          <ul className="grid gap-2 text-[13.5px] leading-relaxed">
+            {ITEMS.map((it) => (
+              <li key={it.after} className="flex gap-2">
+                <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-foreground/50" aria-hidden />
+                <span>{t(it.after)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="grid gap-2 border-t pt-4">
+            <p className="text-[13px] font-medium">{t("teardown.lessonTitle")}</p>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">{t("teardown.lesson")}</p>
+          </div>
+        </li>
+
+        <li className="grid content-start gap-4 rounded-xl border bg-card p-5">
+          <StepHead n={3} title={t("case.s3.title")} meta={`${date(VERIFIED.date)} · ${t("case.engine21", { n: CHECK_COUNT })}`} />
+          <p className="text-[14px]">
+            {t("cp.score")} <span className="o-readout-strong text-foreground">{VERIFIED.readiness}/100</span>
+            <span className="text-muted-foreground"> · {t("form.checksPassed", { a: VERIFIED.passed, b: VERIFIED.total })}</span>
+          </p>
+          <p className="flex gap-2 border-t pt-4 text-[13.5px] leading-relaxed">
+            <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-tel-emerald" aria-hidden />
+            <span>{t("case.s3.body")}</span>
+          </p>
+        </li>
+      </ol>
+
+      <div className="mt-4 grid gap-2 rounded-xl border border-tel-amber/35 bg-tel-amber/[0.05] p-5 text-[14px] leading-relaxed">
+        <p className="font-medium">{t("case.compare.title")}</p>
+        <p className="text-muted-foreground">{t("case.compare.body")}</p>
+        <p className="text-muted-foreground">
+          {t("case.today")}{" "}
+          <Link href="#free-diagnosis" className="font-medium text-foreground underline underline-offset-4">
+            {t("case.todayLink")}
+          </Link>
+        </p>
       </div>
 
       {/* The raw scan result and the paid layer's findings: proof, one click away (progressive disclosure) */}
-      <details className="o-disclosure group mt-12">
-        <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-rim bg-chip px-4 py-2 text-[14px] font-medium text-foreground transition-colors hover:bg-accent pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
+      <details className="o-disclosure group mt-8">
+        <summary className="flex w-fit cursor-pointer list-none items-center gap-2 rounded-md border border-rim px-3.5 py-2 text-[14px] font-medium text-foreground transition-colors hover:bg-accent pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
           <ChevronDown className="size-4 text-muted-foreground transition-transform duration-[var(--dur-state)] group-open:rotate-180" aria-hidden />
           {t("teardown.more")}
         </summary>
         {/* Real output screenshot — also gives our image-alt check something to check */}
-        <figure className="mt-12">
+        <figure className="mt-8">
           {/* Light and dark captures of the same real result; the hidden one is display:none, so it neither loads nor is announced.
               Shown in greyscale: the capture predates the monochrome design, the numbers are unchanged. */}
-          <div className="o-artifact overflow-hidden rounded-2xl">
+          <div className="overflow-hidden rounded-xl border">
             {(["", "-dark"] as const).map((v) => (
               <img
                 key={v || "light"}
@@ -148,10 +134,10 @@ export function Teardown() {
         </figure>
 
         {/* What the paid layer found — real quotes from our own full report */}
-        <div className="o-artifact mt-10 rounded-2xl p-6 sm:p-8">
+        <div className="mt-8 rounded-xl border bg-card p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-3">
             <Eyebrow>{t("teardown.quotesLabel")}</Eyebrow>
-            <span className="rounded-full border border-rim bg-chip px-2 py-0.5 font-mono text-[11px] text-faint">{t("teardown.engineTag")}</span>
+            <span className="text-[12.5px] text-muted-foreground">{t("teardown.engineTag")}</span>
           </div>
           <ul className="mt-5 grid gap-4 text-[14.5px] leading-relaxed">
             {[
@@ -180,48 +166,14 @@ export function Teardown() {
   );
 }
 
-/** Readiness dial: the ring and the number move together when the view switches. */
-function Dial({ value, good }: { value: number; good: boolean }) {
-  const [shown, setShown] = useState(value);
-  const from = useRef(value);
-  useEffect(() => {
-    if (prefersReducedMotion()) {
-      setShown(value);
-      from.current = value;
-      return;
-    }
-    const start = from.current;
-    let raf = 0;
-    let t0 = 0;
-    const step = (now: number) => {
-      if (!t0) t0 = now;
-      const p = Math.min(1, (now - t0) / 520);
-      const e = 1 - Math.pow(1 - p, 3);
-      const v = start + (value - start) * e;
-      setShown(v);
-      from.current = v;
-      if (p < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [value]);
-  const r = 44;
-  const c = 2 * Math.PI * r;
+function StepHead({ n, title, meta }: { n: number; title: string; meta: string }) {
   return (
-    <div className="relative grid size-[112px] shrink-0 place-items-center" dir="ltr">
-      <svg viewBox="-56 -56 112 112" className="absolute inset-0 size-full -rotate-90">
-        <circle r={r} fill="none" stroke="var(--line-strong)" strokeWidth="7" />
-        <circle
-          r={r}
-          fill="none"
-          stroke={good ? "var(--tel-emerald)" : "var(--tel-amber)"}
-          strokeWidth="7"
-          strokeLinecap="round"
-          strokeDasharray={`${(c * shown) / 100} ${c}`}
-          className="transition-[stroke] duration-[var(--dur-state)]"
-        />
-      </svg>
-      <span className="o-readout-strong text-[30px] leading-none text-foreground">{Math.round(shown)}</span>
+    <div className="grid gap-1">
+      <p className="flex items-baseline gap-2.5">
+        <span className="o-readout-strong text-[12px] text-faint">{n}</span>
+        <span className="text-[16px] font-medium">{title}</span>
+      </p>
+      <p className="text-[12.5px] text-muted-foreground">{meta}</p>
     </div>
   );
 }

@@ -193,97 +193,34 @@ export function useFreeAudit(): FreeAuditState {
   return ctx;
 }
 
-/** Sample domains typed into the empty field's placeholder (stops on focus/input). */
-const SAMPLE_DOMAINS = ["acme-analytics.com", "launchkit.dev", "fernbooks.io"];
-
-/** A real site the sample chip types in (acme-analytics.com in the illustrations doesn't exist). */
+/** A real site the fill chip puts in the field (acme-analytics.com in the illustrations doesn't exist). */
 const SAMPLE_SITE = "olmene.com";
-
-function useTypedPlaceholder(base: string, active: boolean) {
-  const [text, setText] = useState(base);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    setText(base);
-    if (!active || typeof window === "undefined") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let word = 0;
-    let chars = 0;
-    let dir = 1;
-    const tick = () => {
-      const w = SAMPLE_DOMAINS[word];
-      chars += dir;
-      let wait = dir > 0 ? 75 : 35;
-      if (chars >= w.length) {
-        dir = -1;
-        wait = 2200;
-      } else if (chars <= 0) {
-        dir = 1;
-        word = (word + 1) % SAMPLE_DOMAINS.length;
-        wait = 400;
-      }
-      setText(w.slice(0, Math.max(chars, 0)) || base);
-      timer.current = setTimeout(tick, wait);
-    };
-    const start = () => (timer.current = setTimeout(tick, 1600));
-    const idle = (window as Window & { requestIdleCallback?: (cb: () => void) => number }).requestIdleCallback;
-    if (idle) idle(start);
-    else start();
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [base, active]);
-  return text;
-}
 
 /** The URL field + submit button. `variant="hero"` is the v2 instrument style. */
 export function FreeAuditInput({ variant = "hero", className }: { variant?: "hero" | "cta"; className?: string }) {
   const { t } = useI18n();
   const { url, setUrl, loading, progress, error, origin, submit } = useFreeAudit();
   const mine = origin === variant;
-  const [focused, setFocused] = useState(false);
-  const [typing, setTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const placeholder = useTypedPlaceholder(t("form.placeholder"), variant === "hero" && !focused && !url && !typing);
 
-  // "Try it on olmene.com": types a real, scannable URL into the command bar
-  // (a sample that exists, so the scan that follows works). The visitor still
-  // presses Scan; nothing is submitted for them.
-  const trySample = () => {
-    const sample = SAMPLE_SITE;
-    if (loading || typing) return;
-    const reduced = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      setUrl(sample);
-      inputRef.current?.focus();
-      return;
-    }
-    setTyping(true);
-    setUrl("");
-    let i = 0;
-    const tick = () => {
-      i += 1;
-      setUrl(sample.slice(0, i));
-      if (i < sample.length) window.setTimeout(tick, 42 + Math.random() * 38);
-      else {
-        setTyping(false);
-        inputRef.current?.focus();
-      }
-    };
-    window.setTimeout(tick, 120);
+  // "Use olmene.com": fills a real, scannable URL at once (refinement
+  // 2026-10-30: no typing animation). The visitor still presses Scan.
+  const fillSample = () => {
+    if (loading) return;
+    setUrl(SAMPLE_SITE);
+    inputRef.current?.focus();
   };
 
   return (
     <form onSubmit={(e) => submit(e, variant)} className={`w-full max-w-xl ${className ?? ""}`} aria-label={t("form.aria")}>
-      <div className="o-beam-border flex w-full flex-col gap-2 rounded-2xl p-1.5 shadow-[inset_0_1px_0_var(--edge-top),0_18px_44px_-22px_rgb(0_0_0/0.8)] min-[480px]:flex-row min-[480px]:items-center">
+      <div className="o-beam-border flex w-full flex-col gap-2 rounded-xl p-1.5 min-[480px]:flex-row min-[480px]:items-center">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-faint" aria-hidden />
           <Input
             ref={inputRef}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder={placeholder}
+            placeholder={t("form.placeholder")}
             className="h-11 border-0 bg-transparent ps-9 font-mono text-[15px] shadow-none placeholder:text-faint focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
             autoComplete="url"
             inputMode="url"
@@ -291,7 +228,7 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
             disabled={loading}
           />
         </div>
-        <Button type="submit" size="xl" className="w-full shrink-0 min-[480px]:w-auto" disabled={loading || typing}>
+        <Button type="submit" size="xl" className="w-full shrink-0 min-[480px]:w-auto" disabled={loading}>
           {loading ? (
             <>
               <LogoLoader size={16} className="text-primary-foreground" /> {t("form.analyzing")}
@@ -303,14 +240,27 @@ export function FreeAuditInput({ variant = "hero", className }: { variant?: "her
           )}
         </Button>
       </div>
-      {variant === "hero" && !loading && (
+      {variant === "hero" && !loading && !url && (
         <button
           type="button"
-          onClick={trySample}
-          className="o-chip o-hit relative mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12.5px] text-muted-foreground transition-colors duration-[var(--dur-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={fillSample}
+          className="o-hit relative mt-3 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-[13px] text-muted-foreground transition-colors duration-[var(--dur-hover)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="text-faint">{t("hero.trySample")}</span>
-          <span dir="ltr" className="font-mono text-foreground">{SAMPLE_SITE}</span>
+          {/* "Use {site}": the site keeps its own styling wherever the language puts it. */}
+          {t("hero.useSample", { site: "\u0000" })
+            .split("\u0000")
+            .map((part, i) =>
+              i === 0 ? (
+                <span key={i}>{part}</span>
+              ) : (
+                <span key={i}>
+                  <span dir="ltr" className="font-mono text-foreground underline decoration-faint underline-offset-4">
+                    {SAMPLE_SITE}
+                  </span>
+                  {part}
+                </span>
+              ),
+            )}
         </button>
       )}
       {loading && mine && <ScanProgress progress={progress ?? EMPTY_PROGRESS} />}
@@ -446,9 +396,7 @@ export function FreeAuditResult() {
     <>
       {result && (
         <div id="diagnosis" className="fade-up-in scroll-mt-24">
-          <div className="o-elevated relative overflow-hidden rounded-2xl border border-line-strong bg-card">
-            {/* One-shot scan line across the card as the result lands */}
-            <div aria-hidden className="o-anim o-diff-sweep pointer-events-none absolute inset-x-0 top-0 h-px" />
+          <div className="relative overflow-hidden rounded-xl border border-line-strong bg-card">
             {/* ── Instrument header: the numbers, straight up ── */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line-strong bg-surface-2/50 px-5 py-3.5">
               <div className="min-w-0">
@@ -485,8 +433,10 @@ export function FreeAuditResult() {
 
             {/* ── Readiness score: deterministic, and it says so ── */}
             <div className="grid gap-6 p-5 sm:grid-cols-[auto_1fr] sm:p-6">
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-3">
                 <ScoreRing value={result.scores.overall} size={112} label={t("scores.readiness")} />
+                {/* The method sits beside the number it explains (refinement 2026-10-30). */}
+                <p className="max-w-[13rem] text-center text-[12px] leading-snug text-muted-foreground">{t("form.scoreNote", { n: result.totalChecks })}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-1">
                 <ScoreBar label={t("scores.seoTech")} value={result.scores.seo} />

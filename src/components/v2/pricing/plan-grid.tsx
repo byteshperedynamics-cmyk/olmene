@@ -61,10 +61,31 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
   const [yearly, setYearly] = useState(false);
   const subs = sorted.filter((p) => intervalOf(p) === (yearly && hasYearly ? "year" : "month"));
   const oneTimes = sorted.filter((p) => intervalOf(p) === "once");
-  const highlight = subs.find((p) => p.slug?.startsWith("fix")) ?? subs[subs.length - 1];
+  // Agency leads (refinement 2026-10-30): it's the plan the product is built around.
+  const highlight = subs.find((p) => p.slug?.startsWith("team")) ?? subs[subs.length - 1];
 
   const featuresFor = (p: Plan): string[] => {
     const fixes = p.actions_per_period ?? 0;
+    // Package-specific lines: site capacity apart from monthly analyses, and
+    // what each plan delivers that the other doesn't.
+    if (p.slug?.startsWith("team"))
+      return [
+        t("plan.agency.sites", { sites: p.sites_limit ?? 5 }),
+        t("plan.agency.analyses", { n: p.reports_per_period }),
+        t("plan.team.f2", { n: fixes }),
+        t("plan.agency.pages"),
+        t("plan.agency.reports"),
+        t("plan.agency.whiteLabel"),
+        t("plan.agency.team"),
+      ];
+    if (p.slug?.startsWith("fix"))
+      return [
+        t("plan.fix.site"),
+        t("pc.feature.reports", { n: p.reports_per_period }),
+        t("plan.fix.f2", { n: fixes }),
+        t("plan.fix.delivery"),
+        t("plan.fix.f1"),
+      ];
     if (p.features_key) {
       const keys = ["f1", "f2", "f3", "f4"].map((f) => `${p.features_key}.${f}`);
       // The full cited reports each plan includes are what the fixes are planned from.
@@ -84,6 +105,20 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
     return agentOn && fixes > 0 ? [...base, t("pc.feature.fixes", { n: fixes })] : base;
   };
 
+  /** Agency: "Request agency trial" (assisted) first; subscribing is its own, labelled action. */
+  const agencyCta = (p: Plan) => (
+    <div className="grid gap-2">
+      <Button asChild size="xl" className="w-full">
+        <Link href="/business/#trial">
+          {t("cta.agencyTrial")} <ArrowRight className="size-4 rtl-flip" aria-hidden />
+        </Link>
+      </Button>
+      <Button asChild size="xl" variant="hairline" className="w-full">
+        <Link href={ctaHref(p.polar_product_id, loggedIn)}>{t("cta.agencyBuy")}</Link>
+      </Button>
+    </div>
+  );
+
   const ctaFor = (p: Plan, isHighlight: boolean) => {
     if (p.slug?.startsWith("fix")) return t("pc.cta.fix");
     if (p.slug?.startsWith("team")) return t("pc.cta.team");
@@ -91,62 +126,49 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
   };
 
   if (layout === "home") {
-    // Homepage: the three ways in — free scan, one cited report, the fix plan.
-    // Agency and yearly billing stay on /pricing/.
+    // Homepage (refinement 2026-10-30): Agency leads, Fix stays, the single
+    // report sits apart on its own row; yearly billing stays on /pricing/.
     const report = oneTimes[0];
-    const fix = sorted.find((p) => intervalOf(p) === "month" && p.slug?.startsWith("fix")) ?? highlight;
+    const monthly = sorted.filter((p) => intervalOf(p) === "month");
+    const agency = monthly.find((p) => p.slug?.startsWith("team"));
+    const fix = monthly.find((p) => p.slug?.startsWith("fix"));
     return (
-      <div className="grid items-stretch gap-4 md:grid-cols-3">
-        <TierCard
-          name={t("pc.free.name")}
-          amount="€0"
-          suffix=""
-          features={[t("pc.free.f1"), t("pc.free.f2", { n: CHECK_COUNT }), t("pc.free.f3")]}
-          cta={
-            <Button asChild variant="hairline" size="xl" className="w-full">
-              <Link href="/#free-diagnosis">{t("pc.free.cta")}</Link>
-            </Button>
-          }
-        />
-        {isLoading ? (
-          [0, 1].map((i) => <div key={i} className="o-skeleton h-[420px] rounded-2xl" />)
-        ) : (
-          <>
-            {report && (
-              <TierCard
-                name={report.name}
-                amount={splitPrice(report.price_label).amount}
-                suffix={t("pc.once")}
-                features={[t("pc.feature.research"), t("pc.feature.audit", { n: CHECK_COUNT }), t("pc.feature.roadmap"), t("pc.noGithub")]}
-                cta={
-                  <Button asChild variant="hairline" size="xl" className="w-full">
-                    <Link href={ctaHref(report.polar_product_id, loggedIn)}>{t("pc.onetime.cta")}</Link>
-                  </Button>
-                }
-              />
-            )}
-            {fix && (
-              <TierCard
-                name={fix.name}
-                amount={splitPrice(fix.price_label).amount}
-                suffix={splitPrice(fix.price_label).suffix}
-                highlight
-                flag={t("pc.recommended")}
-                features={featuresFor(fix)}
-                cta={
-                  <Button asChild size="xl" className="w-full">
-                    <Link href={ctaHref(fix.polar_product_id, loggedIn)}>
-                      {ctaFor(fix, true)} <ArrowRight className="size-4 rtl-flip" aria-hidden />
-                    </Link>
-                  </Button>
-                }
-              />
-            )}
-          </>
-        )}
-        {!isLoading && (isError || sorted.length === 0) && (
-          <p className="text-center text-sm text-muted-foreground md:col-span-3">{t("pc.updating")}</p>
-        )}
+      <div className="grid gap-4">
+        <div className="grid items-stretch gap-4 md:grid-cols-2">
+          {isLoading ? (
+            [0, 1].map((i) => <div key={i} className="o-skeleton h-[440px] rounded-xl" />)
+          ) : (
+            <>
+              {agency && (
+                <TierCard
+                  name={displayName(agency)}
+                  amount={splitPrice(agency.price_label).amount}
+                  suffix={splitPrice(agency.price_label).suffix}
+                  highlight
+                  note={t("plan.agency.note", { sites: agency.sites_limit ?? 5, n: agency.reports_per_period })}
+                  features={featuresFor(agency)}
+                  cta={agencyCta(agency)}
+                />
+              )}
+              {fix && (
+                <TierCard
+                  name={fix.name}
+                  amount={splitPrice(fix.price_label).amount}
+                  suffix={splitPrice(fix.price_label).suffix}
+                  note={t("plan.fix.note")}
+                  features={featuresFor(fix)}
+                  cta={
+                    <Button asChild variant="hairline" size="xl" className="w-full">
+                      <Link href={ctaHref(fix.polar_product_id, loggedIn)}>{ctaFor(fix, false)}</Link>
+                    </Button>
+                  }
+                />
+              )}
+            </>
+          )}
+        </div>
+        {report && <ReportRow plan={report} href={ctaHref(report.polar_product_id, loggedIn)} />}
+        {!isLoading && (isError || sorted.length === 0) && <p className="text-center text-sm text-muted-foreground">{t("pc.updating")}</p>}
       </div>
     );
   }
@@ -205,15 +227,24 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
                   amount={price.amount}
                   suffix={price.suffix}
                   highlight={isHighlight}
-                  flag={current ? t("pc.current") : isHighlight ? t("pc.recommended") : undefined}
+                  flag={current ? t("pc.current") : isHighlight ? t("nav.business") : undefined}
+                  note={
+                    p.slug?.startsWith("team")
+                      ? t("plan.agency.note", { sites: p.sites_limit ?? 5, n: p.reports_per_period })
+                      : p.slug?.startsWith("fix")
+                        ? t("plan.fix.note")
+                        : undefined
+                  }
                   features={featuresFor(p)}
                   cta={
                     current ? (
                       <Button asChild variant="hairline" size="xl" className="w-full">
                         <Link href="/app/billing/">{t("pc.manage")}</Link>
                       </Button>
+                    ) : p.slug?.startsWith("team") ? (
+                      agencyCta(p)
                     ) : (
-                      <Button asChild variant={isHighlight ? "sheen" : "hairline"} size="xl" className="w-full">
+                      <Button asChild variant={isHighlight ? "default" : "hairline"} size="xl" className="w-full">
                         <Link href={ctaHref(p.polar_product_id, loggedIn)}>
                           {ctaFor(p, isHighlight)} {isHighlight && <ArrowRight className="size-4 rtl-flip" aria-hidden />}
                         </Link>
@@ -230,25 +261,28 @@ export function PlanGrid({ initialPlans, layout = "full" }: { initialPlans?: Pla
       )}
 
       {oneTimes.map((p) => (
-        <div
-          key={p.polar_product_id}
-          className="o-well flex flex-col gap-4 rounded-2xl px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8"
-        >
-          <div className="min-w-0">
-            <p className="text-[15px]">
-              <span className="font-medium">{t("gh.title")}</span>{" "}
-              <span className="text-muted-foreground">{t("pc.onetime.body")}</span>
-            </p>
-            <p className="mt-1.5 font-mono text-[11px] text-faint">{t("pc.onetime.validity")}</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-4">
-            <span className="o-readout-strong text-2xl">{splitPrice(p.price_label).amount}</span>
-            <Button asChild variant="hairline">
-              <Link href={ctaHref(p.polar_product_id, loggedIn)}>{t("pc.onetime.cta")}</Link>
-            </Button>
-          </div>
-        </div>
+        <ReportRow key={p.polar_product_id} plan={p} href={ctaHref(p.polar_product_id, loggedIn)} />
       ))}
+    </div>
+  );
+}
+
+/** The standalone report, apart from the plans: what it includes and what it doesn't. */
+function ReportRow({ plan, href }: { plan: Plan; href: string }) {
+  const { t } = useI18n();
+  return (
+    <div className="flex flex-col gap-4 rounded-xl border bg-card px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="grid min-w-0 gap-1">
+        <p className="text-[15px] font-medium">{t("pc.report.title")}</p>
+        <p className="max-w-2xl text-[14px] leading-relaxed text-muted-foreground">{t("pc.report.body")}</p>
+        <p className="text-[12.5px] text-faint">{t("pc.onetime.validity")}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-4">
+        <span className="o-readout-strong text-2xl">{splitPrice(plan.price_label).amount}</span>
+        <Button asChild variant="hairline">
+          <Link href={href}>{t("pc.onetime.cta")}</Link>
+        </Button>
+      </div>
     </div>
   );
 }
@@ -261,6 +295,7 @@ export function TierCard({
   cta,
   highlight,
   flag,
+  note,
 }: {
   name: string;
   amount: string;
@@ -269,27 +304,23 @@ export function TierCard({
   cta: React.ReactNode;
   highlight?: boolean;
   flag?: string;
+  /** One plain line under the price (who it's for, what it counts). */
+  note?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "relative flex min-w-0 flex-col gap-5 rounded-2xl p-6 sm:p-7",
-        highlight ? "o-artifact ring-1 ring-foreground/25" : "o-well",
-      )}
-    >
-      {flag && (
-        <span className="absolute -top-3 end-5 rounded-full bg-primary px-2.5 py-1 font-mono text-[11px] leading-none text-primary-foreground">
-          {flag}
-        </span>
-      )}
+    <div className={cn("relative flex min-w-0 flex-col gap-5 rounded-xl border p-6 sm:p-7", highlight ? "border-line-strong bg-card" : "bg-card/60")}>
       <div>
-        <h2 className="o-display text-[22px]">{name}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="o-display text-[22px]">{name}</h2>
+          {flag && <span className="text-[12.5px] font-medium text-muted-foreground">{flag}</span>}
+        </div>
         <p className="mt-3 flex items-baseline gap-1.5">
-          <span key={amount} className="o-crossfade o-readout-strong text-[40px] leading-none">
+          <span key={amount} className="o-crossfade o-readout-strong text-[36px] leading-none">
             {amount}
           </span>{" "}
           {suffix && <span className="text-[13px] text-muted-foreground">{suffix}</span>}
         </p>
+        {note && <p className="mt-3 text-[14px] leading-relaxed text-muted-foreground">{note}</p>}
       </div>
       <ul className="grid flex-1 content-start gap-2.5 text-[14px] text-muted-foreground">
         {features.map((f) => (

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Eyebrow } from "../atoms";
 
-/** Section rhythm: 128px desktop, 112px tablet, 80px mobile; max-w-6xl. */
+/** Section rhythm (refinement 2026-10-30): 80–96px between sections (two paddings of 40–48px); max-w-6xl. */
 export function Section({
   id,
   className,
@@ -16,7 +16,7 @@ export function Section({
   "aria-label"?: string;
 }) {
   return (
-    <section id={id} aria-label={ariaLabel} className={cn("scroll-mt-24 py-20 md:py-28 lg:py-32", className)}>
+    <section id={id} aria-label={ariaLabel} className={cn("scroll-mt-24 py-10 md:py-12", className)}>
       <div className={cn("mx-auto w-full max-w-6xl px-4 sm:px-6", innerClassName)}>{children}</div>
     </section>
   );
@@ -37,7 +37,7 @@ export function SectionHeader({
   return (
     <div className={cn("grid max-w-3xl gap-4", className)}>
       <Eyebrow>{eyebrow}</Eyebrow>
-      <h2 className="o-display text-[34px] leading-[1.04] tracking-[-0.02em] sm:text-[44px] lg:text-[52px]">{title}</h2>
+      <h2 className="o-display text-[30px] leading-[1.08] tracking-[-0.02em] sm:text-[36px] lg:text-[42px]">{title}</h2>
       {lede && <p className="max-w-[40rem] text-[17px] leading-relaxed text-muted-foreground sm:text-[18px]">{lede}</p>}
     </div>
   );

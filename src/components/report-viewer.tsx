@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Copy, Download, ExternalLink, Printer, TriangleAlert } from "lucide-react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { Check, ChevronDown, Copy, Download, ExternalLink, Printer, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { ScoreBar, ScoreRing } from "@/components/score-ring";
 import { severityClass, statusIconClass, reportToMarkdown, buildActionPlan, realDependency } from "@/lib/format";
 import type { ReportData, AuditFinding, SeoCheck, RoadmapAction, ConversionDiff, ConversionDiffField } from "@/lib/report-types";
@@ -14,18 +15,59 @@ import { SEVERITY_KEYS, STATUS_KEYS, EFFORT_KEYS, IMPACT_KEYS, CONFIDENCE_KEYS, 
 
 // ── Small building blocks ────────────────────────────────────────────────
 
+/**
+ * Sample mode: the public fictional example. Its sources are placeholders,
+ * so they are never links and never invite verification.
+ */
+const ReportMode = createContext<{ sample: boolean }>({ sample: false });
+
+/**
+ * Citation chips. Pressing one opens the source in place (title, address,
+ * retrieval date, a link that opens in a new tab), so the reader never loses
+ * their position in the report.
+ */
 function SourceRefs({ ids, sources }: { ids?: string[]; sources: ReportData["sources"] }) {
+  const { t } = useI18n();
+  const { sample } = useContext(ReportMode);
   if (!ids?.length) return null;
   return (
     <span className="ms-1 inline-flex flex-wrap gap-1 align-middle font-mono text-[11px] text-tel-sky">
       {ids.map((id) => {
         const s = sources.find((x) => x.id === id);
-        return s ? (
-          <a key={id} href={s.url} target="_blank" rel="noopener noreferrer" title={s.title} className="rounded border border-tel-sky/35 px-1 leading-4 hover:bg-tel-sky/10">
-            {id}
-          </a>
-        ) : (
-          <span key={id}>[{id}]</span>
+        if (!s) return <span key={id}>[{id}]</span>;
+        let host = "";
+        try {
+          host = new URL(s.url).hostname;
+        } catch {
+          /* not a URL: show the title only */
+        }
+        return (
+          <Popover key={id}>
+            <PopoverTrigger
+              aria-label={t("rv.citeAria", { id, title: s.title })}
+              className="o-hit relative rounded border border-tel-sky/35 px-1 leading-4 hover:bg-tel-sky/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {id}
+            </PopoverTrigger>
+            <PopoverContent align="start" className="grid w-[min(22rem,calc(100vw-2rem))] gap-1.5 p-3.5 font-sans text-[13px]">
+              <p className="font-mono text-[11px] text-tel-sky">{id}</p>
+              <p className="font-medium leading-snug">{s.title}</p>
+              {sample ? (
+                <p className="text-muted-foreground">{t("sample.sourcePlaceholder")}</p>
+              ) : (
+                <>
+                  {host && (
+                    <p className="truncate font-mono text-[11.5px] text-muted-foreground" dir="ltr">
+                      {host}
+                    </p>
+                  )}
+                  <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="inline-flex w-fit items-center gap-1 font-medium underline underline-offset-4">
+                    {t("rv.openSource")} <ExternalLink className="size-3" aria-hidden />
+                  </a>
+                </>
+              )}
+            </PopoverContent>
+          </Popover>
         );
       })}
     </span>
@@ -68,21 +110,35 @@ function SpeedBlock({ speed }: { speed: NonNullable<ReportData["meta"]["speed"]>
   );
 }
 
+const label = (s: string) => s.replace(/[:：]\s*$/, "").trim();
+
+/**
+ * A finding as observation → evidence → recommendation. The evidence is one
+ * press away on screen and always printed.
+ */
 function FindingCard({ f, sources }: { f: AuditFinding; sources: ReportData["sources"] }) {
   const { t } = useI18n();
+  const [open, setOpen] = useState(false);
   return (
-    <div className="o-artifact rounded-xl p-4 print-block">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${severityClass(f.severity)}`}>
-          {t(SEVERITY_KEYS[f.severity] ?? f.severity)}
-        </span>
-        <p className="font-medium">{f.title}</p>
+    <div className="rounded-xl border bg-card p-4 print-block">
+      <div className="flex flex-wrap items-start gap-2">
+        <span className={`mt-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold ${severityClass(f.severity)}`}>{t(SEVERITY_KEYS[f.severity] ?? f.severity)}</span>
+        <p className="min-w-0 flex-1 font-medium leading-snug">{f.title}</p>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        <span className="font-medium text-foreground">{t("rv.evidence")}</span>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="o-hit relative mt-2.5 inline-flex items-center gap-1.5 text-[13px] text-muted-foreground transition-colors hover:text-foreground print:hidden"
+      >
+        <ChevronDown className={cn("size-3.5 transition-transform duration-[var(--dur-state)]", !open && "-rotate-90 rtl:rotate-90")} aria-hidden />
+        {label(t("rv.evidence"))}
+      </button>
+      <p className={cn("mt-1.5 text-sm leading-relaxed text-muted-foreground", open ? "block" : "hidden print:block")}>
+        <span className="font-medium text-foreground print:inline">{t("rv.evidence")}</span>
         {f.evidence}
       </p>
-      <p className="mt-1.5 text-sm leading-relaxed">
+      <p className="mt-2 text-sm leading-relaxed">
         <span className="font-medium">{t("rv.recommendation")}</span>
         {f.recommendation}
       </p>
@@ -220,6 +276,9 @@ export function SummarySection({ r }: { r: ReportData }) {
           <ScoreBar label={t("scores.trust")} value={s.trust} />
         </div>
       </div>
+      <p className="text-[13px] leading-relaxed text-muted-foreground print-block">
+        <span className="font-medium text-foreground">{t("rv.scoreNote.title")}</span> {t("rv.scoreNote.body")}
+      </p>
       <p className="font-display text-xl font-semibold leading-snug text-balance">
         {r.executiveSummary.headline}
         {r.meta.quality?.headlineUnverified && <Unverified />}
@@ -341,6 +400,7 @@ export function MarketSection({ r }: { r: ReportData }) {
 
 export function CompetitorsSection({ r }: { r: ReportData }) {
   const { t } = useI18n();
+  const { sample } = useContext(ReportMode);
   return (
     <div className="space-y-4">
       {r.competitors.map((c, i) => (
@@ -348,9 +408,16 @@ export function CompetitorsSection({ r }: { r: ReportData }) {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <p className="font-display text-lg font-semibold">{c.name}</p>
-              <a href={c.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-xs text-tel-sky hover:underline">
-                <ExternalLink className="size-3" aria-hidden />{new URL(c.url).hostname}
-              </a>
+              {sample ? (
+                <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+                  {new URL(c.url).hostname}
+                </span>
+              ) : (
+                <a href={c.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-xs text-tel-sky hover:underline">
+                  <ExternalLink className="size-3" aria-hidden />
+                  {new URL(c.url).hostname}
+                </a>
+              )}
             </div>
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
               c.threat === "high" ? "sev-fail" : c.threat === "medium" ? "sev-warn" : "sev-low"
@@ -576,9 +643,10 @@ export function RisksSection({ r }: { r: ReportData }) {
 
 export function SourcesSection({ r }: { r: ReportData }) {
   const { t } = useI18n();
+  const { sample } = useContext(ReportMode);
   return (
     <div className="space-y-2">
-      <p className="text-sm text-muted-foreground">{t("rv.sourcesNote")}</p>
+      <p className="text-sm text-muted-foreground">{t(sample ? "sample.sourcesNote" : "rv.sourcesNote")}</p>
       {r.meta.quality && r.meta.quality.claimsChecked > 0 ? (
         <p className="text-xs text-faint">
           {r.meta.quality.claimsUnverified > 0
@@ -588,13 +656,17 @@ export function SourcesSection({ r }: { r: ReportData }) {
       ) : null}
       <ol className="space-y-2">
         {r.sources.map((s) => (
-          <li key={s.id} className="o-well flex items-start gap-3 rounded-xl p-3 print-block">
+          <li key={s.id} id={`src-${s.id}`} className="flex scroll-mt-24 items-start gap-3 rounded-xl border bg-card p-3 print-block">
             <span className="o-readout-strong w-8 shrink-0 text-sm text-tel-sky">{s.id}</span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{s.title}</p>
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="mt-0.5 block truncate text-xs text-muted-foreground hover:text-foreground">
-                {s.url}
-              </a>
+              <p className="text-sm font-medium">{s.title}</p>
+              {sample ? (
+                <p className="mt-0.5 text-xs text-muted-foreground">{t("sample.sourcePlaceholder")}</p>
+              ) : (
+                <a href={s.url} target="_blank" rel="noopener noreferrer nofollow" className="mt-0.5 block truncate text-xs text-muted-foreground hover:text-foreground" dir="ltr">
+                  {s.url}
+                </a>
+              )}
             </div>
           </li>
         ))}
@@ -605,9 +677,33 @@ export function SourcesSection({ r }: { r: ReportData }) {
 
 // ── Main viewer ─────────────────────────────────────────────────────────
 
-export function ReportViewer({ data }: { data: ReportData }) {
+const SECTION_IDS = ["summary", "product", "market", "competitors", "audit", "strategy", "roadmap", "risks", "sources"] as const;
+type SectionId = (typeof SECTION_IDS)[number];
+
+const SECTION_RENDER: Record<SectionId, (r: ReportData) => React.ReactNode> = {
+  summary: (r) => <SummarySection r={r} />,
+  product: (r) => <ProductSection r={r} />,
+  market: (r) => <MarketSection r={r} />,
+  competitors: (r) => <CompetitorsSection r={r} />,
+  audit: (r) => <AuditSection r={r} />,
+  strategy: (r) => <StrategySection r={r} />,
+  roadmap: (r) => <RoadmapSection r={r} />,
+  risks: (r) => <RisksSection r={r} />,
+  sources: (r) => <SourcesSection r={r} />,
+};
+
+/**
+ * The one report reading system (refinement 2026-10-30), for signed-in
+ * reports and the public sample alike: every section in one document, a
+ * sticky contents rail on desktop and a contents selector on phones, the
+ * score method next to the scores, findings as observation → evidence →
+ * recommendation, citations that open in place, exports, and the print face.
+ * `sample` marks the fictional example: placeholder sources, no outbound links.
+ */
+export function ReportViewer({ data, sample = false }: { data: ReportData; sample?: boolean }) {
   const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
+  const active = useActiveSection(SECTION_IDS.map((id) => `r-${id}`));
   const locale = lang === "en" ? undefined : lang;
   const date = new Date(data.meta.generatedAt).toLocaleDateString(locale ?? undefined, {
     year: "numeric",
@@ -640,68 +736,127 @@ export function ReportViewer({ data }: { data: ReportData }) {
     }
   }
 
-  const TABS = [
-    ["summary", t("rv.tab.summary")],
-    ["product", t("rv.tab.product")],
-    ["market", t("rv.tab.market")],
-    ["competitors", t("rv.tab.competitors")],
-    ["audit", t("rv.tab.audit")],
-    ["strategy", t("rv.tab.strategy")],
-    ["roadmap", t("rv.tab.roadmap")],
-    ["risks", t("rv.tab.risks")],
-    ["sources", t("rv.tab.sources")],
-  ] as const;
+  const jump = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    // Move focus to the section heading so keyboard and screen reader users land there too.
+    el.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+  };
 
   return (
-    <div>
-      {/* Premium print/PDF face — replaces the interactive viewer on paper */}
-      <div className="hidden print:block">
-        <PrintReport data={data} />
-      </div>
+    <ReportMode.Provider value={{ sample }}>
+      <div data-surface="report">
+        {/* Premium print/PDF face — replaces the interactive viewer on paper */}
+        <div className="hidden print:block">
+          <PrintReport data={data} />
+        </div>
 
-      <div className="print:hidden">
-      {/* Toolbar */}
-      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          {data.meta.siteUrl}
-          {data.meta.category ? ` · ${data.meta.category.label}` : ""} · {t("rv.generated", { date })}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={exportMarkdown}>
-            <Download className="size-4" aria-hidden /> {t("rv.export")}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}>
-            <Printer className="size-4" aria-hidden /> {t("rv.print")}
-          </Button>
-          <Button variant="outline" size="sm" onClick={copyActionPlan}>
-            {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />} {t("rv.copyPlan")}
-          </Button>
+        <div className="print:hidden">
+          {/* Toolbar */}
+          <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              <span dir="ltr">{data.meta.siteUrl}</span>
+              {data.meta.category ? ` · ${data.meta.category.label}` : ""} · {t("rv.generated", { date })}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={exportMarkdown}>
+                <Download className="size-4" aria-hidden /> {t("rv.export")}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="size-4" aria-hidden /> {t("rv.print")}
+              </Button>
+              <Button variant="outline" size="sm" onClick={copyActionPlan}>
+                {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />} {t("rv.copyPlan")}
+              </Button>
+            </div>
+          </div>
+
+          <p className="mb-6 rounded-lg border bg-card px-4 py-2.5 text-xs leading-relaxed text-muted-foreground print-block">{t("rv.aiNote")}</p>
+
+          {/* Phones and tablets: a contents selector that stays at hand */}
+          <div className="sticky top-16 z-20 -mx-1 mb-6 bg-background/95 px-1 py-2 backdrop-blur lg:hidden">
+            <label htmlFor="report-contents" className="sr-only">
+              {t("rv.contents")}
+            </label>
+            <div className="relative">
+              <select
+                id="report-contents"
+                value={active}
+                onChange={(e) => jump(e.target.value)}
+                className="h-11 w-full appearance-none rounded-md border border-rim bg-card pe-9 ps-3 text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {SECTION_IDS.map((id, i) => (
+                  <option key={id} value={`r-${id}`}>
+                    {i + 1}. {t(`rv.tab.${id}`)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            </div>
+          </div>
+
+          <div className="grid gap-10 lg:grid-cols-[184px_minmax(0,1fr)]">
+            <nav aria-label={t("rv.contents")} className="hidden lg:block">
+              <ol className="sticky top-24 grid gap-0.5 border-s border-edge">
+                {SECTION_IDS.map((id, i) => (
+                  <li key={id}>
+                    <a
+                      href={`#r-${id}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        jump(`r-${id}`);
+                        history.replaceState(null, "", `#r-${id}`);
+                      }}
+                      aria-current={active === `r-${id}` ? "location" : undefined}
+                      className={cn(
+                        "-ms-px flex items-baseline gap-2.5 border-s py-1.5 ps-4 text-[13px] transition-colors duration-[var(--dur-hover)]",
+                        active === `r-${id}` ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <span className="o-readout-strong text-[11px] text-faint">{i + 1}</span> {t(`rv.tab.${id}`)}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+
+            <div className="grid min-w-0 gap-14">
+              {SECTION_IDS.map((id, i) => (
+                <section key={id} id={`r-${id}`} aria-labelledby={`r-${id}-h`} className="scroll-mt-28">
+                  <h2 id={`r-${id}-h`} tabIndex={-1} className="mb-5 flex items-baseline gap-3 focus:outline-none">
+                    <span className="o-readout-strong text-[12px] text-faint">{i + 1}</span>{" "}
+                    <span className="o-display text-[26px] leading-tight">{t(`rv.tab.${id}`)}</span>
+                  </h2>
+                  {SECTION_RENDER[id](data)}
+                </section>
+              ))}
+              <p className="border-t pt-4 text-center text-[13px] font-medium text-faint">{t("rv.endOfReport")}</p>
+            </div>
+          </div>
         </div>
       </div>
-
-      <p className="o-well mb-6 rounded-lg px-4 py-2.5 text-xs leading-relaxed text-muted-foreground print-block">
-        {t("rv.aiNote")}
-      </p>
-
-      <Tabs defaultValue="summary">
-        <TabsList className="no-print mb-6 flex h-auto w-full flex-wrap justify-start gap-1">
-          {TABS.map(([id, label]) => (
-            <TabsTrigger key={id} value={id} className="text-sm">
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-        <TabsContent value="summary"><SummarySection r={data} /></TabsContent>
-        <TabsContent value="product"><ProductSection r={data} /></TabsContent>
-        <TabsContent value="market"><MarketSection r={data} /></TabsContent>
-        <TabsContent value="competitors"><CompetitorsSection r={data} /></TabsContent>
-        <TabsContent value="audit"><AuditSection r={data} /></TabsContent>
-        <TabsContent value="strategy"><StrategySection r={data} /></TabsContent>
-        <TabsContent value="roadmap"><RoadmapSection r={data} /></TabsContent>
-        <TabsContent value="risks"><RisksSection r={data} /></TabsContent>
-        <TabsContent value="sources"><SourcesSection r={data} /></TabsContent>
-      </Tabs>
-      </div>
-    </div>
+    </ReportMode.Provider>
   );
+}
+
+/** The section currently under the reader's eye (for the contents rail and selector). */
+function useActiveSection(ids: string[]): string {
+  const [active, setActive] = useState(ids[0]);
+  useEffect(() => {
+    const els = ids.map((id) => document.getElementById(id)).filter((e): e is HTMLElement => !!e);
+    if (!els.length || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-20% 0px -65% 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+    // ids are a fixed list
+  }, []);
+  return active;
 }

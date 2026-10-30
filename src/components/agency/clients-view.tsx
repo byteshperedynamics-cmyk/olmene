@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowRight, Building2, Check, Copy, ExternalLink, Globe, Link2, Mail, Palette, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Check, Copy, ExternalLink, Globe, Link2, Mail, Palette, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -359,7 +359,7 @@ function ClientCard({
   }
 
   return (
-    <article className="o-artifact grid gap-5 rounded-2xl p-5 sm:p-6" aria-labelledby={`client-${client.id}`}>
+    <article className="grid gap-5 rounded-xl border bg-card p-5 sm:p-6" aria-labelledby={`client-${client.id}`}>
       {editing ? (
         <div className="grid gap-4">
           <h2 id={`client-${client.id}`} className="text-[15px] font-medium">
@@ -527,7 +527,7 @@ function AgencyIntro({ view, onOn }: { view: ClientsView; onOn: () => void }) {
     }
   }
   return (
-    <section className="o-well grid justify-items-start gap-4 rounded-[22px] p-6 sm:p-8" aria-labelledby="agency-intro">
+    <section className="o-well grid justify-items-start gap-4 rounded-2xl p-6 sm:p-8" aria-labelledby="agency-intro">
       <span className="grid size-12 place-items-center rounded-2xl border border-rim bg-chip">
         <Building2 className="size-5" aria-hidden />
       </span>
@@ -570,8 +570,47 @@ export function ClientsScreen({ view, onView, onKindChanged }: { view: ClientsVi
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<Client | null>(null);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Phones show the list or one client, never both.
+  const [openOnPhone, setOpenOnPhone] = useState(false);
+  // #branding opens the branding area (old links and the setup banner use it).
+  const [section, setSection] = useState<"clients" | "branding">("clients");
+  useEffect(() => {
+    const read = () => setSection(window.location.hash === "#branding" ? "branding" : "clients");
+    read();
+    window.addEventListener("hashchange", read);
+    return () => window.removeEventListener("hashchange", read);
+  }, []);
   const canEdit = atLeast(view.role, "member");
   const admin = atLeast(view.role, "admin");
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return view.clients;
+    return view.clients.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.website ?? "").toLowerCase().includes(q) ||
+        (c.contactEmail ?? "").toLowerCase().includes(q) ||
+        c.sites.some((s) => s.host.toLowerCase().includes(q)),
+    );
+  }, [query, view.clients]);
+  const selected = view.clients.find((c) => c.id === selectedId) ?? view.clients[0] ?? null;
+
+  const go = (tab: "clients" | "branding") => {
+    setSection(tab);
+    history.replaceState(null, "", tab === "branding" ? "#branding" : window.location.pathname + window.location.search);
+  };
+  const pick = (id: string) => {
+    setSelectedId(id);
+    setAdding(false);
+    setOpenOnPhone(true);
+  };
+  const startAdding = () => {
+    setAdding(true);
+    setOpenOnPhone(true);
+  };
 
   if (view.kind !== "agency") return <AgencyIntro view={view} onOn={onKindChanged} />;
 
@@ -592,74 +631,152 @@ export function ClientsScreen({ view, onView, onKindChanged }: { view: ClientsVi
   const brandMissing = !view.brand.name && !view.brand.logoUrl;
 
   return (
-    <div className="grid gap-8">
-      {brandMissing && admin && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rim bg-chip/50 px-5 py-4">
-          <p className="flex items-center gap-3 text-[14px]">
-            <Palette className="size-4 shrink-0" aria-hidden /> Put your agency&apos;s name and logo on the pages clients see.
-          </p>
-          <Button asChild variant="hairline" size="sm">
-            <a href="#branding">
-              Set up branding <ArrowRight className="size-3.5 rtl-flip" aria-hidden />
-            </a>
-          </Button>
-        </div>
-      )}
-
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="grid gap-4" aria-labelledby="clients-list">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="clients-list" className="text-[15px] font-medium">
-              {view.clients.length === 0 ? "No clients yet" : `${view.clients.length} ${view.clients.length === 1 ? "client" : "clients"}`}
-            </h2>
-            {canEdit && !adding && (
-              <Button variant="sheen" size="sm" onClick={() => setAdding(true)}>
-                <Plus className="size-4" aria-hidden /> Add client
-              </Button>
+    <div className="grid gap-6">
+      {/* Daily client work and the agency's branding are separate areas (refinement 2026-10-30). */}
+      <div role="tablist" aria-label="Clients sections" className="flex w-fit gap-1 rounded-lg border bg-card p-1">
+        {(["clients", "branding"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={section === tab}
+            aria-controls={`clients-panel-${tab}`}
+            onClick={() => go(tab)}
+            className={cn(
+              "inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13.5px] transition-colors duration-[var(--dur-hover)] pointer-coarse:h-11",
+              section === tab ? "bg-secondary font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
             )}
-          </div>
-
-          {adding && (
-            <div className="rounded-2xl border border-rim bg-card p-5 sm:p-6">
-              <h3 className="mb-4 text-[15px] font-medium">New client</h3>
-              <ClientForm
-                initial={{ name: "", website: "", contactEmail: "" }}
-                submitLabel="Add client"
-                busyLabel="Adding…"
-                onCancel={() => setAdding(false)}
-                onSubmit={async (f) => {
-                  const r = await addClient(f);
-                  onView(r.view);
-                  setAdding(false);
-                  toast.success(`${f.name} added`);
-                }}
-              />
-            </div>
-          )}
-
-          {view.clients.length === 0 && !adding && (
-            <div className="rounded-2xl border border-dashed p-8 text-center">
-              <p className="font-medium">Add your first client</p>
-              <p className="mx-auto mt-1 max-w-md text-[14px] text-muted-foreground">
-                {view.unassigned.length
-                  ? "Then give them their sites, and create a page link to send them."
-                  : "Sites appear here when their first report is ready; then you can give each one to a client."}
-              </p>
-            </div>
-          )}
-
-          {view.clients.map((c) => (
-            <ClientCard key={c.id} client={c} view={view} onView={onView} onAskRemove={setRemoving} />
-          ))}
-        </section>
-
-        <aside className="grid gap-6">
-          <UnassignedSites view={view} onView={onView} />
-          <HowItWorks />
-        </aside>
+          >
+            {tab === "clients" ? "Clients" : "Branding"}
+            {tab === "branding" && brandMissing && <span className="size-1.5 rounded-full bg-tel-amber" aria-label="not set up" />}
+          </button>
+        ))}
       </div>
 
-      <BrandSettings view={view} onView={onView} />
+      {section === "branding" ? (
+        <div id="clients-panel-branding" role="tabpanel" className="grid gap-4">
+          <BrandSettings view={view} onView={onView} />
+        </div>
+      ) : (
+        <div id="clients-panel-clients" role="tabpanel" className="grid gap-6">
+          {brandMissing && admin && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rim bg-chip/50 px-4 py-3">
+              <p className="flex items-center gap-3 text-[14px]">
+                <Palette className="size-4 shrink-0" aria-hidden /> Put your agency&apos;s name and logo on the pages clients see.
+              </p>
+              <Button variant="hairline" size="sm" onClick={() => go("branding")}>
+                Set up branding <ArrowRight className="size-3.5 rtl-flip" aria-hidden />
+              </Button>
+            </div>
+          )}
+
+          <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+            {/* The list: compact and searchable. On phones it hides while a client is open. */}
+            <section className={cn("grid gap-3", openOnPhone && "hidden lg:grid")} aria-labelledby="clients-list">
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="clients-list" className="text-[15px] font-medium">
+                  {view.clients.length === 0 ? "No clients yet" : `${view.clients.length} ${view.clients.length === 1 ? "client" : "clients"}`}
+                </h2>
+                {canEdit && (
+                  <Button size="sm" onClick={() => startAdding()}>
+                    <Plus className="size-4" aria-hidden /> Add client
+                  </Button>
+                )}
+              </div>
+              {view.clients.length > 3 && (
+                <label className="relative block">
+                  <span className="sr-only">Search clients</span>
+                  <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search by client, site or email"
+                    className={cn(inputClass, "w-full ps-9")}
+                  />
+                </label>
+              )}
+              {view.clients.length > 0 && (
+                <ul className="grid overflow-hidden rounded-xl border bg-card" aria-label="Clients">
+                  {shown.map((c) => (
+                    <li key={c.id} className="border-b last:border-b-0">
+                      <button
+                        type="button"
+                        onClick={() => pick(c.id)}
+                        aria-current={selected?.id === c.id && !adding ? "true" : undefined}
+                        className={cn(
+                          "grid w-full gap-0.5 px-4 py-3 text-start transition-colors duration-[var(--dur-hover)] hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                          selected?.id === c.id && !adding && "bg-secondary",
+                        )}
+                      >
+                        <span className="truncate text-[14px] font-medium">{c.name}</span>
+                        <span className="flex flex-wrap gap-x-2.5 text-[12.5px] text-muted-foreground">
+                          <span>
+                            {c.sites.length} {c.sites.length === 1 ? "site" : "sites"}
+                          </span>
+                          <span>{c.portal ? "page on" : "page off"}</span>
+                          <span>{c.report.cadence === "off" ? "no emailed report" : `${c.report.cadence} report`}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                  {shown.length === 0 && <li className="px-4 py-4 text-[13.5px] text-muted-foreground">No client matches &ldquo;{query}&rdquo;.</li>}
+                </ul>
+              )}
+              <UnassignedSites view={view} onView={onView} />
+              <HowItWorks />
+            </section>
+
+            {/* The open client: sites, page sharing, emailed reports */}
+            <section className={cn("grid min-w-0 gap-4", !openOnPhone && "hidden lg:grid")} aria-label="Selected client">
+              {(openOnPhone || adding) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenOnPhone(false);
+                    setAdding(false);
+                  }}
+                  className="o-hit relative inline-flex w-fit items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground lg:hidden"
+                >
+                  <ArrowLeft className="size-3.5 rtl-flip" aria-hidden /> All clients
+                </button>
+              )}
+              {adding ? (
+                <div className="rounded-xl border border-rim bg-card p-5 sm:p-6">
+                  <h3 className="mb-4 text-[15px] font-medium">New client</h3>
+                  <ClientForm
+                    initial={{ name: "", website: "", contactEmail: "" }}
+                    submitLabel="Add client"
+                    busyLabel="Adding…"
+                    onCancel={() => {
+                      setAdding(false);
+                      setOpenOnPhone(false);
+                    }}
+                    onSubmit={async (f) => {
+                      const r = await addClient(f);
+                      onView(r.view);
+                      setAdding(false);
+                      setSelectedId(r.id);
+                      toast.success(`${f.name} added`);
+                    }}
+                  />
+                </div>
+              ) : selected ? (
+                <ClientCard key={selected.id} client={selected} view={view} onView={onView} onAskRemove={setRemoving} />
+              ) : (
+                <div className="rounded-xl border border-dashed p-8 text-center">
+                  <p className="font-medium">Add your first client</p>
+                  <p className="mx-auto mt-1 max-w-md text-[14px] text-muted-foreground">
+                    {view.unassigned.length
+                      ? "Then give them their sites, and create a page link to send them."
+                      : "Sites appear here when their first full analysis is ready; then you can give each one to a client."}
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={!!removing} onOpenChange={(o) => !busy && !o && setRemoving(null)}>
         <AlertDialogContent className="max-w-[calc(100vw-2rem)] rounded-2xl sm:max-w-[28rem]">

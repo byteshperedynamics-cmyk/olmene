@@ -6,8 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, Check, CircleCheck, ExternalLink, Inbox, Mail, RotateCw, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
 import { Logo } from "@/components/logo";
 import { LogoLoader } from "@/components/logo-loader";
 import { Enter } from "@/components/motion";
@@ -17,6 +15,7 @@ import { identityOf, useProfile } from "@/lib/account-client";
 import { useSession } from "@/lib/session";
 import { finishGoogleSignIn, googleSignInEnabled, readGoogleReturn, startGoogleSignIn } from "@/lib/auth/google-signin-client";
 import { safeNextPath } from "@/lib/safe-next";
+import { SUPPORT_EMAIL } from "@/lib/config";
 import { useI18n, usePageMeta } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
@@ -125,6 +124,8 @@ function LoginForm() {
   usePageMeta(mode === "signup" ? "meta.title.signup" : "meta.title.login");
   // Only allow in-app redirect targets (never external URLs; lib/safe-next.ts).
   const nextPath = safeNextPath(params.get("next"));
+  // Where sign-in leads, said on the card so the scan or checkout context isn't lost.
+  const nextContext = /[?&]scan=/.test(nextPath) ? "login.ctx.scan" : nextPath.startsWith("/app/billing") ? "login.ctx.checkout" : nextPath !== "/app/" ? "login.ctx.other" : null;
   const { session, loading: sessionLoading, signOut } = useSession();
   const profile = useProfile(session);
   const identity = identityOf(session, profile.data);
@@ -290,7 +291,7 @@ function LoginForm() {
   if (!sessionLoading && session && identity && !finishing) {
     return (
       <Enter className="w-full max-w-[26rem]">
-        <div className="o-artifact rounded-[24px] p-6 text-center sm:p-8">
+        <div className="rounded-2xl border bg-card p-6 text-center sm:p-8">
           <UserAvatar src={identity.avatarUrl} initials={identity.initials} size={64} className="mx-auto" />
           <h1 className="o-display mt-5 text-[26px] leading-tight">{t("login.already.title")}</h1>
           <p className="mt-2 text-[15px] text-muted-foreground">
@@ -314,7 +315,7 @@ function LoginForm() {
 
   return (
     <Enter className="w-full max-w-[26rem]">
-      <div className="o-artifact rounded-[24px] p-6 sm:p-8">
+      <div className="rounded-2xl border bg-card p-6 sm:p-8">
         {finishing ? (
           <div className="grid justify-items-center gap-4 py-12 text-center" aria-live="polite">
             <LogoLoader size={44} glow />
@@ -323,7 +324,7 @@ function LoginForm() {
         ) : sent ? (
           <div className="grid gap-6">
             <div className="grid justify-items-center gap-3 text-center">
-              <span className="grid size-14 place-items-center rounded-2xl border border-rim bg-secondary">
+              <span className="grid size-14 place-items-center rounded-xl border border-rim bg-secondary">
                 <Inbox className="size-6" aria-hidden />
               </span>
               <h1 className="o-display text-[28px] leading-tight">{t("login.sentTitle")}</h1>
@@ -376,11 +377,11 @@ function LoginForm() {
         ) : (
           <>
             <div className="grid justify-items-center gap-2 text-center">
-              <Logo className="mb-3 justify-center" />
-              <h1 className="o-display text-[28px] leading-tight sm:text-[30px]">{t(signup ? "login.titleSignup" : "login.title")}</h1>
+              <h1 className="o-display text-[26px] leading-tight sm:text-[28px]">{t(signup ? "login.titleSignup" : "login.title")}</h1>
               <p className="text-[15px] leading-relaxed text-muted-foreground">
                 {t(signup ? "login.descSignup" : googleOn ? "login.desc" : "login.descEmail")}
               </p>
+              {nextContext && <p className="rounded-md border bg-background px-3 py-1.5 text-[13px] text-muted-foreground">{t(nextContext)}</p>}
             </div>
 
             {signup && (
@@ -405,7 +406,7 @@ function LoginForm() {
                       type="button"
                       onClick={google}
                       disabled={googleBusy || loading}
-                      className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-[12px] border border-[#747775] bg-white px-4 text-[15px] font-medium text-[#1F1F1F] transition-colors hover:bg-[#F8F9FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-70 dark:border-[#8E918F] dark:bg-[#131314] dark:text-[#E3E3E3] dark:hover:bg-[#1F1F20]"
+                      className="inline-flex h-12 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-[#747775] bg-white px-4 text-[15px] font-medium text-[#1F1F1F] transition-colors hover:bg-[#F8F9FA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-70 dark:border-[#8E918F] dark:bg-[#131314] dark:text-[#E3E3E3] dark:hover:bg-[#1F1F20]"
                     >
                       {googleBusy ? <LogoLoader size={18} /> : <GoogleG />}
                       {t(googleBusy ? "login.googleOpening" : "login.google")}
@@ -432,7 +433,7 @@ function LoginForm() {
                       type="email"
                       inputMode="email"
                       placeholder={t("login.emailPlaceholder")}
-                      className="h-12 rounded-[12px] ps-9 text-[15px]"
+                      className="h-12 rounded-xl ps-9 text-[15px]"
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
@@ -454,7 +455,7 @@ function LoginForm() {
                     </p>
                   )}
                 </div>
-                <Button type="submit" size="xl" className="h-12 w-full rounded-[12px]" disabled={loading}>
+                <Button type="submit" size="xl" className="h-12 w-full rounded-xl" disabled={loading}>
                   {loading ? (
                     <>
                       <LogoLoader size={16} /> {t("login.sending")}
@@ -504,17 +505,51 @@ function LastUsed({ label }: { label: string }) {
   );
 }
 
+/**
+ * A compact shell for signing in (refinement 2026-10-30): the logo home, the
+ * card, and the help and legal links. No marketing navigation competing with
+ * the one thing this page is for.
+ */
 export default function LoginPage() {
   return (
-    <div className="relative isolate flex min-h-screen flex-col">
-      <div aria-hidden className="o-hero-backdrop pointer-events-none absolute inset-x-0 top-0 -z-10 h-[70vh]" />
-      <SiteHeader />
-      <main id="main-content" className="flex flex-1 items-center justify-center px-4 py-14 sm:py-20">
-        <Suspense fallback={<div className="h-[30rem] w-full max-w-[26rem] animate-pulse rounded-[24px] border bg-card" />}>
+    <div className="flex min-h-screen flex-col">
+      <header className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
+        <Logo />
+        <LoginHelp />
+      </header>
+      <main id="main-content" className="flex flex-1 items-start justify-center px-4 pb-12 pt-6 sm:items-center sm:py-12">
+        <Suspense fallback={<div className="h-[30rem] w-full max-w-[26rem] animate-pulse rounded-2xl border bg-card" />}>
           <LoginForm />
         </Suspense>
       </main>
-      <SiteFooter />
+      <LoginFooter />
     </div>
+  );
+}
+
+function LoginHelp() {
+  const { t } = useI18n();
+  if (!SUPPORT_EMAIL) return null;
+  return (
+    <a href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Signing in to Olmene")}`} className="o-hit relative text-[14px] text-muted-foreground hover:text-foreground">
+      {t("login.help")}
+    </a>
+  );
+}
+
+function LoginFooter() {
+  const { t } = useI18n();
+  return (
+    <footer className="mx-auto flex w-full max-w-5xl flex-wrap justify-center gap-x-6 gap-y-2 px-4 pb-8 text-[13px] text-muted-foreground sm:px-6">
+      <Link href="/legal/terms/" className="o-hit relative hover:text-foreground">
+        {t("footer.terms")}
+      </Link>
+      <Link href="/legal/privacy/" className="o-hit relative hover:text-foreground">
+        {t("footer.privacy")}
+      </Link>
+      <Link href="/security/" className="o-hit relative hover:text-foreground">
+        {t("footer.security")}
+      </Link>
+    </footer>
   );
 }

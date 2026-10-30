@@ -17,7 +17,7 @@ import type { InvitePreview } from "@/lib/workspace/types";
 function Card({ children }: { children: React.ReactNode }) {
   return (
     <Enter className="w-full max-w-[26rem]">
-      <div className="o-artifact grid gap-5 rounded-[24px] p-6 text-center sm:p-8">{children}</div>
+      <div className="o-artifact grid gap-5 rounded-2xl p-6 text-center sm:p-8">{children}</div>
     </Enter>
   );
 }
@@ -155,7 +155,7 @@ export default function InvitePage() {
       <div aria-hidden className="o-hero-backdrop pointer-events-none absolute inset-x-0 top-0 -z-10 h-[70vh]" />
       <SiteHeader />
       <main id="main-content" className="flex flex-1 items-center justify-center px-4 py-14 sm:py-20">
-        <Suspense fallback={<div className="h-[24rem] w-full max-w-[26rem] animate-pulse rounded-[24px] border bg-card" />}>
+        <Suspense fallback={<div className="h-[24rem] w-full max-w-[26rem] animate-pulse rounded-2xl border bg-card" />}>
           <Invitation />
         </Suspense>
       </main>

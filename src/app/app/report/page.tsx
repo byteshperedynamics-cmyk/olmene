@@ -44,7 +44,7 @@ function ReportPageInner() {
   });
 
   if (!id) {
-    return <p className="text-muted-foreground">Missing analysis id. <Link className="underline" href="/app/">Back to analyses</Link></p>;
+    return <p className="text-muted-foreground">Missing analysis id. <Link className="underline" href="/app/analyses/">Back to reports</Link></p>;
   }
 
   if (isLoading && !jobState) {
@@ -58,7 +58,7 @@ function ReportPageInner() {
   }
 
   if (!jobState) {
-    return <p className="text-muted-foreground">Analysis not found. <Link className="underline" href="/app/">Back to analyses</Link></p>;
+    return <p className="text-muted-foreground">Analysis not found. <Link className="underline" href="/app/analyses/">Back to reports</Link></p>;
   }
 
   const status = JOB_STATUS[jobState.status] ?? JOB_STATUS.queued;

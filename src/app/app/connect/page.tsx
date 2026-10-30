@@ -31,7 +31,7 @@ export default function ConnectPage() {
         body="Connecting GitHub becomes available when fix runs are enabled."
         action={
           <Button asChild variant="hairline">
-            <Link href="/app/">Back to analyses</Link>
+            <Link href="/app/">Back to the overview</Link>
           </Button>
         }
       />
