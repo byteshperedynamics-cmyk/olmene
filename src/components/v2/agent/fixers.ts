@@ -95,6 +95,11 @@ export function prStage(job: PrStageInput): PrStage | null {
   return live?.settled || last.fetchError ? "verify_failed" : "awaiting_deploy";
 }
 
+/** Counts verified pull-request runs, regardless of how many fixes each run contains. */
+export function countVerifiedRuns(jobs: PrStageInput[]): number {
+  return jobs.filter((job) => prStage(job) === "verified").length;
+}
+
 export const PR_STAGE_COPY: Record<PrStage, { label: string; tone: "live" | "neutral" | "problem" | "ok" }> = {
   opened: { label: "Pull request open", tone: "neutral" },
   closed: { label: "Closed without merging", tone: "neutral" },

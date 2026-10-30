@@ -335,6 +335,29 @@ export interface NotificationRow {
   created_at: string;
 }
 
+export const REGRESSION_KINDS = ["fix_regression", "site_regression"];
+
+/** The full 30-day count and the six newest regressions; activity volume cannot hide them. */
+export async function listRegressions(): Promise<{ count: number; items: NotificationRow[] }> {
+  const supabase = getSupabase();
+  if (!supabase) throw new DataError({ message: "The database client is unavailable." });
+  const owner = await workspaceOwner();
+  const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  return queryRegressionSummary(supabase, owner, since);
+}
+
+/** Run both reads with the same workspace and time window. */
+export async function queryRegressionSummary(supabase: NonNullable<ReturnType<typeof getSupabase>>, owner: string, since: string): Promise<{ count: number; items: NotificationRow[] }> {
+  const [total, latest] = await Promise.all([
+    supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", owner).in("kind", REGRESSION_KINDS).gte("created_at", since),
+    supabase.from("notifications").select("id, kind, payload, status, created_at").eq("user_id", owner).in("kind", REGRESSION_KINDS).gte("created_at", since).order("created_at", { ascending: false }).limit(6),
+  ]);
+  if (total.error) throw new DataError(total.error);
+  if (latest.error) throw new DataError(latest.error);
+  if (typeof total.count !== "number") throw new DataError({ message: "The regression count was unavailable." });
+  return { count: total.count, items: (latest.data ?? []) as NotificationRow[] };
+}
+
 export async function listNotifications(limit = 15): Promise<NotificationRow[]> {
   const supabase = getSupabase();
   if (!supabase) return [];

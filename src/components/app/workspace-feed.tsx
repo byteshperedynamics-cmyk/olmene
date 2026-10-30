@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
-import { listNotifications, listSites, type NotificationRow, type SiteRow } from "@/lib/data";
+import { listNotifications, listRegressions, listSites, type NotificationRow, type SiteRow } from "@/lib/data";
 import { featureAgentEnabled, getAgentJobs, getGuidedRuns, type AgentJob } from "@/lib/agent-client";
 import { PR_STAGE_COPY, prStage } from "@/components/v2/agent/fixers";
 import { LivePill } from "@/components/v2/atoms";
@@ -11,16 +11,12 @@ import { fmtDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AsyncState, EmptyState, type QueryLike } from "./async-state";
 
-/** Shared queries: the overview and the sites page read the same caches. */
+/** Shared queries: the overview refreshes these caches from one timer. */
 export const useSites = () => useQuery({ queryKey: ["sites"], queryFn: listSites });
 export const useNotifications = () => useQuery({ queryKey: ["notifications"], queryFn: () => listNotifications(30) });
+export const useRegressions = () => useQuery({ queryKey: ["regressions"], queryFn: listRegressions });
 export const useAgentJobs = () => useQuery({ queryKey: ["agent-jobs"], queryFn: getAgentJobs, enabled: featureAgentEnabled() });
 export const useGuidedRuns = () => useQuery({ queryKey: ["guided-runs"], queryFn: getGuidedRuns, enabled: featureAgentEnabled() });
-
-const DAY = 864e5;
-const recent = (iso: string, days: number) => Date.now() - Date.parse(iso) < days * DAY;
-
-export const REGRESSION_KINDS = ["fix_regression", "site_regression"];
 
 /** A titled panel with the same frame everywhere on the overview. */
 export function Panel({ title, action, children, className }: { title: string; action?: React.ReactNode; children: React.ReactNode; className?: string }) {
@@ -119,16 +115,16 @@ function workItems(d: WorkSource): WorkItem[] {
 
 /** Checks that got worse and merged fixes that stopped working, last 30 days. */
 export function Regressions() {
-  const q = useNotifications();
+  const q = useRegressions();
   return (
     <AsyncState
       query={q}
       what="regressions"
       compact
-      isEmpty={(d) => d.filter((n) => REGRESSION_KINDS.includes(n.kind) && recent(n.created_at, 30)).length === 0}
+      isEmpty={(d) => d.count === 0}
       empty={<EmptyState compact title="No regressions in the last 30 days" body="Olmene re-checks every watched site weekly and lists any check that gets worse here." />}
     >
-      {(d) => <FeedList rows={d.filter((n) => REGRESSION_KINDS.includes(n.kind) && recent(n.created_at, 30)).slice(0, 6)} />}
+      {(d) => <FeedList rows={d.items} />}
     </AsyncState>
   );
 }

@@ -712,12 +712,12 @@ export function ReportViewer({ data, sample = false }: { data: ReportData; sampl
   });
 
   function exportMarkdown() {
-    const md = reportToMarkdown(data);
+    const md = reportToMarkdown(data, sample);
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${data.product.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-marketing-report.md`;
+    a.download = `${data.product.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${sample ? "fictional-sample" : "marketing-report"}.md`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -727,7 +727,7 @@ export function ReportViewer({ data, sample = false }: { data: ReportData; sampl
 
   async function copyActionPlan() {
     try {
-      await navigator.clipboard.writeText(buildActionPlan(data));
+      await navigator.clipboard.writeText(buildActionPlan(data, sample));
       setCopied(true);
       toast.success(t("rv.toastCopied"));
       setTimeout(() => setCopied(false), 2000);
@@ -750,14 +750,14 @@ export function ReportViewer({ data, sample = false }: { data: ReportData; sampl
       <div data-surface="report">
         {/* Premium print/PDF face — replaces the interactive viewer on paper */}
         <div className="hidden print:block">
-          <PrintReport data={data} />
+          <PrintReport data={data} sample={sample} />
         </div>
 
         <div className="print:hidden">
           {/* Toolbar */}
           <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
-              <span dir="ltr">{data.meta.siteUrl}</span>
+              {sample ? <span>{t("sample.badge")}</span> : <span dir="ltr">{data.meta.siteUrl}</span>}
               {data.meta.category ? ` · ${data.meta.category.label}` : ""} · {t("rv.generated", { date })}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -773,7 +773,7 @@ export function ReportViewer({ data, sample = false }: { data: ReportData; sampl
             </div>
           </div>
 
-          <p className="mb-6 rounded-lg border bg-card px-4 py-2.5 text-xs leading-relaxed text-muted-foreground print-block">{t("rv.aiNote")}</p>
+          <p className="mb-6 rounded-lg border bg-card px-4 py-2.5 text-xs leading-relaxed text-muted-foreground print-block">{t(sample ? "sample.badgeTip" : "rv.aiNote")}</p>
 
           {/* Phones and tablets: a contents selector that stays at hand */}
           <div className="sticky top-16 z-20 -mx-1 mb-6 bg-background/95 px-1 py-2 backdrop-blur lg:hidden">

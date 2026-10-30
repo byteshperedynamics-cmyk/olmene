@@ -57,7 +57,7 @@ function SectionHeading({ n, title }: { n: string; title: string }) {
   );
 }
 
-export function PrintReport({ data }: { data: ReportData }) {
+export function PrintReport({ data, sample = false }: { data: ReportData; sample?: boolean }) {
   const { t, lang } = useI18n();
   const s = data.executiveSummary.scores;
   const date = new Date(data.meta.generatedAt).toLocaleDateString(lang === "en" ? undefined : lang, {
@@ -72,7 +72,7 @@ export function PrintReport({ data }: { data: ReportData }) {
       <footer className="print-footer" aria-hidden>
         <PrintFlower size={11} />
         <span>
-          Olmene · {data.meta.siteUrl} · {date}
+          Olmene · {sample ? t("sample.badge") : data.meta.siteUrl} · {date}
         </span>
       </footer>
 
@@ -84,6 +84,7 @@ export function PrintReport({ data }: { data: ReportData }) {
         </div>
 
         <div className="print-cover-body">
+          {sample && <p className="print-cover-kicker">{t("sample.badge")}</p>}
           <p className="print-cover-kicker">{t("print.report")}</p>
           <h1 className="print-cover-title">{data.product.name}</h1>
           <p className="print-cover-oneliner">{data.product.oneLiner}</p>
@@ -97,7 +98,7 @@ export function PrintReport({ data }: { data: ReportData }) {
           <dl className="print-cover-meta">
             <div>
               <dt>{t("print.website")}</dt>
-              <dd>{data.meta.siteUrl}</dd>
+              <dd>{sample ? t("sample.badge") : data.meta.siteUrl}</dd>
             </div>
             <div>
               <dt>{t("print.category")}</dt>
@@ -107,14 +108,16 @@ export function PrintReport({ data }: { data: ReportData }) {
               <dt>{t("print.generated")}</dt>
               <dd>{date}</dd>
             </div>
-            <div>
-              <dt>{t("print.sourcesCited")}</dt>
-              <dd>{data.sources.length}</dd>
-            </div>
+            {!sample && (
+              <div>
+                <dt>{t("print.sourcesCited")}</dt>
+                <dd>{data.sources.length}</dd>
+              </div>
+            )}
           </dl>
         </div>
 
-        <p className="print-cover-foot">{t("print.note")}</p>
+        <p className="print-cover-foot">{sample ? t("sample.badgeTip") : t("print.note")}</p>
       </section>
 
       {/* ── Sections ── */}

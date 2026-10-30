@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, Check, X } from "lucide-react";
+import { useCallback, useEffect } from "react";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, Check, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AsyncState, EmptyState } from "@/components/app/async-state";
 import {
@@ -12,13 +12,14 @@ import {
   Panel,
   RecentVerification,
   Regressions,
-  REGRESSION_KINDS,
   ScoreCell,
   useAgentJobs,
+  useGuidedRuns,
   useNotifications,
+  useRegressions,
   useSites,
 } from "@/components/app/workspace-feed";
-import { prStage } from "@/components/v2/agent/fixers";
+import { countVerifiedRuns } from "@/components/v2/agent/fixers";
 import { getClients } from "@/lib/agency/client";
 import { featureAgentEnabled, getAgentConfig, getSiteConnections } from "@/lib/agent-client";
 import { updateProfile, useProfile } from "@/lib/account-client";
@@ -34,19 +35,48 @@ import { cn } from "@/lib/utils";
  * what was verified live, and every watched site with its score. The list of
  * full analyses moved to /app/analyses/ (Reports).
  */
+const OVERVIEW_QUERY_KEYS = ["sites", "agent-jobs", "guided-runs", "notifications", "regressions"];
+
 export default function OverviewPage() {
+  const queryClient = useQueryClient();
   const { session } = useSession();
   const workspaces = useWorkspaces(session);
   const current = workspaces.current;
   const agency = current?.kind === "agency";
   const sites = useSites();
   const jobs = useAgentJobs();
+  const guided = useGuidedRuns();
   const notes = useNotifications();
+  const regressionSummary = useRegressions();
   const agentOn = featureAgentEnabled();
+  const refreshing = useIsFetching({ predicate: (q) => OVERVIEW_QUERY_KEYS.includes(String(q.queryKey[0])) }) > 0;
+  const updates = [sites.dataUpdatedAt, notes.dataUpdatedAt, regressionSummary.dataUpdatedAt, ...(agentOn ? [jobs.dataUpdatedAt, guided.dataUpdatedAt] : [])];
+  const lastUpdatedAt = updates.every(Boolean) ? Math.min(...updates) : 0;
+
+  const refresh = useCallback(() => {
+    void Promise.all(OVERVIEW_QUERY_KEYS.map((key) => queryClient.invalidateQueries({ queryKey: [key], refetchType: "active" })));
+  }, [queryClient]);
+
+  useEffect(() => {
+    let lastRefresh = 0;
+    const refreshIfVisible = () => {
+      if (document.visibilityState !== "visible" || Date.now() - lastRefresh < 1_000) return;
+      lastRefresh = Date.now();
+      refresh();
+    };
+    const timer = window.setInterval(refreshIfVisible, 60_000);
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [refresh]);
 
   const awaiting = jobs.data?.jobs.filter((j) => j.status === "awaiting_approval").length;
-  const regressions = notes.data?.filter((n) => REGRESSION_KINDS.includes(n.kind) && Date.now() - Date.parse(n.created_at) < 30 * 864e5).length;
-  const verified = jobs.data?.jobs.filter((j) => prStage(j) === "verified").length;
+  const regressions = regressionSummary.data?.count;
+  const verified = jobs.data ? countVerifiedRuns(jobs.data.jobs) : undefined;
 
   return (
     <div className="grid gap-8">
@@ -57,6 +87,14 @@ export default function OverviewPage() {
             {current?.name ? `${current.name}: work waiting for you` : "Work waiting for you"}, what changed, and every watched site.
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {lastUpdatedAt ? `Last checked ${new Date(lastUpdatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Checking overview…"}
+          </p>
+          <Button variant="outline" size="sm" onClick={refresh} disabled={refreshing}>
+            <RotateCw className={cn("size-3.5", refreshing && "animate-spin")} aria-hidden /> Refresh
+          </Button>
+        </div>
       </header>
 
       <SetupChecklist agency={agency} />
@@ -64,8 +102,8 @@ export default function OverviewPage() {
       <dl className={cn("grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border", agentOn && "md:grid-cols-4")}>
         <Stat label="Sites watched weekly" value={sites.data ? sites.data.filter((s) => s.monitor).length : undefined} failed={sites.isError && !sites.data} />
         {agentOn && <Stat label="Fix runs to review" value={awaiting} failed={jobs.isError && !jobs.data} attention={!!awaiting} />}
-        <Stat label="Regressions, last 30 days" value={regressions} failed={notes.isError && !notes.data} attention={!!regressions} />
-        {agentOn && <Stat label="Fixes verified live" value={verified} failed={jobs.isError && !jobs.data} />}
+        <Stat label="Regressions, last 30 days" value={regressions} failed={regressionSummary.isError && !regressionSummary.data} attention={!!regressions} />
+        {agentOn && <Stat label="Verified runs among latest 20" value={verified} failed={jobs.isError && !jobs.data} />}
       </dl>
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
